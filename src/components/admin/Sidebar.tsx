@@ -12,6 +12,8 @@ const NAV = (slug: string) => [
   { href: `/restaurant/${slug}/events`, label: 'Special Events' },
   { href: `/restaurant/${slug}/employees`, label: 'Employees' },
   { href: `/restaurant/${slug}/referrals`, label: 'Referrals' },
+  { href: `/restaurant/${slug}/photos`, label: 'Photos' },
+  { href: `/restaurant/${slug}/billing`, label: 'Billing' },
   { href: `/restaurant/${slug}/settings`, label: 'Settings' },
 ]
 

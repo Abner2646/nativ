@@ -124,3 +124,28 @@ export async function sendCampaignEmail(
     html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto">${body}</div>`
   })
 }
+
+export async function sendReminderEmail(r: Reservation, settings: TenantSettings, slug: string) {
+  const guest = r.guest!
+  const cancelUrl = `${getTenantUrl(slug)}/cancel?token=${r.cancellation_token}`
+  await resend.emails.send({
+    from: getFrom(settings),
+    to: guest.email,
+    subject: `Reminder: Your reservation tomorrow at ${settings.name}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:${settings.primary_color}">See you tomorrow!</h2>
+        <p>Hi ${guest.name},</p>
+        <p>Just a reminder about your reservation at <strong>${settings.name}</strong>.</p>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:6px 0">Date</td><td>${r.date}</td></tr>
+          <tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:6px 0">Time</td><td>${r.time}</td></tr>
+          <tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:6px 0">Guests</td><td>${r.party_size}</td></tr>
+          ${r.occasion ? `<tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:6px 0">Occasion</td><td>${r.occasion}</td></tr>` : ''}
+        </table>
+        <br>
+        <p>We look forward to seeing you!</p>
+        <p><a href="${cancelUrl}" style="color:${settings.primary_color}">Need to cancel? Click here.</a></p>
+      </div>`
+  })
+}
