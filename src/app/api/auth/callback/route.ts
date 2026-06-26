@@ -1,6 +1,6 @@
 // src/app/api/auth/callback/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase'
+import { createRouteHandlerSupabase } from '@/lib/supabase'
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
@@ -8,13 +8,14 @@ export async function GET(req: NextRequest) {
   const next = searchParams.get('next') ?? '/onboarding'
 
   if (code) {
-    const supabase = await createServerSupabase()
+    // La respuesta se crea primero para que el cliente escriba las cookies en ella
+    const redirectResponse = NextResponse.redirect(`${origin}${next}`)
+    const supabase = createRouteHandlerSupabase(req, redirectResponse)
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      return redirectResponse
     }
   }
 
-  // Si algo falla, mandar al login con error
   return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
 }

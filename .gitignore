@@ -35,3 +35,7 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Archivos de contexto del agente — no subir al repo
+CONTEXT.md
+Agent.md
