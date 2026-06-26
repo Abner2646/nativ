@@ -97,7 +97,7 @@ create table tenant_settings (
   min_advance_hours  integer not null default 2,
   stripe_account_id  text,
   ai_enabled         boolean not null default true,
-  constraint one_per_tenant unique (tenant_id)
+  constraint uq_tenant_settings unique (tenant_id)
 );
 
 -- ── TENANT PHOTOS ─────────────────────────────────────────────
@@ -218,7 +218,7 @@ create table birthday_campaign_config (
   days_before   integer not null default 7,
   email_subject text not null default 'Happy Birthday from {restaurant_name}!',
   email_body    text not null default '<p>Hi {guest_name}, we''d love to celebrate with you!</p><p><a href="{reserve_url}">Reserve a Table</a></p>',
-  constraint one_per_tenant unique (tenant_id)
+  constraint uq_birthday_config unique (tenant_id)
 );
 
 -- ── AI CAMPAIGNS ──────────────────────────────────────────────

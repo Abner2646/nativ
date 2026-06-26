@@ -1,12 +1,9 @@
 'use client'
 // src/app/(marketing)/register/page.tsx
 import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { getBrowserSupabase } from '@/lib/supabase-browser'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabase = getBrowserSupabase()
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')

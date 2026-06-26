@@ -28,6 +28,20 @@ export async function createServerSupabase() {
   })
 }
 
+// Client para route handlers — escribe cookies directo al response que se retorna
+export function createRouteHandlerSupabase(req: NextRequest, res: NextResponse) {
+  return createServerClient(url, anon, {
+    cookies: {
+      getAll: () => req.cookies.getAll(),
+      setAll: (cookiesToSet) => {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          res.cookies.set(name, value, options)
+        )
+      },
+    },
+  })
+}
+
 // Client para middleware
 export function createMiddlewareSupabase(req: NextRequest, res: NextResponse) {
   return createServerClient(url, anon, {

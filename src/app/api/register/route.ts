@@ -23,7 +23,10 @@ export async function POST(req: NextRequest) {
   // Crear tenant
   const { data: tenant, error: tenantErr } = await supabaseAdmin
     .from('tenants').insert({ slug, status: 'trial' }).select().single()
-  if (tenantErr || !tenant) return NextResponse.json({ error: 'Failed to create restaurant' }, { status: 500 })
+  if (tenantErr || !tenant) {
+    console.error('[register] tenant insert failed:', tenantErr)
+    return NextResponse.json({ error: tenantErr?.message || 'Failed to create restaurant' }, { status: 500 })
+  }
 
   // Crear settings
   await supabaseAdmin.from('tenant_settings').insert({ tenant_id: tenant.id, name, notification_email: user.email! })
