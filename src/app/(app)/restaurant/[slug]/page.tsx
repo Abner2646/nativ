@@ -4,9 +4,10 @@ import { getTenantBySlug } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 
-export default async function RestaurantDashboard({ params }: { params: { slug: string } }) {
+export default async function RestaurantDashboard({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const user = await requireUser()
-  const access = await getTenantBySlug(params.slug, user.id)
+  const access = await getTenantBySlug(slug, user.id)
   if (!access) return notFound()
 
   const { tenant } = access
@@ -33,21 +34,21 @@ export default async function RestaurantDashboard({ params }: { params: { slug: 
       <aside className="w-64 border-r border-gray-800 flex flex-col fixed h-screen">
         <div className="p-6 border-b border-gray-800">
           <a href="/dashboard" className="text-xs text-gray-500 hover:text-gray-300 transition block mb-3">← All restaurants</a>
-          <p className="font-bold text-white truncate">{settings?.name || params.slug}</p>
-          <p className="text-xs text-gray-500 mt-1">{params.slug}.nativ.com</p>
+          <p className="font-bold text-white truncate">{settings?.name || slug}</p>
+          <p className="text-xs text-gray-500 mt-1">{slug}.nativ.com</p>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {[
-            { href: `/restaurant/${params.slug}`, label: 'Dashboard' },
-            { href: `/restaurant/${params.slug}/reservations`, label: 'Reservations' },
-            { href: `/restaurant/${params.slug}/guests`, label: 'Guests' },
-            { href: `/restaurant/${params.slug}/campaigns`, label: 'AI Campaigns' },
-            { href: `/restaurant/${params.slug}/shifts`, label: 'Shifts' },
-            { href: `/restaurant/${params.slug}/areas`, label: 'Seating Areas' },
-            { href: `/restaurant/${params.slug}/events`, label: 'Special Events' },
-            { href: `/restaurant/${params.slug}/employees`, label: 'Employees' },
-            { href: `/restaurant/${params.slug}/referrals`, label: 'Referrals' },
-            { href: `/restaurant/${params.slug}/settings`, label: 'Settings' },
+            { href: `/restaurant/${slug}`, label: 'Dashboard' },
+            { href: `/restaurant/${slug}/reservations`, label: 'Reservations' },
+            { href: `/restaurant/${slug}/guests`, label: 'Guests' },
+            { href: `/restaurant/${slug}/campaigns`, label: 'AI Campaigns' },
+            { href: `/restaurant/${slug}/shifts`, label: 'Shifts' },
+            { href: `/restaurant/${slug}/areas`, label: 'Seating Areas' },
+            { href: `/restaurant/${slug}/events`, label: 'Special Events' },
+            { href: `/restaurant/${slug}/employees`, label: 'Employees' },
+            { href: `/restaurant/${slug}/referrals`, label: 'Referrals' },
+            { href: `/restaurant/${slug}/settings`, label: 'Settings' },
           ].map(l => (
             <a key={l.href} href={l.href}
               className="block px-4 py-2.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition">
@@ -56,7 +57,7 @@ export default async function RestaurantDashboard({ params }: { params: { slug: 
           ))}
         </nav>
         <div className="p-4 border-t border-gray-800">
-          <a href={`https://${params.slug}.nativ.com`} target="_blank" rel="noopener noreferrer"
+          <a href={`https://${slug}.nativ.com`} target="_blank" rel="noopener noreferrer"
             className="block px-4 py-2.5 rounded-lg text-sm text-gray-500 hover:text-white hover:bg-gray-800 transition">
             View public page ↗
           </a>
@@ -101,7 +102,7 @@ export default async function RestaurantDashboard({ params }: { params: { slug: 
                 {pendingCampaigns.count} campaign{(pendingCampaigns.count ?? 0) > 1 ? 's' : ''} waiting for your approval.
               </p>
             </div>
-            <a href={`/restaurant/${params.slug}/campaigns`}
+            <a href={`/restaurant/${slug}/campaigns`}
               className="bg-yellow-500 text-black font-semibold px-4 py-2 rounded-lg text-sm hover:bg-yellow-400 transition">
               Review
             </a>
