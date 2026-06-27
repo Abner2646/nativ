@@ -7,7 +7,7 @@ import { TenantSettings, TenantPhoto } from '@/lib/types'
 async function RestaurantPage({ slug }: { slug: string }) {
   const { data: tenant } = await supabaseAdmin
     .from('tenants')
-    .select('id, slug, tenant_settings(*), tenant_photos(*)')
+    .select('id, slug')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -19,8 +19,10 @@ async function RestaurantPage({ slug }: { slug: string }) {
     )
   }
 
-  const settings = (tenant.tenant_settings as unknown as TenantSettings[])?.[0]
-  const photos = (tenant.tenant_photos as unknown as TenantPhoto[]) || []
+  const [{ data: settings }, { data: photos }] = await Promise.all([
+    supabaseAdmin.from('tenant_settings').select('*').eq('tenant_id', tenant.id).maybeSingle(),
+    supabaseAdmin.from('tenant_photos').select('*').eq('tenant_id', tenant.id).order('position'),
+  ])
 
   if (!settings) {
     return (
@@ -30,67 +32,70 @@ async function RestaurantPage({ slug }: { slug: string }) {
     )
   }
 
+  const s = settings as TenantSettings
+  const photoList = (photos as TenantPhoto[]) || []
+
   const isDev = process.env.NODE_ENV === 'development'
   const reserveUrl = isDev ? `/reserve?tenant=${slug}` : `/reserve`
-  const bg = settings.background_color || '#0a0a0a'
-  const primary = settings.primary_color || '#ffffff'
+  const bg = s.background_color || '#0a0a0a'
+  const primary = s.primary_color || '#ffffff'
 
   const socialLinks = [
-    { label: 'Instagram', url: settings.instagram_url },
-    { label: 'Facebook', url: settings.facebook_url },
-    { label: 'TripAdvisor', url: settings.tripadvisor_url },
-    { label: 'Yelp', url: settings.yelp_url },
-  ].filter(s => s.url)
+    { label: 'Instagram', url: s.instagram_url },
+    { label: 'Facebook', url: s.facebook_url },
+    { label: 'TripAdvisor', url: s.tripadvisor_url },
+    { label: 'Yelp', url: s.yelp_url },
+  ].filter(l => l.url)
 
   return (
-    <main style={{ backgroundColor: bg, fontFamily: settings.font_family || 'sans-serif' }} className="min-h-screen text-white">
+    <main style={{ backgroundColor: bg, fontFamily: s.font_family || 'sans-serif' }} className="min-h-screen text-white">
       <section className="relative">
-        {settings.logo_url ? (
+        {s.logo_url ? (
           <div className="w-full h-64 sm:h-96 overflow-hidden">
-            <img src={settings.logo_url} alt={settings.name} className="w-full h-full object-cover" />
+            <img src={s.logo_url} alt={s.name} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70" />
           </div>
         ) : (
           <div className="w-full h-48" style={{ background: `linear-gradient(135deg, ${primary}22, ${bg})` }} />
         )}
         <div className="relative max-w-3xl mx-auto px-6 py-12">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4" style={{ color: primary }}>{settings.name}</h1>
-          {settings.description && <p className="text-lg text-gray-300 mb-8 max-w-xl">{settings.description}</p>}
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4" style={{ color: primary }}>{s.name}</h1>
+          {s.description && <p className="text-lg text-gray-300 mb-8 max-w-xl">{s.description}</p>}
           <a href={reserveUrl} className="inline-block font-semibold px-8 py-4 rounded-lg text-black transition hover:opacity-90" style={{ backgroundColor: primary }}>
             Reserve a table
           </a>
         </div>
       </section>
 
-      {(settings.address || settings.phone || settings.hours_text) && (
+      {(s.address || s.phone || s.hours_text) && (
         <section className="max-w-3xl mx-auto px-6 py-10 border-t border-white/10">
           <div className="grid sm:grid-cols-3 gap-8">
-            {settings.address && (
+            {s.address && (
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Address</p>
-                <p className="text-sm text-gray-300">{settings.address}</p>
+                <p className="text-sm text-gray-300">{s.address}</p>
               </div>
             )}
-            {settings.phone && (
+            {s.phone && (
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Phone</p>
-                <a href={`tel:${settings.phone}`} className="text-sm text-gray-300 hover:text-white transition">{settings.phone}</a>
+                <a href={`tel:${s.phone}`} className="text-sm text-gray-300 hover:text-white transition">{s.phone}</a>
               </div>
             )}
-            {settings.hours_text && (
+            {s.hours_text && (
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Hours</p>
-                <p className="text-sm text-gray-300 whitespace-pre-line">{settings.hours_text}</p>
+                <p className="text-sm text-gray-300 whitespace-pre-line">{s.hours_text}</p>
               </div>
             )}
           </div>
         </section>
       )}
 
-      {photos.length > 0 && (
+      {photoList.length > 0 && (
         <section className="max-w-3xl mx-auto px-6 py-10 border-t border-white/10">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {photos.map(photo => (
+            {photoList.map(photo => (
               <div key={photo.id} className="aspect-square rounded-xl overflow-hidden">
                 <img src={photo.url} alt="" className="w-full h-full object-cover" />
               </div>
@@ -102,8 +107,8 @@ async function RestaurantPage({ slug }: { slug: string }) {
       <footer className="max-w-3xl mx-auto px-6 py-10 border-t border-white/10">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex gap-4 flex-wrap">
-            {socialLinks.map(s => (
-              <a key={s.label} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-white transition">{s.label}</a>
+            {socialLinks.map(l => (
+              <a key={l.label} href={l.url!} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-white transition">{l.label}</a>
             ))}
           </div>
           <a href={reserveUrl} className="text-sm font-semibold px-5 py-2.5 rounded-lg text-black transition hover:opacity-90" style={{ backgroundColor: primary }}>
