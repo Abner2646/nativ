@@ -1,33 +1,44 @@
 'use client'
-// src/app/(marketing)/register/page.tsx
 import { useState } from 'react'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 
 const supabase = getBrowserSupabase()
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState('')
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
+  const [name, setName]         = useState('')
+  const [refCode, setRefCode]   = useState(() => {
+    if (typeof window !== 'undefined') {
+      // Accept ?ref= from a shared referral link
+      return new URLSearchParams(window.location.search).get('ref') || ''
+    }
+    return ''
+  })
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [sent, setSent] = useState(false)
+  const [error, setError]     = useState('')
+  const [sent, setSent]       = useState(false)
 
   const handleRegister = async () => {
     if (password.length < 6) { setError('Password must be at least 6 characters'); return }
     setLoading(true); setError('')
     const { error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding` }
+      options: {
+        data: { full_name: name, ref_code: refCode.trim() || null },
+        emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
+      },
     })
     if (error) { setError(error.message); setLoading(false); return }
     setSent(true)
   }
 
   const handleGoogle = async () => {
+    // Persist ref code across OAuth redirect (browser leaves and returns)
+    if (refCode.trim()) localStorage.setItem('nativ_pending_ref', refCode.trim())
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding` }
+      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding` },
     })
   }
 
@@ -37,7 +48,9 @@ export default function RegisterPage() {
         <div className="max-w-sm text-center">
           <div className="text-4xl mb-4">✉️</div>
           <h1 className="text-2xl font-bold mb-3">Check your email</h1>
-          <p className="text-gray-400">We sent a confirmation link to <strong className="text-white">{email}</strong>. Click it to activate your account.</p>
+          <p className="text-gray-400">
+            We sent a confirmation link to <strong className="text-white">{email}</strong>. Click it to activate your account.
+          </p>
         </div>
       </main>
     )
@@ -74,6 +87,21 @@ export default function RegisterPage() {
             className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gray-400" />
           <input type="password" placeholder="Password (min. 6 characters)" value={password} onChange={e => setPassword(e.target.value)}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gray-400" />
+
+          {/* Referral code */}
+          <div>
+            <input
+              type="text"
+              placeholder="Referral code (optional)"
+              value={refCode}
+              onChange={e => setRefCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              maxLength={6}
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gray-400 font-mono tracking-widest"
+            />
+            {refCode.length === 6 && (
+              <p className="text-green-400 text-xs mt-1 pl-1">Code applied — 50% off for 3 months ✓</p>
+            )}
+          </div>
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
 

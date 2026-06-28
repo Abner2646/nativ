@@ -20,7 +20,12 @@ export default function OnboardingPage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { window.location.href = '/login'; return }
 
-    const res = await fetch('/api/register', {
+    // Recover referral code saved before Google OAuth redirect
+    const pendingRef = localStorage.getItem('nativ_pending_ref') || ''
+    localStorage.removeItem('nativ_pending_ref')
+    const refParam = pendingRef ? `?ref=${encodeURIComponent(pendingRef)}` : ''
+
+    const res = await fetch(`/api/register${refParam}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
       body: JSON.stringify({ name, slug })

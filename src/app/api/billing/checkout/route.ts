@@ -28,10 +28,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Admin only' }, { status: 403 })
   }
 
+  // If this tenant was referred, include their discount coupon in the checkout session
+  const { data: referral } = await supabaseAdmin
+    .from('referrals')
+    .select('referred_coupon_id')
+    .eq('referred_tenant_id', ctx.tenant.id)
+    .maybeSingle()
+
   const session = await createCheckoutSession(
     ctx.tenant.id,
     ctx.tenant.slug,
-    ctx.tenant.stripe_customer_id
+    ctx.tenant.stripe_customer_id,
+    referral?.referred_coupon_id ?? undefined
   )
   return NextResponse.json({ url: session.url })
 }

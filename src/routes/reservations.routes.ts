@@ -4,8 +4,13 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { resolveTenantFromRequest } from '@/lib/tenant'
 import { sendConfirmationEmail, sendOwnerNotification, sendCancellationEmail } from '@/lib/email'
 import { sendConfirmationSMS } from '@/lib/sms'
+import { reservationLimiter, checkRateLimit } from '@/lib/ratelimit'
 
 export async function createReservation(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
+  const { limited, headers } = await checkRateLimit(reservationLimiter, ip)
+  if (limited) return NextResponse.json({ error: 'Too many requests' }, { status: 429, headers })
+
   const ctx = await resolveTenantFromRequest(req)
   if (!ctx) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
 

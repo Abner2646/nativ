@@ -1,8 +1,37 @@
 import { headers } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase'
 import { TenantSettings, TenantPhoto } from '@/lib/types'
+import { ReservationPanel } from '@/components/public/ReservationPanel'
+import Image from 'next/image'
+
+// Returns a Google Fonts URL for the restaurant's selected font (excluding Inter,
+// which is already loaded in the root layout).
+const GOOGLE_FONTS = new Set([
+  'Poppins','Montserrat','Raleway','Nunito','Lato',
+  'Merriweather','Playfair Display','Lora','EB Garamond','Cormorant Garamond','Libre Baskerville',
+])
+function restaurantFontUrl(fontFamily: string): string | null {
+  const name = fontFamily.replace(/['"]/g, '').split(',')[0].trim()
+  if (!GOOGLE_FONTS.has(name)) return null
+  return `https://fonts.googleapis.com/css2?family=${name.replace(/ /g, '+')}:wght@400;600;700&display=swap`
+}
 
 // ─── Public restaurant page (tenant subdomain / ?tenant= param) ───────────────
+
+const R = {
+  bg:      '#111015',
+  surface: '#1c1a22',
+  border:  'rgba(255,255,255,0.07)',
+  text:    '#F2EFE9',
+  muted:   'rgba(242,239,233,0.42)',
+  faint:   'rgba(242,239,233,0.2)',
+}
+
+function safeAccent(raw: string | null | undefined): string {
+  const bad = new Set(['#ffffff', '#fff', '#FFFFFF', '#FFF', '#000000', '#000', '#000000'])
+  const v = (raw || '').trim()
+  return bad.has(v) || !v ? '#C9A96E' : v
+}
 
 async function RestaurantPage({ slug }: { slug: string }) {
   const { data: tenant } = await supabaseAdmin
@@ -13,8 +42,8 @@ async function RestaurantPage({ slug }: { slug: string }) {
 
   if (!tenant) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-gray-400">Restaurant not found.</p>
+      <main style={{ minHeight: '100vh', backgroundColor: R.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: R.muted, fontFamily: 'Inter, sans-serif' }}>Restaurant not found.</p>
       </main>
     )
   }
@@ -26,96 +55,281 @@ async function RestaurantPage({ slug }: { slug: string }) {
 
   if (!settings) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-gray-400">Restaurant coming soon.</p>
+      <main style={{ minHeight: '100vh', backgroundColor: R.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: R.muted, fontFamily: 'Inter, sans-serif' }}>Restaurant coming soon.</p>
       </main>
     )
   }
 
-  const s = settings as TenantSettings
+  const s         = settings as TenantSettings
   const photoList = (photos as TenantPhoto[]) || []
+  const accent    = safeAccent(s.primary_color)
+  const font      = s.font_family || "'Inter', sans-serif"
+  const fontUrl   = restaurantFontUrl(font)
 
-  const isDev = process.env.NODE_ENV === 'development'
-  const reserveUrl = isDev ? `/reserve?tenant=${slug}` : `/reserve`
-  const bg = s.background_color || '#0a0a0a'
-  const primary = s.primary_color || '#ffffff'
+  // Pre-fetch calendar data for the reservation panel
+  const threeMonthsOut = new Date()
+  threeMonthsOut.setMonth(threeMonthsOut.getMonth() + 3)
+  const [{ data: shiftsData }, { data: blockedDatesData }] = await Promise.all([
+    supabaseAdmin.from('shifts').select('day_of_week').eq('tenant_id', tenant.id).eq('is_active', true),
+    supabaseAdmin.from('blocked_dates').select('date')
+      .eq('tenant_id', tenant.id)
+      .gte('date', new Date().toISOString().split('T')[0])
+      .lte('date', threeMonthsOut.toISOString().split('T')[0]),
+  ])
+  const availableDaysOfWeek = [...new Set((shiftsData || []).map((s: { day_of_week: number }) => s.day_of_week))]
+  const blockedDates = (blockedDatesData || []).map((b: { date: string }) => b.date)
 
   const socialLinks = [
-    { label: 'Instagram', url: s.instagram_url },
-    { label: 'Facebook', url: s.facebook_url },
+    { label: 'Instagram',   url: s.instagram_url },
+    { label: 'Facebook',    url: s.facebook_url },
     { label: 'TripAdvisor', url: s.tripadvisor_url },
-    { label: 'Yelp', url: s.yelp_url },
+    { label: 'Yelp',        url: s.yelp_url },
   ].filter(l => l.url)
 
+  const hasInfo = !!(s.address || s.phone || s.hours_text)
+
+  // Hero: first photo (wide), rest are the gallery
+  const [heroPhoto, ...galleryPhotos] = photoList
+
   return (
-    <main style={{ backgroundColor: bg, fontFamily: s.font_family || 'sans-serif' }} className="min-h-screen text-white">
-      <section className="relative">
-        {s.logo_url ? (
-          <div className="w-full h-64 sm:h-96 overflow-hidden">
-            <img src={s.logo_url} alt={s.name} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70" />
-          </div>
-        ) : (
-          <div className="w-full h-48" style={{ background: `linear-gradient(135deg, ${primary}22, ${bg})` }} />
-        )}
-        <div className="relative max-w-3xl mx-auto px-6 py-12">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4" style={{ color: primary }}>{s.name}</h1>
-          {s.description && <p className="text-lg text-gray-300 mb-8 max-w-xl">{s.description}</p>}
-          <a href={reserveUrl} className="inline-block font-semibold px-8 py-4 rounded-lg text-black transition hover:opacity-90" style={{ backgroundColor: primary }}>
-            Reserve a table
-          </a>
+    <main style={{ backgroundColor: R.bg, color: R.text, minHeight: '100vh', fontFamily: font }}>
+      {fontUrl && <link rel="stylesheet" href={fontUrl} />}
+
+      {/* ── Sticky nav ────────────────────────────────────────────────── */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 50,
+        backgroundColor: `${R.bg}e0`,
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        borderBottom: `1px solid ${R.border}`,
+        padding: '0 1.5rem',
+        height: '3.75rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: '1rem',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', overflow: 'hidden' }}>
+          {s.logo_url && (
+            <div style={{ position: 'relative', height: '2rem', width: '3.5rem', flexShrink: 0, borderRadius: '0.3125rem', overflow: 'hidden' }}>
+              <Image src={s.logo_url} alt="" fill style={{ objectFit: 'contain' }} sizes="56px" />
+            </div>
+          )}
+          <span style={{
+            fontWeight: 700,
+            fontSize: '1rem',
+            letterSpacing: '-0.02em',
+            color: R.text,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}>
+            {s.name}
+          </span>
         </div>
-      </section>
+        {/* Scrolls to the reservation panel on the page */}
+        <a
+          href="#reserve-panel"
+          style={{
+            backgroundColor: accent,
+            color: '#0F1015',
+            fontWeight: 700,
+            fontSize: '0.8125rem',
+            padding: '0.5rem 1.125rem',
+            borderRadius: '0.5rem',
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          Reserve
+        </a>
+      </nav>
 
-      {(s.address || s.phone || s.hours_text) && (
-        <section className="max-w-3xl mx-auto px-6 py-10 border-t border-white/10">
-          <div className="grid sm:grid-cols-3 gap-8">
-            {s.address && (
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Address</p>
-                <p className="text-sm text-gray-300">{s.address}</p>
-              </div>
-            )}
-            {s.phone && (
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Phone</p>
-                <a href={`tel:${s.phone}`} className="text-sm text-gray-300 hover:text-white transition">{s.phone}</a>
-              </div>
-            )}
-            {s.hours_text && (
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Hours</p>
-                <p className="text-sm text-gray-300 whitespace-pre-line">{s.hours_text}</p>
-              </div>
-            )}
-          </div>
-        </section>
+      {/* ── Hero photo ────────────────────────────────────────────────── */}
+      {heroPhoto ? (
+        <div style={{ width: '100%', aspectRatio: '21/8', overflow: 'hidden', maxHeight: '28rem', position: 'relative' }}>
+          <Image
+            src={heroPhoto.url}
+            alt=""
+            fill
+            style={{ objectFit: 'cover' }}
+            priority
+            sizes="100vw"
+          />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to bottom, transparent 40%, rgba(17,16,21,0.9) 100%)',
+          }} />
+        </div>
+      ) : (
+        <div style={{
+          width: '100%', height: '10rem',
+          background: `linear-gradient(135deg, ${R.surface} 0%, ${R.bg} 100%)`,
+          borderBottom: `1px solid ${R.border}`,
+        }} />
       )}
 
-      {photoList.length > 0 && (
-        <section className="max-w-3xl mx-auto px-6 py-10 border-t border-white/10">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {photoList.map(photo => (
-              <div key={photo.id} className="aspect-square rounded-xl overflow-hidden">
-                <img src={photo.url} alt="" className="w-full h-full object-cover" />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ── Main two-column area ──────────────────────────────────────── */}
+      {/*
+          Desktop: left column (restaurant info) + right column (sticky reservation panel)
+          Mobile:  single column, panel appears above the info
+          Using Tailwind for the responsive split since inline styles can't do media queries.
+      */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
 
-      <footer className="max-w-3xl mx-auto px-6 py-10 border-t border-white/10">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex gap-4 flex-wrap">
+        {/* ── Right: Reservation panel (first in DOM for mobile focus) ── */}
+        <aside className="w-full lg:w-80 xl:w-96 shrink-0 order-first lg:order-last lg:sticky lg:top-20">
+          <ReservationPanel
+            slug={slug}
+            accent={accent}
+            fontFamily={font}
+            availableDaysOfWeek={availableDaysOfWeek}
+            blockedDates={blockedDates}
+          />
+        </aside>
+
+        {/* ── Left: Restaurant content ─────────────────────────────────── */}
+        <div className="flex-1 min-w-0">
+
+          {/* Restaurant name + meta */}
+          <div style={{ marginBottom: '2rem' }}>
+            {s.logo_url && !heroPhoto && (
+              <div style={{ position: 'relative', height: '3.5rem', width: '10rem', borderRadius: '0.625rem', overflow: 'hidden', marginBottom: '1.25rem' }}>
+                <Image src={s.logo_url} alt={s.name} fill style={{ objectFit: 'contain', objectPosition: 'left center' }} sizes="160px" />
+              </div>
+            )}
+            <h1 style={{
+              fontWeight: 700,
+              fontSize: 'clamp(2rem, 5vw, 3.25rem)',
+              lineHeight: 1.05,
+              letterSpacing: '-0.03em',
+              color: R.text,
+              marginBottom: '0.75rem',
+            }}>
+              {s.name}
+            </h1>
+            {s.description && (
+              <p style={{
+                fontSize: '1.0625rem',
+                color: R.muted,
+                lineHeight: 1.7,
+                maxWidth: '38rem',
+              }}>
+                {s.description}
+              </p>
+            )}
+          </div>
+
+          {/* Info: address, phone, hours */}
+          {hasInfo && (
+            <div style={{
+              borderTop: `1px solid ${R.border}`,
+              paddingTop: '1.75rem',
+              marginBottom: '2rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(8rem, 1fr))',
+              gap: '1.5rem 2rem',
+            }}>
+              {s.address && (
+                <div>
+                  <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                    Address
+                  </p>
+                  <p style={{ color: R.text, fontSize: '0.9375rem', lineHeight: 1.6 }}>{s.address}</p>
+                </div>
+              )}
+              {s.phone && (
+                <div>
+                  <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                    Phone
+                  </p>
+                  <a href={`tel:${s.phone}`} style={{ color: R.text, fontSize: '0.9375rem', textDecoration: 'none' }}>
+                    {s.phone}
+                  </a>
+                </div>
+              )}
+              {s.hours_text && (
+                <div>
+                  <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                    Hours
+                  </p>
+                  <p style={{ color: R.text, fontSize: '0.9375rem', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{s.hours_text}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Photo gallery (remaining photos after the hero) */}
+          {galleryPhotos.length > 0 && (
+            <div style={{ borderTop: `1px solid ${R.border}`, paddingTop: '1.75rem' }}>
+              <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '1rem' }}>
+                Photos
+              </p>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                gap: '0.5rem',
+              }}>
+                {galleryPhotos.map(photo => (
+                  <div
+                    key={photo.id}
+                    style={{ aspectRatio: '4/3', borderRadius: '0.625rem', overflow: 'hidden', backgroundColor: R.surface, position: 'relative' }}
+                  >
+                    <Image src={photo.url} alt="" fill style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 50vw, 200px" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* If no hero photo but has a logo, show gallery including first photo */}
+          {!heroPhoto && photoList.length > 0 && (
+            <div style={{ borderTop: `1px solid ${R.border}`, paddingTop: '1.75rem' }}>
+              <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '1rem' }}>
+                Photos
+              </p>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                gap: '0.5rem',
+              }}>
+                {photoList.map(photo => (
+                  <div
+                    key={photo.id}
+                    style={{ aspectRatio: '4/3', borderRadius: '0.625rem', overflow: 'hidden', backgroundColor: R.surface, position: 'relative' }}
+                  >
+                    <Image src={photo.url} alt="" fill style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 50vw, 200px" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Footer ────────────────────────────────────────────────────── */}
+      <footer style={{ borderTop: `1px solid ${R.border}`, padding: '1.5rem 1.5rem' }}>
+        <div style={{
+          maxWidth: '72rem', margin: '0 auto',
+          display: 'flex', flexWrap: 'wrap',
+          alignItems: 'center', justifyContent: 'space-between',
+          gap: '1rem',
+        }}>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
             {socialLinks.map(l => (
-              <a key={l.label} href={l.url!} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-white transition">{l.label}</a>
+              <a
+                key={l.label}
+                href={l.url!}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: R.faint, fontSize: '0.875rem', textDecoration: 'none' }}
+              >
+                {l.label}
+              </a>
             ))}
           </div>
-          <a href={reserveUrl} className="text-sm font-semibold px-5 py-2.5 rounded-lg text-black transition hover:opacity-90" style={{ backgroundColor: primary }}>
-            Reserve now
-          </a>
+          <p style={{ color: R.faint, fontSize: '0.75rem' }}>Powered by Nativ</p>
         </div>
-        <p className="text-xs text-gray-700 mt-6">Powered by Nativ</p>
       </footer>
     </main>
   )

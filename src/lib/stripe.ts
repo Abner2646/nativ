@@ -54,10 +54,17 @@ export async function createReferralCoupon() {
   return coupon.id
 }
 
+export async function applyDiscountToSubscription(subscriptionId: string, couponId: string) {
+  return stripe.subscriptions.update(subscriptionId, {
+    discounts: [{ coupon: couponId }],
+  })
+}
+
 export async function createCheckoutSession(
   tenantId: string,
   slug: string,
-  customerId?: string | null
+  customerId?: string | null,
+  couponId?: string
 ) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
   return stripe.checkout.sessions.create({
@@ -68,6 +75,7 @@ export async function createCheckoutSession(
     metadata: { tenant_id: tenantId },
     subscription_data: { metadata: { tenant_id: tenantId } },
     ...(customerId ? { customer: customerId } : {}),
+    ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
   })
 }
 

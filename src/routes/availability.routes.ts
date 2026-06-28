@@ -2,8 +2,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { resolveTenantFromRequest } from '@/lib/tenant'
+import { availabilityLimiter, checkRateLimit } from '@/lib/ratelimit'
 
 export async function getAvailability(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
+  const { limited, headers } = await checkRateLimit(availabilityLimiter, ip)
+  if (limited) return NextResponse.json({ error: 'Too many requests' }, { status: 429, headers })
+
   const ctx = await resolveTenantFromRequest(req)
   if (!ctx) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
 

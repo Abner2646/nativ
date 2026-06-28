@@ -20,11 +20,30 @@ export async function POST(req: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session
     const tenantId = session.metadata?.tenant_id
     if (tenantId && session.subscription) {
+      const subscriptionId = session.subscription as string
+
       await supabaseAdmin.from('tenants').update({
         stripe_customer_id: session.customer as string,
-        stripe_subscription_id: session.subscription as string,
+        stripe_subscription_id: subscriptionId,
         status: 'active',
       }).eq('id', tenantId)
+
+      // If this tenant referred others while still in trial, apply their referrer coupon now.
+      // (If they were already subscribed when the referral happened, it was applied in /api/register.)
+      const { data: pendingReferral } = await supabaseAdmin
+        .from('referrals')
+        .select('referrer_coupon_id')
+        .eq('referrer_tenant_id', tenantId)
+        .not('referrer_coupon_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (pendingReferral?.referrer_coupon_id) {
+        await stripe.subscriptions.update(subscriptionId, {
+          discounts: [{ coupon: pendingReferral.referrer_coupon_id }],
+        }).catch(e => console.error('[webhook] referrer coupon apply failed:', e))
+      }
     }
   }
 
