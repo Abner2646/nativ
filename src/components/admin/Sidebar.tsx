@@ -6,10 +6,10 @@ const SECTIONS = (slug: string) => [
   {
     label: 'My restaurant',
     items: [
-      { href: `/restaurant/${slug}`,              label: 'Dashboard',    exact: true },
+      { href: `/restaurant/${slug}`,              label: 'Dashboard',     exact: true },
       { href: `/restaurant/${slug}/reservations`, label: 'Reservations' },
       { href: `/restaurant/${slug}/guests`,       label: 'Guests' },
-      { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns' },
+      { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',  comingSoon: true },
     ],
   },
   {
@@ -59,6 +59,19 @@ export function Sidebar({ slug, name }: { slug: string; name: string }) {
               {section.label}
             </p>
             {section.items.map(item => {
+              if (item.comingSoon) {
+                return (
+                  <span
+                    key={item.href}
+                    className="flex items-center justify-between mx-2 px-3 py-2 rounded-md text-sm text-gray-600 cursor-default select-none"
+                  >
+                    {item.label}
+                    <span className="text-[9px] font-semibold uppercase tracking-widest bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded">
+                      Soon
+                    </span>
+                  </span>
+                )
+              }
               const active = item.exact
                 ? pathname === item.href
                 : pathname.startsWith(item.href)

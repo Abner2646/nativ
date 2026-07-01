@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -191,15 +191,22 @@ function CalendarPicker({ value, min, availableDaysOfWeek, blockedDates, accent,
 
 // ─── ReservationPanel ─────────────────────────────────────────────────────────
 
+function normalizeWebsiteUrl(raw: string): string {
+  const v = raw.trim()
+  if (!v) return ''
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`
+}
+
 interface Props {
   slug: string
   accent: string
   fontFamily: string
   availableDaysOfWeek: number[]
   blockedDates: string[]
+  websiteUrl?: string | null
 }
 
-export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek, blockedDates }: Props) {
+export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek, blockedDates, websiteUrl }: Props) {
   const [step, setStep] = useState<Step>('search')
 
   const [date, setDate] = useState(tomorrowStr())
@@ -218,6 +225,25 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [confirmationRef, setConfirmationRef] = useState('')
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null)
+
+  const targetUrl = websiteUrl ? normalizeWebsiteUrl(websiteUrl) : null
+
+  useEffect(() => {
+    if (step !== 'success' || !targetUrl) return
+    setRedirectCountdown(5)
+    const interval = setInterval(() => {
+      setRedirectCountdown(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval)
+          window.location.href = targetUrl
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [step, targetUrl])
 
   const C = {
     bg:          '#1c1a22',
@@ -584,6 +610,11 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
           <p style={{ color: C.faint, fontSize: '0.8125rem', marginBottom: '1.5rem' }}>
             Check your email for details and the cancellation link.
           </p>
+          {redirectCountdown !== null && targetUrl && (
+            <p style={{ color: C.faint, fontSize: '0.75rem', marginBottom: '1rem' }}>
+              Redirecting to the restaurant&apos;s website in {redirectCountdown}s…
+            </p>
+          )}
           <button type="button" onClick={reset}
             style={{ color: C.muted, fontSize: '0.8125rem', background: 'none', border: 'none', cursor: 'pointer', fontFamily }}>
             Make another reservation →

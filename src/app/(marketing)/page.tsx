@@ -186,6 +186,7 @@ async function RestaurantPage({ slug }: { slug: string }) {
             fontFamily={font}
             availableDaysOfWeek={availableDaysOfWeek}
             blockedDates={blockedDates}
+            websiteUrl={settings.website_url ?? null}
           />
         </aside>
 

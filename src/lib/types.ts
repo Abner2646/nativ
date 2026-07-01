@@ -55,6 +55,7 @@ export interface TenantSettings {
   min_advance_hours: number
   stripe_account_id: string | null
   ai_enabled: boolean
+  website_url: string | null
 }
 
 export interface TenantPhoto {

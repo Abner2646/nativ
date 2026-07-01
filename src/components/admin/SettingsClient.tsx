@@ -152,6 +152,21 @@ export function SettingsClient({ settings: initial, slug }: Props) {
             className={inputClass}
           />
         </div>
+        <div>
+          <Label>Restaurant website</Label>
+          <input
+            type="text"
+            value={form.website_url || ''}
+            onChange={e => set('website_url', e.target.value)}
+            onBlur={e => {
+              const v = e.target.value.trim()
+              if (v && !/^https?:\/\//i.test(v)) set('website_url', `https://${v}`)
+            }}
+            placeholder="yourrestaurant.com"
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-600 mt-1">Guests are redirected here after booking.</p>
+        </div>
       </div>
 
       {/* ── Booking rules ─────────────────────────────────────── */}
