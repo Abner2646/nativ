@@ -1,4 +1,5 @@
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
 import { TenantSettings, TenantPhoto } from '@/lib/types'
 import { ReservationPanel } from '@/components/public/ReservationPanel'
@@ -692,8 +693,21 @@ function NativLanding() {
 
 // ─── Root page ────────────────────────────────────────────────────────────────
 
-export default async function Page() {
-  const headersList = await headers()
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string; next?: string }>
+}) {
+  const [sp, headersList] = await Promise.all([searchParams, headers()])
+
+  // Supabase sometimes sends the OAuth code to the Site URL instead of the
+  // configured redirectTo when the redirect URL is not in the allowlist.
+  // Catch it here and forward to the proper callback handler.
+  if (sp.code) {
+    const next = sp.next ? `&next=${encodeURIComponent(sp.next)}` : '&next=/dashboard'
+    redirect(`/api/auth/callback?code=${encodeURIComponent(sp.code)}${next}`)
+  }
+
   const tenantSlug = headersList.get('x-tenant-slug')
 
   if (tenantSlug) {
