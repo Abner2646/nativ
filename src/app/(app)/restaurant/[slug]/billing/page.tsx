@@ -16,11 +16,10 @@ export default async function BillingPage({
   const access = await getTenantBySlug(slug, user.id)
   if (!access) return notFound()
 
-  const { data: tenant } = await supabaseAdmin
-    .from('tenants')
-    .select('*')
-    .eq('id', access.tenant.id)
-    .single()
+  const [{ data: tenant }, { data: referral }] = await Promise.all([
+    supabaseAdmin.from('tenants').select('*').eq('id', access.tenant.id).single(),
+    supabaseAdmin.from('referrals').select('id').eq('referred_tenant_id', access.tenant.id).maybeSingle(),
+  ])
 
   if (!tenant) return notFound()
 
@@ -31,6 +30,7 @@ export default async function BillingPage({
         tenant={tenant as Tenant}
         slug={slug}
         success={sp.success === 'true'}
+        hasReferral={!!referral}
       />
     </div>
   )
