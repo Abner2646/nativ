@@ -31,6 +31,7 @@ const SECTIONS = (slug: string) => [
     label: 'Account',
     items: [
       { href: `/restaurant/${slug}/photos`,   label: 'Photos' },
+      { href: `/restaurant/${slug}/embed`,    label: 'Embed & share' },
       { href: `/restaurant/${slug}/billing`,  label: 'Billing' },
       { href: `/restaurant/${slug}/settings`, label: 'Settings' },
     ],
