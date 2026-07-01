@@ -1,0 +1,183 @@
+'use client'
+import { useState } from 'react'
+
+interface Referral {
+  id: string
+  referrer_tenant_id: string
+  referred_tenant_id: string
+  created_at: string
+  referrer_coupon_id: string | null
+  referred_coupon_id: string | null
+  referral_code_used: string | null
+  referrer: { slug: string; referral_code?: string } | null
+  referred: { slug: string } | null
+}
+
+interface Props {
+  initialReferrals: Referral[]
+  tenantSlug: string
+  tenantId: string
+  referralCode: string
+  appUrl: string
+  slug: string
+}
+
+export function ReferralsClient({ initialReferrals, tenantId, referralCode, appUrl }: Props) {
+  const [copied, setCopied] = useState(false)
+
+  const referred   = initialReferrals.filter(r => r.referrer_tenant_id === tenantId)
+  const referredBy = initialReferrals.find(r => r.referred_tenant_id === tenantId)
+
+  const shareText = `Use code ${referralCode} when signing up at ${appUrl}/register to get 50% off Nativ for your first 3 months.`
+  const registerUrl = `${appUrl}/register?ref=${referralCode}`
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(referralCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const shareCode = async () => {
+    if (navigator.share) {
+      await navigator.share({ title: 'Join Nativ', text: shareText, url: registerUrl }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(shareText)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  return (
+    <div className="max-w-2xl space-y-10">
+
+      {/* ── Your referral code ──────────────────────────────────── */}
+      <section>
+        <h2 className="text-xs text-gray-500 uppercase tracking-widest font-semibold pb-3 border-b border-gray-800 mb-4">
+          Your referral code
+        </h2>
+        <p className="text-sm text-gray-400 mb-5">
+          Share this code with other restaurant owners. When they sign up and subscribe, you both get <strong className="text-white">50% off for 3 months</strong>.
+        </p>
+
+        {/* Big code display */}
+        <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 mb-4 text-center">
+          <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Your code</p>
+          <p className="font-mono text-5xl font-bold text-white tracking-[0.2em] mb-5">
+            {referralCode || '···'}
+          </p>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={copyCode}
+              className="flex items-center gap-2 bg-white text-black font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-gray-100 transition"
+            >
+              {copied ? (
+                <><span>✓</span> Copied</>
+              ) : (
+                <><CopyIcon /> Copy code</>
+              )}
+            </button>
+            <button
+              onClick={shareCode}
+              className="flex items-center gap-2 bg-gray-800 text-white font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-gray-700 transition border border-gray-700"
+            >
+              <ShareIcon /> Share
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-600 text-center">
+          Recipients enter code <span className="font-mono text-gray-400">{referralCode}</span> at signup · <a href={registerUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 underline hover:text-white transition">{registerUrl}</a>
+        </p>
+      </section>
+
+      {/* ── Referred by ─────────────────────────────────────────── */}
+      {referredBy && (
+        <section>
+          <h2 className="text-xs text-gray-500 uppercase tracking-widest font-semibold pb-3 border-b border-gray-800 mb-4">
+            Referred by
+          </h2>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4">
+            <p className="text-sm text-white font-medium">{referredBy.referrer?.slug}.nativ.com</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Code used: <span className="font-mono text-gray-400">{referredBy.referral_code_used || referredBy.referrer?.referral_code || '—'}</span>
+              {' · '}Joined {new Date(referredBy.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </p>
+            {referredBy.referred_coupon_id && (
+              <p className="text-xs text-green-400 mt-2">✓ 50% discount applied for 3 months</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Restaurants you referred ──────────────────────────── */}
+      <section>
+        <h2 className="text-xs text-gray-500 uppercase tracking-widest font-semibold pb-3 border-b border-gray-800 mb-4">
+          Restaurants you referred ({referred.length})
+        </h2>
+        {referred.length === 0 ? (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-10 text-center">
+            <p className="text-sm text-gray-500">No referrals yet. Share your code to earn discounts!</p>
+          </div>
+        ) : (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-800">
+                  {['Restaurant', 'Joined', 'Discount'].map(h => (
+                    <th key={h} className="text-left text-xs text-gray-500 uppercase tracking-widest px-5 py-3 font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {referred.map(r => (
+                  <tr key={r.id} className="border-b border-gray-800/50 last:border-0">
+                    <td className="px-5 py-4 text-sm font-medium text-white">
+                      {r.referred?.slug}.nativ.com
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-400">
+                      {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td className="px-5 py-4">
+                      {r.referrer_coupon_id ? (
+                        <span className="text-xs bg-green-900/40 text-green-400 px-2 py-0.5 rounded-full">50% for 3 months</span>
+                      ) : (
+                        <span className="text-xs text-gray-600">Pending</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
+        <p className="text-sm text-gray-400">
+          <strong className="text-white">How it works:</strong> Share your 6-digit code. When a restaurant signs up using it and subscribes, you both receive 50% off for 3 months — applied automatically.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function CopyIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+    </svg>
+  )
+}
+
+function ShareIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+    </svg>
+  )
+}

@@ -1,12 +1,9 @@
 'use client'
 // src/app/(app)/onboarding/page.tsx
 import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { getBrowserSupabase } from '@/lib/supabase-browser'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabase = getBrowserSupabase()
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
@@ -23,7 +20,12 @@ export default function OnboardingPage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { window.location.href = '/login'; return }
 
-    const res = await fetch('/api/register', {
+    // Recover referral code saved before Google OAuth redirect
+    const pendingRef = localStorage.getItem('nativ_pending_ref') || ''
+    localStorage.removeItem('nativ_pending_ref')
+    const refParam = pendingRef ? `?ref=${encodeURIComponent(pendingRef)}` : ''
+
+    const res = await fetch(`/api/register${refParam}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
       body: JSON.stringify({ name, slug })

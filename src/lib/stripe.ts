@@ -2,7 +2,7 @@
 import Stripe from 'stripe'
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-02-24.acacia',
 })
 
 export async function createSubscription(customerId: string, couponId?: string) {
@@ -52,4 +52,37 @@ export async function createReferralCoupon() {
     duration_in_months: 3,
   })
   return coupon.id
+}
+
+export async function applyDiscountToSubscription(subscriptionId: string, couponId: string) {
+  return stripe.subscriptions.update(subscriptionId, {
+    discounts: [{ coupon: couponId }],
+  })
+}
+
+export async function createCheckoutSession(
+  tenantId: string,
+  slug: string,
+  customerId?: string | null,
+  couponId?: string
+) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  return stripe.checkout.sessions.create({
+    mode: 'subscription',
+    line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
+    success_url: `${appUrl}/restaurant/${slug}/billing?success=true`,
+    cancel_url: `${appUrl}/restaurant/${slug}/billing`,
+    metadata: { tenant_id: tenantId },
+    subscription_data: { metadata: { tenant_id: tenantId } },
+    ...(customerId ? { customer: customerId } : {}),
+    ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
+  })
+}
+
+export async function createBillingPortalSession(customerId: string, slug: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  return stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: `${appUrl}/restaurant/${slug}/billing`,
+  })
 }

@@ -1,18 +1,26 @@
 'use client'
 // src/app/(marketing)/login/page.tsx
-import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { useState, useEffect } from 'react'
+import { getBrowserSupabase } from '@/lib/supabase-browser'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabase = getBrowserSupabase()
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Handles hash-based tokens (implicit flow from old confirmation emails or OAuth)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        const params = new URLSearchParams(window.location.search)
+        window.location.href = params.get('redirect') || '/dashboard'
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   const handleLogin = async () => {
     setLoading(true); setError('')
