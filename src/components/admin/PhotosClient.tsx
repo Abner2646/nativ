@@ -72,19 +72,20 @@ export function PhotosClient({ slug, initialLogo, initialPhotos }: Props) {
         </div>
       )}
 
-      {section('Logo')}
+      {section('Isotipo')}
       <div className="flex items-start gap-6 mb-8">
-        <div className="w-24 h-24 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="w-20 h-20 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
           {logo ? (
-            <img src={logo} alt="Logo" className="w-full h-full object-cover" />
+            <img src={logo} alt="Isotipo" className="w-full h-full object-contain p-1" />
           ) : (
-            <span className="text-gray-700 text-xs text-center px-2">No logo</span>
+            <span className="text-gray-700 text-xs text-center px-2">No isotipo</span>
           )}
         </div>
         <div className="flex-1">
-          <p className="text-sm text-gray-400 mb-3">
-            Shown on your public page and emails. Recommended: square, at least 400×400px.
+          <p className="text-sm text-gray-400 mb-1">
+            Your brand symbol shown in the reservation widget. Must be <strong className="text-gray-300">square</strong> — ideally 1:1, at least 400×400 px.
           </p>
+          <p className="text-xs text-gray-600 mb-3">Not a wide logo — just the icon or emblem.</p>
           <input
             ref={logoRef}
             type="file"
@@ -97,7 +98,7 @@ export function PhotosClient({ slug, initialLogo, initialPhotos }: Props) {
             disabled={uploadingLogo}
             className="bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-700 transition disabled:opacity-40"
           >
-            {uploadingLogo ? 'Uploading…' : logo ? 'Replace logo' : 'Upload logo'}
+            {uploadingLogo ? 'Uploading…' : logo ? 'Replace isotipo' : 'Upload isotipo'}
           </button>
         </div>
       </div>
