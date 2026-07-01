@@ -38,9 +38,13 @@ export async function middleware(req: NextRequest) {
 
   // ── Mini-sitio público: slug.nativ.com ────────────────────────
   if (!isDev) {
-    const slug = host.split(`.${PROD_DOMAIN}`)[0]
-    if (slug && slug !== 'www' && slug !== 'app' && host !== PROD_DOMAIN) {
-      res.headers.set('x-tenant-slug', slug)
+    // Only treat as tenant subdomain when the host actually ends with .nativ.com
+    // (prevents Vercel preview URLs like nativ-xxx.vercel.app from matching)
+    if (host.endsWith(`.${PROD_DOMAIN}`)) {
+      const slug = host.slice(0, host.length - PROD_DOMAIN.length - 1)
+      if (slug && slug !== 'www' && slug !== 'app') {
+        res.headers.set('x-tenant-slug', slug)
+      }
     }
   } else {
     const tenantSlug = req.nextUrl.searchParams.get('tenant')
