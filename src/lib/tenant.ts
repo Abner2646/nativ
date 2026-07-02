@@ -6,16 +6,16 @@ import { getAppDomain } from '@/lib/domain'
 
 export function getTenantSlug(req: NextRequest): string | null {
   const host = req.headers.get('host') || ''
-  const isDev = host.includes('localhost')
+  const domain = getAppDomain()
 
-  if (isDev) {
-    return new URL(req.url).searchParams.get('tenant')
+  // Subdomain routing: only when a custom domain is configured and the host has it as suffix
+  if (domain && host.endsWith(`.${domain}`)) {
+    const slug = host.slice(0, host.length - domain.length - 1)
+    if (slug && slug !== 'www' && slug !== 'app') return slug
   }
 
-  const domain = getAppDomain()
-  const slug = host.split(`.${domain}`)[0]
-  if (!slug || slug === 'www' || slug === 'app' || host === domain) return null
-  return slug
+  // All other cases (localhost, Vercel preview URLs, staging without custom domain): ?tenant= param
+  return new URL(req.url).searchParams.get('tenant')
 }
 
 export async function resolveTenant(slug: string): Promise<TenantContext | null> {

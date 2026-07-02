@@ -35,18 +35,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
-  // ── Mini-sitio público: slug.yourdomain.com ──────────────────
-  if (!isDev) {
-    // Only treat as tenant subdomain when host ends with the configured app domain
-    // (prevents Vercel preview URLs like nativ-xxx.vercel.app from matching)
-    const appDomain = getAppDomain()
-    if (appDomain && host.endsWith(`.${appDomain}`)) {
-      const slug = host.slice(0, host.length - appDomain.length - 1)
-      if (slug && slug !== 'www' && slug !== 'app') {
-        res.headers.set('x-tenant-slug', slug)
-      }
+  // ── Mini-sitio público ───────────────────────────────────────
+  const appDomain = getAppDomain()
+  if (!isDev && appDomain && host.endsWith(`.${appDomain}`)) {
+    // Prod with custom domain: extract tenant from subdomain
+    const slug = host.slice(0, host.length - appDomain.length - 1)
+    if (slug && slug !== 'www' && slug !== 'app') {
+      res.headers.set('x-tenant-slug', slug)
     }
   } else {
+    // Dev, Vercel preview URLs, or staging without custom domain: ?tenant= param
     const tenantSlug = req.nextUrl.searchParams.get('tenant')
     if (tenantSlug && (pathname === '/' || pathname.startsWith('/reserve'))) {
       res.headers.set('x-tenant-slug', tenantSlug)
