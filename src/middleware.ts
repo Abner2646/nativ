@@ -1,8 +1,7 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createMiddlewareSupabase } from '@/lib/supabase'
-
-const PROD_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'nativ.com'
+import { getAppDomain } from '@/lib/domain'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
@@ -36,12 +35,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
-  // ── Mini-sitio público: slug.nativ.com ────────────────────────
+  // ── Mini-sitio público: slug.yourdomain.com ──────────────────
   if (!isDev) {
-    // Only treat as tenant subdomain when the host actually ends with .nativ.com
+    // Only treat as tenant subdomain when host ends with the configured app domain
     // (prevents Vercel preview URLs like nativ-xxx.vercel.app from matching)
-    if (host.endsWith(`.${PROD_DOMAIN}`)) {
-      const slug = host.slice(0, host.length - PROD_DOMAIN.length - 1)
+    const appDomain = getAppDomain()
+    if (appDomain && host.endsWith(`.${appDomain}`)) {
+      const slug = host.slice(0, host.length - appDomain.length - 1)
       if (slug && slug !== 'www' && slug !== 'app') {
         res.headers.set('x-tenant-slug', slug)
       }

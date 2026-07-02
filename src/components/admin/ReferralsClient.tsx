@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { getTenantDomain } from '@/lib/domain'
 
 interface Referral {
   id: string
@@ -97,7 +98,7 @@ export function ReferralsClient({ initialReferrals, tenantId, referralCode, appU
             Referred by
           </h2>
           <div className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4">
-            <p className="text-sm text-white font-medium">{referredBy.referrer?.slug}.nativ.com</p>
+            <p className="text-sm text-white font-medium">{referredBy.referrer?.slug ? getTenantDomain(referredBy.referrer.slug) : '—'}</p>
             <p className="text-xs text-gray-500 mt-1">
               Code used: <span className="font-mono text-gray-400">{referredBy.referral_code_used || referredBy.referrer?.referral_code || '—'}</span>
               {' · '}Joined {new Date(referredBy.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -132,7 +133,7 @@ export function ReferralsClient({ initialReferrals, tenantId, referralCode, appU
                 {referred.map(r => (
                   <tr key={r.id} className="border-b border-gray-800/50 last:border-0">
                     <td className="px-5 py-4 text-sm font-medium text-white">
-                      {r.referred?.slug}.nativ.com
+                      {r.referred?.slug ? getTenantDomain(r.referred.slug) : '—'}
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-400">
                       {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

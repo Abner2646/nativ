@@ -2,6 +2,7 @@
 // src/app/(app)/onboarding/page.tsx
 import { useState } from 'react'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
+import { getAppDomain } from '@/lib/domain'
 
 const supabase = getBrowserSupabase()
 
@@ -57,11 +58,11 @@ export default function OnboardingPage() {
             <div className="flex items-center bg-gray-900 border border-gray-700 rounded-lg px-4 py-3">
               <input type="text" value={slug} onChange={e => setSlug(slugify(e.target.value))}
                 className="bg-transparent text-white flex-1 focus:outline-none min-w-0" />
-              <span className="text-gray-500 text-sm whitespace-nowrap">.nativ.com</span>
+              <span className="text-gray-500 text-sm whitespace-nowrap">.{getAppDomain()}</span>
             </div>
             {slug && (
               <p className="text-xs text-gray-600 mt-1">
-                Your guests will book at <span className="text-gray-400">{slug}.nativ.com</span>
+                Your guests will book at <span className="text-gray-400">{slug}.{getAppDomain()}</span>
               </p>
             )}
           </div>

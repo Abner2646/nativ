@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { getTenantDomain } from '@/lib/domain'
 
 const SECTIONS = (slug: string) => [
   {
@@ -49,7 +50,7 @@ export function Sidebar({ slug, name }: { slug: string; name: string }) {
           ← All restaurants
         </Link>
         <p className="font-bold text-white truncate text-sm">{name}</p>
-        <p className="text-xs text-gray-600 mt-0.5">{slug}.nativ.com</p>
+        <p className="text-xs text-gray-600 mt-0.5">{getTenantDomain(slug)}</p>
       </div>
 
       {/* Sectioned nav */}
