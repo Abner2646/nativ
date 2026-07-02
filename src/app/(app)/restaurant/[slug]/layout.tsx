@@ -23,8 +23,8 @@ export default async function RestaurantLayout({
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex">
-      <Sidebar slug={slug} name={settings?.name || slug} />
-      <main className="ml-64 flex-1 min-h-screen">
+      <Sidebar slug={slug} name={settings?.name || slug} userEmail={user.email ?? ''} />
+      <main className="ml-60 flex-1 min-h-screen">
         {children}
       </main>
     </div>
