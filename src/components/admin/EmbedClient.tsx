@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { getAppUrl, getTenantReserveUrl, getTenantDomain } from '@/lib/domain'
+import { getAppUrl, getTenantBaseUrl, getTenantReserveUrl, getTenantDomain } from '@/lib/domain'
 
 interface Props {
   slug: string
@@ -34,9 +34,10 @@ function CopyBlock({ label, code, lang = 'html' }: { label: string; code: string
 }
 
 export function EmbedClient({ slug }: Props) {
-  const appUrl    = getAppUrl()
-  const isLocal   = appUrl.includes('localhost') || appUrl.includes('127.0.0.1')
-  const scriptSrc = `${appUrl}/embed.js?tenant=${slug}`
+  const appUrl     = getAppUrl()
+  const isLocal    = appUrl.includes('localhost') || appUrl.includes('127.0.0.1')
+  const scriptSrc  = `${appUrl}/embed.js?tenant=${slug}`
+  const publicUrl  = getTenantBaseUrl(slug)
   const reserveUrl = getTenantReserveUrl(slug)
 
   const scriptSnippet = `<script src="${scriptSrc}"></script>`
@@ -63,6 +64,25 @@ export function EmbedClient({ slug }: Props) {
           You're in development — URLs point to <code className="font-mono">localhost</code>. In production they will use your configured domain.
         </div>
       )}
+
+      {/* ── Public page ── */}
+      <div>
+        <h2 className="text-xs text-gray-500 uppercase tracking-widest font-semibold pt-2 pb-3 border-b border-gray-800 mb-6">
+          Your public page
+        </h2>
+        <p className="text-sm text-gray-400 mb-6">
+          This is your restaurant's standalone page — photos, description, and the reservation panel all in one. Share it anywhere or use it as your main online presence.
+        </p>
+        <CopyBlock label="public page URL" code={publicUrl} />
+        <a
+          href={publicUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mt-4 bg-gray-900 border border-gray-700 hover:border-gray-500 text-sm text-gray-300 hover:text-white px-4 py-2.5 rounded-lg transition"
+        >
+          Open your page ↗
+        </a>
+      </div>
 
       {/* ── Script widget (recommended) ── */}
       <div>
@@ -99,15 +119,15 @@ export function EmbedClient({ slug }: Props) {
         </div>
       </div>
 
-      {/* ── Direct link ── */}
+      {/* ── Direct reservation link ── */}
       <div>
         <h2 className="text-xs text-gray-500 uppercase tracking-widest font-semibold pt-2 pb-3 border-b border-gray-800 mb-6">
-          Direct link
+          Direct reservation link
         </h2>
         <p className="text-sm text-gray-400 mb-6">
-          Use this URL anywhere — WhatsApp bio, Instagram link-in-bio, Google Business, email signature.
+          Links straight to the reservation form, skipping the landing page. Ideal for WhatsApp bio, Instagram link-in-bio, Google Business, or email signatures.
         </p>
-        <CopyBlock label="reservation URL" code={reserveUrl} />
+        <CopyBlock label="reservation-only URL" code={reserveUrl} />
       </div>
 
       {/* ── iframe (alternative) ── */}
