@@ -24,12 +24,13 @@ const OCCASIONS = ['', 'Birthday', 'Anniversary', 'Business dinner', 'Date night
 function getTenantSlug(): string | null {
   if (typeof window === 'undefined') return null
   const hostname = window.location.hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return new URLSearchParams(window.location.search).get('tenant')
+  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || ''
+  // Subdomain routing: host must actually end with .appDomain (not just have 3+ parts)
+  if (appDomain && hostname.endsWith(`.${appDomain}`)) {
+    return hostname.slice(0, hostname.length - appDomain.length - 1) || null
   }
-  const parts = hostname.split('.')
-  if (parts.length >= 3) return parts[0]
-  return null
+  // Dev or any host without a matching custom-domain subdomain: use ?tenant= param
+  return new URLSearchParams(window.location.search).get('tenant')
 }
 
 function today() {

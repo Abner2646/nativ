@@ -6,15 +6,18 @@ import { getAppDomain } from '@/lib/domain'
 
 export function getTenantSlug(req: NextRequest): string | null {
   const host = req.headers.get('host') || ''
-  const isDev = host.includes('localhost')
+  const isDev = host.includes('localhost') || host.includes('127.0.0.1')
 
   if (isDev) {
     return new URL(req.url).searchParams.get('tenant')
   }
 
   const domain = getAppDomain()
-  const slug = host.split(`.${domain}`)[0]
-  if (!slug || slug === 'www' || slug === 'app' || host === domain) return null
+  // Only extract a slug when the host is actually a subdomain of the configured domain.
+  // Without this guard, hosts like nativ-xxx.vercel.app would produce garbage slugs.
+  if (!domain || !host.endsWith(`.${domain}`)) return null
+  const slug = host.slice(0, host.length - domain.length - 1)
+  if (!slug || slug === 'www' || slug === 'app') return null
   return slug
 }
 
