@@ -2,8 +2,7 @@
 import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { TenantContext } from '@/lib/types'
-
-const PROD_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'nativ.com'
+import { getAppDomain } from '@/lib/domain'
 
 export function getTenantSlug(req: NextRequest): string | null {
   const host = req.headers.get('host') || ''
@@ -13,8 +12,9 @@ export function getTenantSlug(req: NextRequest): string | null {
     return new URL(req.url).searchParams.get('tenant')
   }
 
-  const slug = host.split(`.${PROD_DOMAIN}`)[0]
-  if (!slug || slug === 'www' || slug === 'app' || host === PROD_DOMAIN) return null
+  const domain = getAppDomain()
+  const slug = host.split(`.${domain}`)[0]
+  if (!slug || slug === 'www' || slug === 'app' || host === domain) return null
   return slug
 }
 

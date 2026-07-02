@@ -2,19 +2,19 @@
 import { Resend } from 'resend'
 import { Reservation, TenantSettings } from '@/lib/types'
 
+import { getAppDomain, getTenantBaseUrl } from '@/lib/domain'
+
 const resend = new Resend(process.env.RESEND_API_KEY!)
 const FROM_DEV = 'onboarding@resend.dev'
-const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'nativ.com'
 const isDev = process.env.NODE_ENV === 'development'
 
 function getFrom(settings: TenantSettings) {
   if (isDev) return FROM_DEV
-  return `${settings.name} <reservations@${APP_DOMAIN}>`
+  return `${settings.name} <reservations@${getAppDomain()}>`
 }
 
 function getTenantUrl(slug: string) {
-  if (isDev) return `http://localhost:3000?tenant=${slug}`
-  return `https://${slug}.${APP_DOMAIN}`
+  return getTenantBaseUrl(slug)
 }
 
 export async function sendConfirmationEmail(r: Reservation, settings: TenantSettings, slug: string) {
@@ -82,7 +82,7 @@ export async function sendEmployeeInvite(email: string, token: string, restauran
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
   const inviteUrl = `${appUrl}/invite?token=${token}`
   await resend.emails.send({
-    from: isDev ? FROM_DEV : `${restaurantName} <noreply@${APP_DOMAIN}>`,
+    from: isDev ? FROM_DEV : `${restaurantName} <noreply@${getAppDomain()}>`,
     to: email,
     subject: `You've been invited to ${restaurantName} on Nativ`,
     html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto">

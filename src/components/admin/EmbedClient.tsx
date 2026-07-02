@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { getAppUrl, getTenantReserveUrl, getTenantDomain } from '@/lib/domain'
 
 interface Props {
   slug: string
@@ -33,8 +34,9 @@ function CopyBlock({ label, code }: { label: string; code: string }) {
 }
 
 export function EmbedClient({ slug }: Props) {
-  const baseUrl = `https://${slug}.nativ.com`
-  const reserveUrl = `${baseUrl}/reserve`
+  const reserveUrl = getTenantReserveUrl(slug)
+  const appUrl = getAppUrl()
+  const isLocal = appUrl.includes('localhost') || appUrl.includes('127.0.0.1')
 
   const iframeSnippet =
 `<iframe
@@ -50,6 +52,13 @@ export function EmbedClient({ slug }: Props) {
 
   return (
     <div className="max-w-2xl space-y-10">
+
+      {/* Dev warning */}
+      {isLocal && (
+        <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-xl px-4 py-3 text-xs text-yellow-400">
+          You're in development — URLs point to <code className="font-mono">localhost</code>. In production they will use your configured domain.
+        </div>
+      )}
 
       {/* iframe embed */}
       <div>
