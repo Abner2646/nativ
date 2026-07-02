@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { getTenantDomain, getTenantBaseUrl } from '@/lib/domain'
 
 const SECTIONS = (slug: string) => [
   {
@@ -31,6 +32,7 @@ const SECTIONS = (slug: string) => [
     label: 'Account',
     items: [
       { href: `/restaurant/${slug}/photos`,   label: 'Photos' },
+      { href: `/restaurant/${slug}/embed`,    label: 'Embed & share' },
       { href: `/restaurant/${slug}/billing`,  label: 'Billing' },
       { href: `/restaurant/${slug}/settings`, label: 'Settings' },
     ],
@@ -48,7 +50,7 @@ export function Sidebar({ slug, name }: { slug: string; name: string }) {
           ← All restaurants
         </Link>
         <p className="font-bold text-white truncate text-sm">{name}</p>
-        <p className="text-xs text-gray-600 mt-0.5">{slug}.nativ.com</p>
+        <p className="text-xs text-gray-600 mt-0.5">{getTenantDomain(slug)}</p>
       </div>
 
       {/* Sectioned nav */}
@@ -93,15 +95,19 @@ export function Sidebar({ slug, name }: { slug: string; name: string }) {
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* Footer — public page link */}
       <div className="p-3 border-t border-gray-800">
         <a
-          href={`/?tenant=${slug}`}
+          href={getTenantBaseUrl(slug)}
           target="_blank"
           rel="noopener noreferrer"
-          className="block px-3 py-2 rounded-md text-xs text-gray-500 hover:text-white hover:bg-gray-800 transition"
+          className="flex items-center justify-between mx-0 px-3 py-2.5 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 transition group"
         >
-          View public page ↗
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-300 group-hover:text-white transition">Your public page</p>
+            <p className="text-[10px] text-gray-600 truncate mt-0.5">{getTenantDomain(slug)}</p>
+          </div>
+          <span className="text-gray-600 group-hover:text-gray-400 transition ml-2 shrink-0 text-sm">↗</span>
         </a>
       </div>
     </aside>

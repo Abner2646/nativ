@@ -22,14 +22,28 @@ export default function RegisterPage() {
   const handleRegister = async () => {
     if (password.length < 6) { setError('Password must be at least 6 characters'); return }
     setLoading(true); setError('')
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password,
       options: {
         data: { full_name: name, ref_code: refCode.trim() || null },
         emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
       },
     })
-    if (error) { setError(error.message); setLoading(false); return }
+    if (error) {
+      console.error('[register] signUp error:', error)
+      const raw = error.message?.trim()
+      // Supabase returns '{}' (empty body) when the email already exists
+      // or when there's an auth service misconfiguration
+      if (!raw || raw === '{}') {
+        setError('An account with this email may already exist. Try logging in instead.')
+      } else {
+        setError(raw)
+      }
+      setLoading(false)
+      return
+    }
+    // Supabase sends a confirmation email — go to "check your email" screen
+    // (data.user may be non-null but unconfirmed; that's expected)
     setSent(true)
   }
 

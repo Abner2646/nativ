@@ -1,6 +1,7 @@
 // src/app/(app)/dashboard/page.tsx
 import { requireUser } from '@/lib/auth'
 import { getUserTenants } from '@/lib/auth'
+import { getTenantDomain } from '@/lib/domain'
 
 export default async function DashboardPage() {
   const user = await requireUser()
@@ -53,7 +54,7 @@ export default async function DashboardPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-white group-hover:text-gray-100">{settings?.name || tenant?.slug}</p>
-                      <p className="text-sm text-gray-500">{tenant?.slug}.nativ.com · {m.role}</p>
+                      <p className="text-sm text-gray-500">{tenant?.slug ? getTenantDomain(tenant.slug) : ''} · {m.role}</p>
                     </div>
                     <div className={`text-xs px-2 py-1 rounded-full ${tenant?.status === 'active' ? 'bg-green-900/50 text-green-400' : tenant?.status === 'trial' ? 'bg-yellow-900/50 text-yellow-400' : 'bg-red-900/50 text-red-400'}`}>
                       {tenant?.status}
