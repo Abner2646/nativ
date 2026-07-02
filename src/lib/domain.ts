@@ -10,34 +10,24 @@ export function getAppUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 }
 
-// Returns true only when a custom domain is configured AND APP_URL is hosted on
-// that same domain, meaning wildcard subdomain routing actually works.
-// Vercel preview URLs (nativ-xxx.vercel.app) never satisfy this check.
-function supportsSubdomains(): boolean {
-  const appDomain = getAppDomain()
-  if (!appDomain) return false
-  try {
-    const urlHost = new URL(getAppUrl()).hostname
-    return urlHost === appDomain || urlHost === `www.${appDomain}`
-  } catch {
-    return false
-  }
+function isLocal(): boolean {
+  const url = getAppUrl()
+  return url.includes('localhost') || url.includes('127.0.0.1')
 }
 
-// "oth.yourdomain.com" — for display only; falls back to just the slug when no domain
+// "oth.yourdomain.com" — for display only
 export function getTenantDomain(slug: string): string {
-  const domain = getAppDomain()
-  return domain ? `${slug}.${domain}` : slug
+  return `${slug}.${getAppDomain()}`
 }
 
-// Full URL to the tenant's public page
+// Full URL to the tenant's public page (home or reserve page)
 export function getTenantBaseUrl(slug: string): string {
-  if (supportsSubdomains()) return `https://${slug}.${getAppDomain()}`
-  return `${getAppUrl()}?tenant=${slug}`
+  if (isLocal()) return `${getAppUrl()}?tenant=${slug}`
+  return `https://${slug}.${getAppDomain()}`
 }
 
 // Full URL to the tenant's standalone reservation page
 export function getTenantReserveUrl(slug: string): string {
-  if (supportsSubdomains()) return `https://${slug}.${getAppDomain()}/reserve`
-  return `${getAppUrl()}/reserve?tenant=${slug}`
+  if (isLocal()) return `${getAppUrl()}/reserve?tenant=${slug}`
+  return `https://${slug}.${getAppDomain()}/reserve`
 }
