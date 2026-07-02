@@ -29,8 +29,22 @@ export default async function AccountPage() {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
+  const firstSlug = tenants[0]?.slug ?? null
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
+      {/* Top bar */}
+      <div className="border-b border-gray-800 px-6 py-3 flex items-center gap-4">
+        <a
+          href={firstSlug ? `/restaurant/${firstSlug}` : '/dashboard'}
+          className="text-sm text-gray-400 hover:text-white transition flex items-center gap-1.5"
+        >
+          ← {firstSlug ? 'Back to restaurant' : 'Dashboard'}
+        </a>
+        <span className="text-gray-700">|</span>
+        <span className="text-sm font-semibold text-white">My account</span>
+      </div>
+
       <div className="max-w-2xl mx-auto px-8 py-12">
         <div className="mb-10">
           <h1 className="text-2xl font-bold">My account</h1>
