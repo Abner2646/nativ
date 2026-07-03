@@ -41,6 +41,12 @@ const DEFAULT_COLORS = {
   background_color: '#ffffff',
 }
 
+const BUTTON_STYLES = [
+  { value: 'rounded', label: 'Rounded',  radius: '0.625rem' },
+  { value: 'sharp',   label: 'Sharp',    radius: '0' },
+  { value: 'pill',    label: 'Pill',     radius: '9999px' },
+] as const
+
 // Label + field wrapper — defined OUTSIDE the component to avoid re-mount on every render
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -285,6 +291,42 @@ export function SettingsClient({ settings: initial, slug }: Props) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Button style */}
+        <div>
+          <Label>Button style</Label>
+          <div className="grid grid-cols-3 gap-3">
+            {BUTTON_STYLES.map(s => {
+              const active = (form.button_style || 'rounded') === s.value
+              return (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => set('button_style', s.value)}
+                  className={`flex flex-col items-center gap-2.5 py-4 px-3 rounded-xl border transition ${
+                    active
+                      ? 'border-white bg-gray-800'
+                      : 'border-gray-700 bg-gray-900 hover:border-gray-500'
+                  }`}
+                >
+                  <div
+                    className="w-full h-7 flex items-center justify-center text-xs font-bold"
+                    style={{
+                      backgroundColor: active ? '#ffffff' : '#374151',
+                      color: active ? '#000' : '#9ca3af',
+                      borderRadius: s.radius,
+                    }}
+                  >
+                    Book
+                  </div>
+                  <span className={`text-xs font-medium ${active ? 'text-white' : 'text-gray-500'}`}>
+                    {s.label}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

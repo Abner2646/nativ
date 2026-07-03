@@ -298,7 +298,7 @@ export async function updateSettings(req: NextRequest) {
   const r = await getCtxAndUser(req); if (r.error) return r.error
   const { ctx } = r as any
   const body = await req.json()
-  const allowed = ['name','description','address','phone','timezone','hours_text','website_url','instagram_url','facebook_url','tripadvisor_url','yelp_url','primary_color','secondary_color','background_color','font_family','notification_email','min_party_size','max_party_size','min_advance_hours']
+  const allowed = ['name','description','address','phone','timezone','hours_text','website_url','instagram_url','facebook_url','tripadvisor_url','yelp_url','primary_color','secondary_color','background_color','font_family','button_style','notification_email','min_party_size','max_party_size','min_advance_hours']
   const updates: any = {}
   for (const k of allowed) if (body[k] !== undefined) updates[k] = body[k]
   const { data, error } = await supabaseAdmin.from('tenant_settings').update(updates).eq('tenant_id', ctx.tenant.id).select().single()

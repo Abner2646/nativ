@@ -3,10 +3,10 @@ import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
 import { TenantSettings, TenantPhoto } from '@/lib/types'
 import { ReservationPanel } from '@/components/public/ReservationPanel'
+import { buildTheme } from '@/lib/theme'
 import Image from 'next/image'
 
-// Returns a Google Fonts URL for the restaurant's selected font (excluding Inter,
-// which is already loaded in the root layout).
+// Returns a Google Fonts URL for the restaurant's selected font (excluding Inter).
 const GOOGLE_FONTS = new Set([
   'Poppins','Montserrat','Raleway','Nunito','Lato',
   'Merriweather','Playfair Display','Lora','EB Garamond','Cormorant Garamond','Libre Baskerville',
@@ -15,23 +15,6 @@ function restaurantFontUrl(fontFamily: string): string | null {
   const name = fontFamily.replace(/['"]/g, '').split(',')[0].trim()
   if (!GOOGLE_FONTS.has(name)) return null
   return `https://fonts.googleapis.com/css2?family=${name.replace(/ /g, '+')}:wght@400;600;700&display=swap`
-}
-
-// ─── Public restaurant page (tenant subdomain / ?tenant= param) ───────────────
-
-const R = {
-  bg:      '#111015',
-  surface: '#1c1a22',
-  border:  'rgba(255,255,255,0.07)',
-  text:    '#F2EFE9',
-  muted:   'rgba(242,239,233,0.42)',
-  faint:   'rgba(242,239,233,0.2)',
-}
-
-function safeAccent(raw: string | null | undefined): string {
-  const bad = new Set(['#ffffff', '#fff', '#FFFFFF', '#FFF', '#000000', '#000', '#000000'])
-  const v = (raw || '').trim()
-  return bad.has(v) || !v ? '#C9A96E' : v
 }
 
 async function RestaurantPage({ slug }: { slug: string }) {
@@ -43,8 +26,8 @@ async function RestaurantPage({ slug }: { slug: string }) {
 
   if (!tenant) {
     return (
-      <main style={{ minHeight: '100vh', backgroundColor: R.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: R.muted, fontFamily: 'Inter, sans-serif' }}>Restaurant not found.</p>
+      <main style={{ minHeight: '100vh', backgroundColor: '#111015', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'rgba(242,239,233,0.42)', fontFamily: 'Inter, sans-serif' }}>Restaurant not found.</p>
       </main>
     )
   }
@@ -56,17 +39,16 @@ async function RestaurantPage({ slug }: { slug: string }) {
 
   if (!settings) {
     return (
-      <main style={{ minHeight: '100vh', backgroundColor: R.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: R.muted, fontFamily: 'Inter, sans-serif' }}>Restaurant coming soon.</p>
+      <main style={{ minHeight: '100vh', backgroundColor: '#111015', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'rgba(242,239,233,0.42)', fontFamily: 'Inter, sans-serif' }}>Restaurant coming soon.</p>
       </main>
     )
   }
 
   const s         = settings as TenantSettings
   const photoList = (photos as TenantPhoto[]) || []
-  const accent    = safeAccent(s.primary_color)
-  const font      = s.font_family || "'Inter', sans-serif"
-  const fontUrl   = restaurantFontUrl(font)
+  const theme     = buildTheme(s)
+  const fontUrl   = restaurantFontUrl(s.font_family || 'Inter')
 
   // Pre-fetch calendar data for the reservation panel
   const threeMonthsOut = new Date()
@@ -94,16 +76,16 @@ async function RestaurantPage({ slug }: { slug: string }) {
   const [heroPhoto, ...galleryPhotos] = photoList
 
   return (
-    <main style={{ backgroundColor: R.bg, color: R.text, minHeight: '100vh', fontFamily: font }}>
+    <main style={{ backgroundColor: theme.bg, color: theme.text, minHeight: '100vh', fontFamily: theme.font }}>
       {fontUrl && <link rel="stylesheet" href={fontUrl} />}
 
       {/* ── Sticky nav ────────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
-        backgroundColor: `${R.bg}e0`,
+        backgroundColor: `${theme.bg}e0`,
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
-        borderBottom: `1px solid ${R.border}`,
+        borderBottom: `1px solid ${theme.border}`,
         padding: '0 1.5rem',
         height: '3.75rem',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -119,7 +101,7 @@ async function RestaurantPage({ slug }: { slug: string }) {
             fontWeight: 700,
             fontSize: '1rem',
             letterSpacing: '-0.02em',
-            color: R.text,
+            color: theme.text,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -127,16 +109,15 @@ async function RestaurantPage({ slug }: { slug: string }) {
             {s.name}
           </span>
         </div>
-        {/* Scrolls to the reservation panel on the page */}
         <a
           href="#reserve-panel"
           style={{
-            backgroundColor: accent,
-            color: '#0F1015',
+            backgroundColor: theme.primary,
+            color: theme.primaryText,
             fontWeight: 700,
             fontSize: '0.8125rem',
             padding: '0.5rem 1.125rem',
-            borderRadius: '0.5rem',
+            borderRadius: theme.btnRadius,
             textDecoration: 'none',
             whiteSpace: 'nowrap',
             flexShrink: 0,
@@ -159,14 +140,14 @@ async function RestaurantPage({ slug }: { slug: string }) {
           />
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(to bottom, transparent 40%, rgba(17,16,21,0.9) 100%)',
+            background: `linear-gradient(to bottom, transparent 40%, ${theme.bg}e6 100%)`,
           }} />
         </div>
       ) : (
         <div style={{
           width: '100%', height: '10rem',
-          background: `linear-gradient(135deg, ${R.surface} 0%, ${R.bg} 100%)`,
-          borderBottom: `1px solid ${R.border}`,
+          background: `linear-gradient(135deg, ${theme.surface} 0%, ${theme.bg} 100%)`,
+          borderBottom: `1px solid ${theme.border}`,
         }} />
       )}
 
@@ -182,8 +163,7 @@ async function RestaurantPage({ slug }: { slug: string }) {
         <aside className="w-full lg:w-80 xl:w-96 shrink-0 order-first lg:order-last lg:sticky lg:top-20">
           <ReservationPanel
             slug={slug}
-            accent={accent}
-            fontFamily={font}
+            theme={theme}
             availableDaysOfWeek={availableDaysOfWeek}
             blockedDates={blockedDates}
             websiteUrl={settings.website_url ?? null}
@@ -205,7 +185,7 @@ async function RestaurantPage({ slug }: { slug: string }) {
               fontSize: 'clamp(2rem, 5vw, 3.25rem)',
               lineHeight: 1.05,
               letterSpacing: '-0.03em',
-              color: R.text,
+              color: theme.text,
               marginBottom: '0.75rem',
             }}>
               {s.name}
@@ -213,7 +193,7 @@ async function RestaurantPage({ slug }: { slug: string }) {
             {s.description && (
               <p style={{
                 fontSize: '1.0625rem',
-                color: R.muted,
+                color: theme.muted,
                 lineHeight: 1.7,
                 maxWidth: '38rem',
               }}>
@@ -225,7 +205,7 @@ async function RestaurantPage({ slug }: { slug: string }) {
           {/* Info: address, phone, hours */}
           {hasInfo && (
             <div style={{
-              borderTop: `1px solid ${R.border}`,
+              borderTop: `1px solid ${theme.border}`,
               paddingTop: '1.75rem',
               marginBottom: '2rem',
               display: 'grid',
@@ -234,28 +214,28 @@ async function RestaurantPage({ slug }: { slug: string }) {
             }}>
               {s.address && (
                 <div>
-                  <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  <p style={{ color: theme.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
                     Address
                   </p>
-                  <p style={{ color: R.text, fontSize: '0.9375rem', lineHeight: 1.6 }}>{s.address}</p>
+                  <p style={{ color: theme.text, fontSize: '0.9375rem', lineHeight: 1.6 }}>{s.address}</p>
                 </div>
               )}
               {s.phone && (
                 <div>
-                  <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  <p style={{ color: theme.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
                     Phone
                   </p>
-                  <a href={`tel:${s.phone}`} style={{ color: R.text, fontSize: '0.9375rem', textDecoration: 'none' }}>
+                  <a href={`tel:${s.phone}`} style={{ color: theme.text, fontSize: '0.9375rem', textDecoration: 'none' }}>
                     {s.phone}
                   </a>
                 </div>
               )}
               {s.hours_text && (
                 <div>
-                  <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  <p style={{ color: theme.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
                     Hours
                   </p>
-                  <p style={{ color: R.text, fontSize: '0.9375rem', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{s.hours_text}</p>
+                  <p style={{ color: theme.text, fontSize: '0.9375rem', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{s.hours_text}</p>
                 </div>
               )}
             </div>
@@ -263,8 +243,8 @@ async function RestaurantPage({ slug }: { slug: string }) {
 
           {/* Photo gallery (remaining photos after the hero) */}
           {galleryPhotos.length > 0 && (
-            <div style={{ borderTop: `1px solid ${R.border}`, paddingTop: '1.75rem' }}>
-              <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '1rem' }}>
+            <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: '1.75rem' }}>
+              <p style={{ color: theme.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '1rem' }}>
                 Photos
               </p>
               <div style={{
@@ -275,7 +255,7 @@ async function RestaurantPage({ slug }: { slug: string }) {
                 {galleryPhotos.map(photo => (
                   <div
                     key={photo.id}
-                    style={{ aspectRatio: '4/3', borderRadius: '0.625rem', overflow: 'hidden', backgroundColor: R.surface, position: 'relative' }}
+                    style={{ aspectRatio: '4/3', borderRadius: '0.625rem', overflow: 'hidden', backgroundColor: theme.surface, position: 'relative' }}
                   >
                     <Image src={photo.url} alt="" fill style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 50vw, 200px" />
                   </div>
@@ -286,8 +266,8 @@ async function RestaurantPage({ slug }: { slug: string }) {
 
           {/* If no hero photo but has a logo, show gallery including first photo */}
           {!heroPhoto && photoList.length > 0 && (
-            <div style={{ borderTop: `1px solid ${R.border}`, paddingTop: '1.75rem' }}>
-              <p style={{ color: R.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '1rem' }}>
+            <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: '1.75rem' }}>
+              <p style={{ color: theme.faint, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '1rem' }}>
                 Photos
               </p>
               <div style={{
@@ -298,7 +278,7 @@ async function RestaurantPage({ slug }: { slug: string }) {
                 {photoList.map(photo => (
                   <div
                     key={photo.id}
-                    style={{ aspectRatio: '4/3', borderRadius: '0.625rem', overflow: 'hidden', backgroundColor: R.surface, position: 'relative' }}
+                    style={{ aspectRatio: '4/3', borderRadius: '0.625rem', overflow: 'hidden', backgroundColor: theme.surface, position: 'relative' }}
                   >
                     <Image src={photo.url} alt="" fill style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 50vw, 200px" />
                   </div>
@@ -310,7 +290,7 @@ async function RestaurantPage({ slug }: { slug: string }) {
       </div>
 
       {/* ── Footer ────────────────────────────────────────────────────── */}
-      <footer style={{ borderTop: `1px solid ${R.border}`, padding: '1.5rem 1.5rem' }}>
+      <footer style={{ borderTop: `1px solid ${theme.border}`, padding: '1.5rem 1.5rem' }}>
         <div style={{
           maxWidth: '72rem', margin: '0 auto',
           display: 'flex', flexWrap: 'wrap',
@@ -324,13 +304,13 @@ async function RestaurantPage({ slug }: { slug: string }) {
                 href={l.url!}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: R.faint, fontSize: '0.875rem', textDecoration: 'none' }}
+                style={{ color: theme.faint, fontSize: '0.875rem', textDecoration: 'none' }}
               >
                 {l.label}
               </a>
             ))}
           </div>
-          <p style={{ color: R.faint, fontSize: '0.75rem' }}>Powered by Nativ</p>
+          <p style={{ color: theme.faint, fontSize: '0.75rem' }}>Powered by Nativ</p>
         </div>
       </footer>
     </main>

@@ -56,6 +56,7 @@ export interface TenantSettings {
   stripe_account_id: string | null
   ai_enabled: boolean
   website_url: string | null
+  button_style: string
 }
 
 export interface TenantPhoto {
