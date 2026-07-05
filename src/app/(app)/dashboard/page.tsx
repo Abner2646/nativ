@@ -88,9 +88,18 @@ export default async function DashboardPage() {
 
                 {/* ── Info strip ── */}
                 <div className="px-4 py-3.5 flex-1" style={{ backgroundColor: '#162232' }}>
-                  <p className="font-satoshi font-semibold text-[14px] text-offwhite truncate leading-tight">
-                    {name}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-satoshi font-semibold text-[14px] text-offwhite truncate leading-tight">
+                      {name}
+                    </p>
+                    <span className={`shrink-0 text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded-full ${
+                      m.role === 'admin'
+                        ? 'bg-gold/12 text-gold border border-gold/25'
+                        : 'bg-white/[0.06] text-offwhite/40 border border-white/[0.08]'
+                    }`}>
+                      {m.role}
+                    </span>
+                  </div>
                   <p className="text-[12px] text-offwhite/35 mt-0.5 truncate">
                     {tenant?.slug ? getTenantDomain(tenant.slug) : ''}
                   </p>
