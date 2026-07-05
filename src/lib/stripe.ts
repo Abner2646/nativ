@@ -5,12 +5,18 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 })
 
-export async function createSubscription(customerId: string, couponId?: string) {
-  return stripe.subscriptions.create({
-    customer: customerId,
-    items: [{ price: process.env.STRIPE_PRICE_ID! }],
-    trial_end: Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60,
-    ...(couponId ? { discounts: [{ coupon: couponId }] } : {})
+export async function addCouponToSubscription(subscriptionId: string, couponId: string) {
+  // Retrieve current discounts first so we ADD instead of REPLACE
+  const sub = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['discounts'] })
+  const existing = ((sub.discounts ?? []) as Stripe.Discount[])
+    .map(d => {
+      const id = typeof d.coupon === 'string' ? d.coupon : d.coupon?.id
+      return id ? { coupon: id } : null
+    })
+    .filter((d): d is { coupon: string } => !!d)
+
+  return stripe.subscriptions.update(subscriptionId, {
+    discounts: [...existing, { coupon: couponId }],
   })
 }
 
@@ -50,14 +56,9 @@ export async function createReferralCoupon() {
     percent_off: 50,
     duration: 'repeating',
     duration_in_months: 3,
+    max_redemptions: 1,
   })
   return coupon.id
-}
-
-export async function applyDiscountToSubscription(subscriptionId: string, couponId: string) {
-  return stripe.subscriptions.update(subscriptionId, {
-    discounts: [{ coupon: couponId }],
-  })
 }
 
 export async function createCheckoutSession(

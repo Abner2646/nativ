@@ -29,6 +29,13 @@ export async function resolveTenant(slug: string): Promise<TenantContext | null>
 
   if (!tenant) return null
 
+  // Auto-expire trials lazily: the next request after trial_ends_at marks it inactive.
+  // No cron needed — self-heals on access.
+  if (tenant.status === 'trial' && tenant.trial_ends_at && new Date(tenant.trial_ends_at) < new Date()) {
+    await supabaseAdmin.from('tenants').update({ status: 'inactive' }).eq('id', tenant.id)
+    tenant.status = 'inactive'
+  }
+
   const { data: settings } = await supabaseAdmin
     .from('tenant_settings')
     .select('*')

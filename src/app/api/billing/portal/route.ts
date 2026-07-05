@@ -18,6 +18,16 @@ export async function POST(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { data: member } = await supabaseAdmin
+    .from('tenant_members')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('tenant_id', ctx.tenant.id)
+    .maybeSingle()
+  if (!member || member.role !== 'admin') {
+    return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+  }
+
   if (!ctx.tenant.stripe_customer_id) {
     return NextResponse.json({ error: 'No billing account' }, { status: 400 })
   }

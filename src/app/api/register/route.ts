@@ -46,27 +46,36 @@ export async function POST(req: NextRequest) {
   // Agregar al usuario como admin del tenant
   await supabaseAdmin.from('tenant_members').insert({ tenant_id: tenant.id, user_id: user.id, role: 'admin' })
 
-  // Verificar si tiene código de referido (6 dígitos numéricos)
+  // Apply referral code if provided (6-digit numeric)
   const rawRef = req.nextUrl.searchParams.get('ref') || user.user_metadata?.ref_code || ''
   const refCode = typeof rawRef === 'string' ? rawRef.trim() : ''
   if (refCode && /^\d{6}$/.test(refCode)) {
-    const { data: referrer } = await supabaseAdmin.from('tenants').select('id').eq('referral_code', refCode).maybeSingle()
+    const { data: referrer } = await supabaseAdmin
+      .from('tenants').select('id, stripe_subscription_id').eq('referral_code', refCode).maybeSingle()
     if (referrer && referrer.id !== tenant.id) {
-      const { createReferralCoupon, applyDiscountToSubscription } = await import('@/lib/stripe')
-      const [referrerCoupon, referredCoupon] = await Promise.all([createReferralCoupon(), createReferralCoupon()])
-      await supabaseAdmin.from('referrals').insert({
-        referrer_tenant_id: referrer.id, referred_tenant_id: tenant.id,
-        referrer_coupon_id: referrerCoupon, referred_coupon_id: referredCoupon,
-        referral_code_used: refCode,
-      })
+      // Insert the referral row FIRST to claim the slot.
+      // If this fails (duplicate, race), skip silently — registration still succeeds.
+      const { data: newReferral, error: refInsertErr } = await supabaseAdmin
+        .from('referrals')
+        .insert({ referrer_tenant_id: referrer.id, referred_tenant_id: tenant.id, referral_code_used: refCode })
+        .select('id')
+        .single()
 
-      // If referrer already has an active subscription, apply their discount now.
-      // Otherwise, the webhook handles it when they subscribe.
-      const { data: referrerTenant } = await supabaseAdmin
-        .from('tenants').select('stripe_subscription_id').eq('id', referrer.id).maybeSingle()
-      if (referrerTenant?.stripe_subscription_id) {
-        await applyDiscountToSubscription(referrerTenant.stripe_subscription_id, referrerCoupon)
-          .catch(e => console.error('[register] referrer coupon apply failed:', e))
+      if (!refInsertErr && newReferral) {
+        const { createReferralCoupon, addCouponToSubscription } = await import('@/lib/stripe')
+        const [referrerCoupon, referredCoupon] = await Promise.all([
+          createReferralCoupon(),
+          createReferralCoupon(),
+        ])
+
+        await supabaseAdmin.from('referrals')
+          .update({ referrer_coupon_id: referrerCoupon, referred_coupon_id: referredCoupon })
+          .eq('id', newReferral.id)
+
+        if (referrer.stripe_subscription_id) {
+          await addCouponToSubscription(referrer.stripe_subscription_id, referrerCoupon)
+            .catch(e => console.error('[register] referrer coupon apply failed:', e))
+        }
       }
     }
   }
