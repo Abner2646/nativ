@@ -6,19 +6,18 @@ import { getAppDomain } from '@/lib/domain'
 
 export function getTenantSlug(req: NextRequest): string | null {
   const host = req.headers.get('host') || ''
-  const isDev = host.includes('localhost') || host.includes('127.0.0.1')
+  const url  = new URL(req.url)
 
-  if (isDev) {
-    return new URL(req.url).searchParams.get('tenant')
+  // 1. Subdomain routing (production public widget: slug.nativ.business)
+  const domain = getAppDomain()
+  if (domain && host.endsWith(`.${domain}`)) {
+    const slug = host.slice(0, host.length - domain.length - 1)
+    if (slug && slug !== 'www' && slug !== 'app') return slug
   }
 
-  const domain = getAppDomain()
-  // Only extract a slug when the host is actually a subdomain of the configured domain.
-  // Without this guard, hosts like nativ-xxx.vercel.app would produce garbage slugs.
-  if (!domain || !host.endsWith(`.${domain}`)) return null
-  const slug = host.slice(0, host.length - domain.length - 1)
-  if (!slug || slug === 'www' || slug === 'app') return null
-  return slug
+  // 2. Query param fallback — used by admin panel API calls (?tenant=slug)
+  //    Works in both dev and production.
+  return url.searchParams.get('tenant')
 }
 
 export async function resolveTenant(slug: string): Promise<TenantContext | null> {
