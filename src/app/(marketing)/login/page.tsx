@@ -9,7 +9,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    const p = new URLSearchParams(window.location.search)
+    if (p.get('error') === 'auth_callback_failed') return 'Connection interrupted. Please try again.'
+    return ''
+  })
 
   // Handles hash-based tokens (implicit flow from old confirmation emails or OAuth)
   useEffect(() => {
