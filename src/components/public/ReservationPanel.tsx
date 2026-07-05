@@ -202,14 +202,17 @@ interface Props {
   availableDaysOfWeek: number[]
   blockedDates: string[]
   websiteUrl?: string | null
+  minPartySize?: number
+  maxPartySize?: number
 }
 
-export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDates, websiteUrl }: Props) {
+export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDates, websiteUrl, minPartySize = 1, maxPartySize = 10 }: Props) {
   const fontFamily = theme.fontFamily
   const [step, setStep] = useState<Step>('search')
 
   const [date, setDate] = useState(tomorrowStr())
-  const [partySize, setPartySize] = useState(2)
+  const [partySize, setPartySize] = useState(() => Math.min(Math.max(2, minPartySize), maxPartySize))
+  const [showAllParty, setShowAllParty] = useState(false)
 
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null)
@@ -393,24 +396,47 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
           {/* Party size */}
           <div>
             <span style={labelStyle}>Guests</span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.375rem' }}>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-                <button
-                  key={n} type="button"
-                  onClick={() => setPartySize(n)}
-                  style={{
-                    padding: '0.625rem 0', borderRadius: '0.5rem',
-                    fontSize: '0.875rem', fontWeight: 600, border: 'none',
-                    cursor: 'pointer', transition: 'all 0.1s',
-                    backgroundColor: partySize === n ? C.primary : C.input,
-                    color: partySize === n ? C.primaryText : C.muted,
-                    fontFamily,
-                  }}
-                >
-                  {n === 8 ? '8+' : n}
-                </button>
-              ))}
-            </div>
+            {(() => {
+              const all = Array.from({ length: maxPartySize - minPartySize + 1 }, (_, i) => minPartySize + i)
+              const hasMore = all.length > 8
+              const visible = hasMore && !showAllParty ? all.slice(0, 7) : all
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.375rem' }}>
+                  {visible.map(n => (
+                    <button
+                      key={n} type="button"
+                      onClick={() => setPartySize(n)}
+                      style={{
+                        padding: '0.625rem 0', borderRadius: '0.5rem',
+                        fontSize: '0.875rem', fontWeight: 600, border: 'none',
+                        cursor: 'pointer', transition: 'all 0.1s',
+                        backgroundColor: partySize === n ? C.primary : C.input,
+                        color: partySize === n ? C.primaryText : C.muted,
+                        fontFamily,
+                      }}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  {hasMore && !showAllParty && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllParty(true)}
+                      style={{
+                        padding: '0.625rem 0', borderRadius: '0.5rem',
+                        fontSize: '0.75rem', fontWeight: 600, border: 'none',
+                        cursor: 'pointer', transition: 'all 0.1s',
+                        backgroundColor: C.input,
+                        color: C.muted,
+                        fontFamily,
+                      }}
+                    >
+                      more
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Custom calendar */}

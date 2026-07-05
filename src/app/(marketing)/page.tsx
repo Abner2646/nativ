@@ -167,6 +167,8 @@ async function RestaurantPage({ slug }: { slug: string }) {
             availableDaysOfWeek={availableDaysOfWeek}
             blockedDates={blockedDates}
             websiteUrl={settings.website_url ?? null}
+            minPartySize={settings.min_party_size ?? 1}
+            maxPartySize={settings.max_party_size ?? 10}
           />
         </aside>
 
