@@ -31,11 +31,18 @@ export default async function ReservePage({
 
   const { data: settings } = await supabaseAdmin
     .from('tenant_settings')
-    .select('background_color, primary_color, secondary_color, font_family, button_style')
+    .select('background_color, primary_color, secondary_color, font_family, button_style, min_party_size, max_party_size')
     .eq('tenant_id', tenant.id)
     .maybeSingle()
 
   const theme = buildTheme(settings ?? {})
 
-  return <ReserveClient slug={slug} theme={theme} />
+  return (
+    <ReserveClient
+      slug={slug}
+      theme={theme}
+      minPartySize={settings?.min_party_size ?? 1}
+      maxPartySize={settings?.max_party_size ?? 10}
+    />
+  )
 }

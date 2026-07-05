@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { Theme } from '@/lib/theme'
 
 interface AvailabilitySlot {
@@ -31,12 +31,14 @@ function fmtDate(d: string) {
 interface Props {
   slug: string
   theme: Theme
+  minPartySize?: number
+  maxPartySize?: number
 }
 
-export function ReserveClient({ slug, theme: t }: Props) {
+export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize = 10 }: Props) {
   const [step, setStep] = useState<Step>('search')
   const [date, setDate] = useState(tomorrow())
-  const [partySize, setPartySize] = useState(2)
+  const [partySize, setPartySize] = useState(Math.min(2, maxPartySize))
 
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null)
@@ -51,6 +53,27 @@ export function ReserveClient({ slug, theme: t }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [confirmationRef, setConfirmationRef] = useState('')
+  const [countdown, setCountdown] = useState(6)
+
+  // Countdown redirect after successful reservation
+  useEffect(() => {
+    if (step !== 'success') return
+    setCountdown(6)
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          setStep('search')
+          setGuestName(''); setGuestEmail(''); setGuestPhone('')
+          setOccasion(''); setNotes(''); setSelectedSlot(null)
+          setDate(tomorrow())
+          return 6
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [step])
 
   // Inline style helpers derived from theme
   const root: React.CSSProperties = {
@@ -204,21 +227,33 @@ export function ReserveClient({ slug, theme: t }: Props) {
               </div>
               <div>
                 <label style={labelStyle}>Party size</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.375rem' }}>
-                  {[1,2,3,4,5,6,7,8].map(n => (
-                    <button key={n} type="button" onClick={() => setPartySize(n)}
-                      style={{
-                        padding: '0.625rem 0',
-                        borderRadius: t.btnRadius,
-                        fontSize: '0.875rem', fontWeight: 600, border: 'none',
-                        cursor: 'pointer', transition: 'all 0.1s',
-                        backgroundColor: partySize === n ? t.primary : t.input,
-                        color: partySize === n ? t.primaryText : t.muted,
-                        fontFamily: t.font,
-                      }}
-                    >{n}</button>
-                  ))}
-                </div>
+                {maxPartySize - minPartySize <= 7 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.375rem' }}>
+                    {Array.from({ length: maxPartySize - minPartySize + 1 }, (_, i) => i + minPartySize).map(n => (
+                      <button key={n} type="button" onClick={() => setPartySize(n)}
+                        style={{
+                          padding: '0.625rem 0',
+                          borderRadius: t.btnRadius,
+                          fontSize: '0.875rem', fontWeight: 600, border: 'none',
+                          cursor: 'pointer', transition: 'all 0.1s',
+                          backgroundColor: partySize === n ? t.primary : t.input,
+                          color: partySize === n ? t.primaryText : t.muted,
+                          fontFamily: t.font,
+                        }}
+                      >{n}</button>
+                    ))}
+                  </div>
+                ) : (
+                  <select
+                    value={partySize}
+                    onChange={e => setPartySize(Number(e.target.value))}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    {Array.from({ length: maxPartySize - minPartySize + 1 }, (_, i) => i + minPartySize).map(n => (
+                      <option key={n} value={n}>{n} {n === 1 ? 'person' : 'people'}</option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
             <button onClick={handleSearch} style={primaryBtn}>Check availability</button>
@@ -361,8 +396,11 @@ export function ReserveClient({ slug, theme: t }: Props) {
                 #{confirmationRef}
               </p>
             </div>
-            <p style={{ color: t.faint, fontSize: '0.8125rem', marginBottom: '1.25rem' }}>
+            <p style={{ color: t.faint, fontSize: '0.8125rem', marginBottom: '1rem' }}>
               Check your email for details and the cancellation link.
+            </p>
+            <p style={{ color: t.muted, fontSize: '0.8125rem', marginBottom: '1.25rem' }}>
+              Redirecting in {countdown} second{countdown !== 1 ? 's' : ''}…
             </p>
             <button type="button"
               onClick={() => {
