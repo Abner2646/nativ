@@ -28,18 +28,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Admin only' }, { status: 403 })
   }
 
-  // If this tenant was referred, include their discount coupon in the checkout session
-  const { data: referral } = await supabaseAdmin
-    .from('referrals')
-    .select('referred_coupon_id')
-    .eq('referred_tenant_id', ctx.tenant.id)
-    .maybeSingle()
+  // Prevent creating a second subscription if one already exists
+  if (ctx.tenant.status === 'active' && ctx.tenant.stripe_subscription_id) {
+    return NextResponse.json({ error: 'Already subscribed' }, { status: 409 })
+  }
+
+  // Only apply the referred coupon on the FIRST subscription ever.
+  // If stripe_subscription_id is already set (cancelled and re-subscribing),
+  // the coupon was already used — don't re-apply it.
+  const isFirstSubscription = !ctx.tenant.stripe_subscription_id
+  let couponId: string | undefined
+
+  if (isFirstSubscription) {
+    const { data: referral } = await supabaseAdmin
+      .from('referrals')
+      .select('referred_coupon_id')
+      .eq('referred_tenant_id', ctx.tenant.id)
+      .maybeSingle()
+    couponId = referral?.referred_coupon_id ?? undefined
+  }
 
   const session = await createCheckoutSession(
     ctx.tenant.id,
     ctx.tenant.slug,
     ctx.tenant.stripe_customer_id,
-    referral?.referred_coupon_id ?? undefined
+    couponId,
   )
   return NextResponse.json({ url: session.url })
 }

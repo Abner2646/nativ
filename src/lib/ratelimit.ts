@@ -21,6 +21,9 @@ export const reservationLimiter = makeLimiter(10, '1 m', 'rl:reserve')
 // 3 accounts/hour per IP — prevents bulk signup
 export const registerLimiter = makeLimiter(3, '1 h', 'rl:reg')
 
+// 10 attempts/hour per IP — prevents brute-forcing 6-digit referral codes
+export const referralLimiter = makeLimiter(10, '1 h', 'rl:ref')
+
 export async function checkRateLimit(
   rl: Ratelimit | null,
   identifier: string,
