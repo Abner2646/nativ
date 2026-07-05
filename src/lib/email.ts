@@ -81,7 +81,7 @@ export async function sendOwnerNotification(r: Reservation, settings: TenantSett
 export async function sendEmployeeInvite(email: string, token: string, restaurantName: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
   const inviteUrl = `${appUrl}/invite?token=${token}`
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: isDev ? FROM_DEV : `${restaurantName} <noreply@${getAppDomain()}>`,
     to: email,
     subject: `You've been invited to ${restaurantName} on Nativ`,
@@ -92,6 +92,7 @@ export async function sendEmployeeInvite(email: string, token: string, restauran
       <p style="color:#888;font-size:12px">This link expires in 7 days.</p>
     </div>`
   })
+  if (error) throw error
 }
 
 export async function sendBirthdayEmail(

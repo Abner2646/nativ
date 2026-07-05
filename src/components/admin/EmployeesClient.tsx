@@ -50,8 +50,18 @@ export function EmployeesClient({ initialEmployees, initialInvites, currentUserI
     setInviting(true); setInviteError(''); setInviteSent(false)
     const res = await adminFetch('resource=employees', { method: 'POST', body: JSON.stringify({ email: inviteEmail.trim() }) })
     setInviting(false)
-    if (res.ok) { setInviteSent(true); setInviteEmail(''); setTimeout(() => setInviteSent(false), 3000) }
-    else { const data = await res.json(); setInviteError(data.error || 'Failed to send invite') }
+    const data = await res.json()
+    if (res.ok) {
+      setInviteEmail('')
+      if (data.emailSent === false) {
+        setInviteError('Invite saved, but the email failed to send. Verify the nativ.business domain in your Resend dashboard.')
+      } else {
+        setInviteSent(true)
+        setTimeout(() => setInviteSent(false), 3000)
+      }
+    } else {
+      setInviteError(data.error || 'Failed to send invite')
+    }
   }
 
   const removeEmployee = async (userId: string) => {
