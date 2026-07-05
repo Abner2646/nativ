@@ -1,4 +1,4 @@
-import { requireUser, getTenantBySlug } from '@/lib/auth'
+import { requireUser, requireAdminForSlug } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { BillingClient } from '@/components/admin/BillingClient'
@@ -13,8 +13,7 @@ export default async function BillingPage({
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams])
   const user = await requireUser()
-  const access = await getTenantBySlug(slug, user.id)
-  if (!access) return notFound()
+  const access = await requireAdminForSlug(slug, user.id)
 
   const [{ data: tenant }, { data: referral }] = await Promise.all([
     supabaseAdmin.from('tenants').select('*').eq('id', access.tenant.id).single(),

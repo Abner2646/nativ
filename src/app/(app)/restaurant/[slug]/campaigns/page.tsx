@@ -1,4 +1,4 @@
-import { requireUser, getTenantBySlug } from '@/lib/auth'
+import { requireUser, requireAdminForSlug } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { CampaignsClient } from '@/components/admin/CampaignsClient'
@@ -6,8 +6,7 @@ import { CampaignsClient } from '@/components/admin/CampaignsClient'
 export default async function CampaignsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const user = await requireUser()
-  const access = await getTenantBySlug(slug, user.id)
-  if (!access) return notFound()
+  const access = await requireAdminForSlug(slug, user.id)
 
   const { tenant } = access
 

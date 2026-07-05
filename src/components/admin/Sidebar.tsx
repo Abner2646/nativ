@@ -4,26 +4,39 @@ import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { getTenantDomain, getTenantBaseUrl } from '@/lib/domain'
 
-type NavItem = { href: string; label: string; exact?: boolean; comingSoon?: boolean } | '---'
+type NavItem = {
+  href: string
+  label: string
+  exact?: boolean
+  comingSoon?: boolean
+  adminOnly?: boolean
+} | '---'
 
 const NAV = (slug: string): NavItem[] => [
-  { href: `/restaurant/${slug}`,              label: 'Dashboard',     exact: true },
+  { href: `/restaurant/${slug}`,              label: 'Dashboard',      exact: true },
   { href: `/restaurant/${slug}/reservations`, label: 'Reservations' },
   { href: `/restaurant/${slug}/guests`,       label: 'Guests' },
-  { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',  comingSoon: true },
+  { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',   comingSoon: true, adminOnly: true },
   '---',
-  { href: `/restaurant/${slug}/shifts`,       label: 'Shifts' },
-  { href: `/restaurant/${slug}/areas`,        label: 'Seating areas' },
-  { href: `/restaurant/${slug}/events`,       label: 'Special events' },
+  { href: `/restaurant/${slug}/shifts`,       label: 'Shifts',         adminOnly: true },
+  { href: `/restaurant/${slug}/areas`,        label: 'Seating areas',  adminOnly: true },
+  { href: `/restaurant/${slug}/events`,       label: 'Special events', adminOnly: true },
   '---',
-  { href: `/restaurant/${slug}/employees`,    label: 'Employees' },
-  { href: `/restaurant/${slug}/photos`,       label: 'Photos' },
-  { href: `/restaurant/${slug}/embed`,        label: 'Embed & share' },
-  { href: `/restaurant/${slug}/settings`,     label: 'Settings' },
-  { href: `/restaurant/${slug}/billing`,      label: 'Billing' },
+  { href: `/restaurant/${slug}/employees`,    label: 'Employees',      adminOnly: true },
+  { href: `/restaurant/${slug}/photos`,       label: 'Photos',         adminOnly: true },
+  { href: `/restaurant/${slug}/embed`,        label: 'Embed & share',  adminOnly: true },
+  { href: `/restaurant/${slug}/settings`,     label: 'Settings',       adminOnly: true },
+  { href: `/restaurant/${slug}/billing`,      label: 'Billing',        adminOnly: true },
 ]
 
-export function Sidebar({ slug, name, userEmail }: { slug: string; name: string; userEmail: string }) {
+export function Sidebar({
+  slug, name, userEmail, role,
+}: {
+  slug: string
+  name: string
+  userEmail: string
+  role: 'admin' | 'employee'
+}) {
   const pathname  = usePathname()
   const [open, setOpen] = useState(false)
   const menuRef   = useRef<HTMLDivElement>(null)
@@ -37,6 +50,26 @@ export function Sidebar({ slug, name, userEmail }: { slug: string; name: string;
   }, [])
 
   const initial = (userEmail?.[0] ?? '?').toUpperCase()
+  const isAdmin = role === 'admin'
+
+  const visibleNav = NAV(slug).filter(item => {
+    if (item === '---') return true
+    if (item.adminOnly && !isAdmin) return false
+    return true
+  })
+
+  // Collapse consecutive separators and leading/trailing separators
+  const cleanNav: NavItem[] = []
+  for (const item of visibleNav) {
+    if (item === '---') {
+      if (cleanNav.length === 0) continue
+      if (cleanNav[cleanNav.length - 1] === '---') continue
+      cleanNav.push(item)
+    } else {
+      cleanNav.push(item)
+    }
+  }
+  if (cleanNav[cleanNav.length - 1] === '---') cleanNav.pop()
 
   return (
     <aside className="w-60 flex flex-col fixed h-screen bg-midnight z-10"
@@ -72,6 +105,13 @@ export function Sidebar({ slug, name, userEmail }: { slug: string; name: string;
               style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <p className="text-xs text-offwhite/35 truncate">{userEmail}</p>
+                <span className={`mt-1 inline-block text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded-full ${
+                  isAdmin
+                    ? 'bg-gold/12 text-gold border border-gold/25'
+                    : 'bg-white/[0.06] text-offwhite/40 border border-white/[0.08]'
+                }`}>
+                  {role}
+                </span>
               </div>
               <Link href="/account" onClick={() => setOpen(false)}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-offwhite/60 hover:text-offwhite hover:bg-white/[0.04] transition-colors">
@@ -95,7 +135,7 @@ export function Sidebar({ slug, name, userEmail }: { slug: string; name: string;
 
       {/* ── Nav ── */}
       <nav className="flex-1 overflow-y-auto py-2">
-        {NAV(slug).map((item, i) => {
+        {cleanNav.map((item, i) => {
           if (item === '---') {
             return <div key={i} className="my-1 mx-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }} />
           }
@@ -126,19 +166,27 @@ export function Sidebar({ slug, name, userEmail }: { slug: string; name: string;
         })}
       </nav>
 
-      {/* ── Footer: public page ── */}
+      {/* ── Footer: public page (admin only) or role badge (employee) ── */}
       <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <a href={getTenantBaseUrl(slug)} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors group"
-          style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-          onMouseOver={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
-          onMouseOut={e  => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-offwhite/60">Your public page</p>
-            <p className="text-[10px] text-offwhite/25 truncate mt-0.5">{getTenantDomain(slug)}</p>
+        {isAdmin ? (
+          <a href={getTenantBaseUrl(slug)} target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors group"
+            style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+            onMouseOver={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
+            onMouseOut={e  => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-offwhite/60">Your public page</p>
+              <p className="text-[10px] text-offwhite/25 truncate mt-0.5">{getTenantDomain(slug)}</p>
+            </div>
+            <span className="text-offwhite/25 ml-2 shrink-0 text-sm">↗</span>
+          </a>
+        ) : (
+          <div className="px-3 py-2.5 rounded-xl"
+            style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-offwhite/25">Role</p>
+            <p className="text-xs text-offwhite/40 mt-0.5">Employee</p>
           </div>
-          <span className="text-offwhite/25 ml-2 shrink-0 text-sm">↗</span>
-        </a>
+        )}
       </div>
     </aside>
   )

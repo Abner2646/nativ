@@ -67,6 +67,14 @@ export async function getUserTenants(userId: string) {
   return data
 }
 
+// Verificar que el usuario es admin de un tenant por slug (redirect si no)
+export async function requireAdminForSlug(slug: string, userId: string) {
+  const access = await getTenantBySlug(slug, userId)
+  if (!access) redirect('/dashboard')
+  if (access.role !== 'admin') redirect(`/restaurant/${slug}`)
+  return access
+}
+
 // Obtener un tenant por slug verificando acceso del usuario
 export async function getTenantBySlug(slug: string, userId: string) {
   const { data: tenant } = await supabaseAdmin
