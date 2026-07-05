@@ -355,8 +355,13 @@ export async function inviteEmployee(req: NextRequest) {
   const { error } = await supabaseAdmin.from('employee_invites')
     .upsert({ tenant_id: ctx.tenant.id, email, token, expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), created_by: user.id }, { onConflict: 'tenant_id,email' })
   if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
-  sendEmployeeInvite(email, token, ctx.settings.name).catch(console.error)
-  return NextResponse.json({ success: true }, { status: 201 })
+  try {
+    await sendEmployeeInvite(email, token, ctx.settings.name)
+  } catch (emailErr) {
+    console.error('[inviteEmployee] email send failed:', emailErr)
+    return NextResponse.json({ success: true, emailSent: false }, { status: 201 })
+  }
+  return NextResponse.json({ success: true, emailSent: true }, { status: 201 })
 }
 
 export async function removeEmployee(req: NextRequest) {

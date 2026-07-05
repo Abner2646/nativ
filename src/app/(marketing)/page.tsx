@@ -615,7 +615,7 @@ function NativLanding() {
               Nativ Pro
             </p>
             <div className="flex items-end gap-2 justify-center mb-1">
-              <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '4.5rem', color: C.offwhite, lineHeight: 1 }}>$49</span>
+              <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '4.5rem', color: C.offwhite, lineHeight: 1 }}>$80</span>
               <span style={{ color: 'rgba(250,250,248,0.35)', fontSize: '1rem', paddingBottom: '0.75rem' }}>/month</span>
             </div>
             <p style={{ color: 'rgba(250,250,248,0.28)', fontSize: '0.8125rem', marginBottom: '2.25rem' }}>

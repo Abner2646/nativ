@@ -133,7 +133,7 @@ export function BillingClient({ tenant, slug, success, hasReferral }: Props) {
       {tenant.status !== 'active' && (
         <button onClick={goToCheckout} disabled={loading}
           className="w-full bg-offwhite text-midnight font-semibold py-3 rounded-xl hover:bg-offwhite/90 transition-colors disabled:opacity-40">
-          {loading ? 'Redirecting…' : 'Subscribe — $49 / month'}
+          {loading ? 'Redirecting…' : 'Subscribe — $80 / month'}
         </button>
       )}
 
