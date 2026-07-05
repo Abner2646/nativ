@@ -10,10 +10,12 @@ function slugify(s: string) {
 }
 
 export function OnboardingForm() {
-  const [name, setName]       = useState('')
-  const [slug, setSlug]       = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+  const [mode, setMode]         = useState<'choose' | 'create' | 'join'>('choose')
+  const [name, setName]         = useState('')
+  const [slug, setSlug]         = useState('')
+  const [token, setToken]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
 
   const handleCreate = async () => {
     setLoading(true); setError('')
@@ -34,16 +36,96 @@ export function OnboardingForm() {
     window.location.href = `/restaurant/${slug}`
   }
 
+  const handleJoin = async () => {
+    setLoading(true); setError('')
+    const trimmed = token.trim()
+    if (!trimmed) { setError('Enter your invite token'); setLoading(false); return }
+
+    const res = await fetch(`/api/register?token=${encodeURIComponent(trimmed)}`, {
+      method: 'PUT',
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      const msg: Record<number, string> = {
+        404: 'Invite not found. Check the link in your email.',
+        409: 'This invite has already been used.',
+        410: 'This invite has expired. Ask the restaurant admin to send a new one.',
+      }
+      setError(msg[res.status] || data.error || 'Something went wrong')
+      setLoading(false)
+      return
+    }
+    window.location.href = '/dashboard'
+  }
+
   const domain = getAppDomain()
 
+  // ── Step 0: choose path ──────────────────────────────────────
+  if (mode === 'choose') {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+        <div className="w-full max-w-md">
+          <h1 className="text-3xl font-bold mb-2">Welcome to Nativ</h1>
+          <p className="text-gray-500 text-sm mb-10">What would you like to do?</p>
+          <div className="space-y-4">
+            <button onClick={() => setMode('create')}
+              className="w-full text-left bg-gray-900 border border-gray-700 hover:border-gray-500 rounded-xl px-6 py-5 transition">
+              <p className="font-semibold text-white mb-1">Create a new restaurant</p>
+              <p className="text-sm text-gray-500">Set up your reservation system from scratch.</p>
+            </button>
+            <button onClick={() => setMode('join')}
+              className="w-full text-left bg-gray-900 border border-gray-700 hover:border-gray-500 rounded-xl px-6 py-5 transition">
+              <p className="font-semibold text-white mb-1">Join an existing restaurant</p>
+              <p className="text-sm text-gray-500">You received an invite from a restaurant admin.</p>
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  // ── Step 1b: join with invite token ─────────────────────────
+  if (mode === 'join') {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+        <div className="w-full max-w-md">
+          <button onClick={() => { setMode('choose'); setError('') }}
+            className="text-gray-500 text-sm mb-8 hover:text-gray-300 transition">
+            ← Back
+          </button>
+          <h1 className="text-3xl font-bold mb-2">Accept your invite</h1>
+          <p className="text-gray-500 text-sm mb-8">
+            Paste the invite token from the email you received.
+          </p>
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="Paste invite token here"
+              value={token}
+              onChange={e => setToken(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gray-400 font-mono text-sm"
+            />
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+            <button onClick={handleJoin} disabled={loading || !token.trim()}
+              className="w-full bg-white text-black font-semibold py-4 rounded-lg hover:bg-gray-100 transition disabled:opacity-40">
+              {loading ? 'Joining…' : 'Join restaurant'}
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  // ── Step 1a: create restaurant ───────────────────────────────
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
       <div className="w-full max-w-md">
-        <div className="mb-10">
-          <p className="text-gray-500 text-sm mb-2">Step 1 of 1</p>
-          <h1 className="text-3xl font-bold mb-2">Create your restaurant</h1>
-          <p className="text-gray-500 text-sm">You can add more restaurants later from your dashboard.</p>
-        </div>
+        <button onClick={() => { setMode('choose'); setError('') }}
+          className="text-gray-500 text-sm mb-8 hover:text-gray-300 transition">
+          ← Back
+        </button>
+        <h1 className="text-3xl font-bold mb-2">Create your restaurant</h1>
+        <p className="text-gray-500 text-sm mb-8">You can add more restaurants later from your dashboard.</p>
 
         <div className="space-y-5">
           <div>
