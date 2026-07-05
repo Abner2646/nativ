@@ -20,8 +20,8 @@ export default async function AreasPage({ params }: { params: Promise<{ slug: st
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold">Seating Areas</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="font-satoshi font-bold text-[22px] text-offwhite">Seating Areas</h1>
+        <p className="text-sm text-offwhite/40 mt-1">
           Define the zones guests can choose from (Terrace, Main room, Bar…). Assign capacities per area in Shifts.
         </p>
       </div>

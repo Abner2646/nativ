@@ -334,16 +334,16 @@ function NativLanding() {
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav style={{ backgroundColor: C.offwhite, borderBottom: `1px solid ${C.sand}` }}
         className="sticky top-0 z-50 px-6 md:px-12 py-4 flex items-center justify-between">
-        <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '1.25rem', color: C.midnight, letterSpacing: '-0.02em' }}>
-          NATIV
+        <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '1.1875rem', color: C.midnight, letterSpacing: '-0.02em' }}>
+          Nativ
         </span>
-        <div className="flex items-center gap-4">
-          <a href="/login" style={{ color: C.midnight, fontSize: '0.875rem', fontWeight: 500 }}
-            className="hidden sm:block hover:opacity-60 transition-opacity">
+        <div className="flex items-center gap-5">
+          <a href="/login" style={{ color: C.midnight, fontSize: '0.875rem', fontWeight: 500, opacity: 0.55 }}
+            className="hidden sm:block hover:opacity-100 transition-opacity">
             Log in
           </a>
           <a href="/register"
-            style={{ backgroundColor: C.midnight, color: C.offwhite, fontSize: '0.875rem', fontWeight: 600, padding: '0.625rem 1.25rem', borderRadius: '0.5rem' }}
+            style={{ backgroundColor: C.midnight, color: C.offwhite, fontSize: '0.875rem', fontWeight: 600, padding: '0.5625rem 1.25rem', borderRadius: '0.5rem', textDecoration: 'none' }}
             className="hover:opacity-80 transition-opacity">
             Start free trial
           </a>
@@ -351,81 +351,77 @@ function NativLanding() {
       </nav>
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
-      <section style={{ backgroundColor: C.midnight }} className="px-6 md:px-12 py-24 md:py-36">
+      <section style={{ backgroundColor: C.midnight }} className="px-6 md:px-12 py-28 md:py-40">
         <div className="max-w-4xl mx-auto">
-          <p style={{ color: C.sage, fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.12em', fontFamily: "'Satoshi', sans-serif" }}
-            className="uppercase mb-6">
+          <p style={{ color: C.sage, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.16em', fontFamily: "'Satoshi', sans-serif" }}
+            className="uppercase mb-7">
             Reservation software for independent restaurants
           </p>
-          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', lineHeight: '1.05', letterSpacing: '-0.03em', color: C.offwhite }}
-            className="mb-6">
-            Your reservation system<br />
-            is showing guests<br />
-            <span style={{ color: C.gold }}>other restaurants.</span>
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(2.75rem, 7vw, 5.25rem)', lineHeight: '1.02', letterSpacing: '-0.035em', color: C.offwhite }}
+            className="mb-7">
+            You built the demand.<br />
+            <span style={{ color: C.gold }}>The platform captured it.</span>
           </h1>
-          <p style={{ color: '#8fa0ae', fontSize: '1.125rem', lineHeight: '1.7', maxWidth: '36rem' }} className="mb-10">
-            Traditional platforms redirect your guests to their marketplace. You paid to bring them in. They capture the relationship. Nativ doesn't work that way.
+          <p style={{ color: 'rgba(250,250,248,0.50)', fontSize: '1.1875rem', lineHeight: '1.8', maxWidth: '35rem' }} className="mb-10">
+            OpenTable, TheFork, Resy — every time a guest books through them, they're shown competing restaurants. You paid to bring them in. The platform decides where they go next.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <a href="/register"
-              style={{ backgroundColor: C.offwhite, color: C.midnight, fontWeight: 700, fontSize: '0.9375rem', padding: '1rem 2rem', borderRadius: '0.625rem', fontFamily: "'Satoshi', sans-serif" }}
+              style={{ backgroundColor: C.offwhite, color: C.midnight, fontWeight: 700, fontSize: '0.9375rem', padding: '1rem 2rem', borderRadius: '0.625rem', fontFamily: "'Satoshi', sans-serif", textDecoration: 'none' }}
               className="hover:opacity-90 transition-opacity text-center">
               Start free 14-day trial
             </a>
             <a href="#how-it-works"
-              style={{ color: C.offwhite, fontWeight: 500, fontSize: '0.9375rem', padding: '1rem 2rem', borderRadius: '0.625rem', border: `1px solid rgba(255,255,255,0.15)` }}
-              className="hover:border-white/40 transition-colors text-center">
-              See how it works
+              style={{ color: 'rgba(250,250,248,0.60)', fontWeight: 500, fontSize: '0.9375rem', padding: '1rem 2rem', borderRadius: '0.625rem', border: '1px solid rgba(255,255,255,0.12)', textDecoration: 'none' }}
+              className="hover:text-white/80 hover:border-white/25 transition-all text-center">
+              See how it works →
             </a>
           </div>
-          <p style={{ color: '#4a6070', fontSize: '0.8125rem', marginTop: '1.5rem' }}>
-            No credit card required · Cancel anytime
+          <p style={{ color: 'rgba(250,250,248,0.25)', fontSize: '0.8125rem', marginTop: '1.75rem' }}>
+            No credit card required · 14-day free trial · Cancel anytime
           </p>
         </div>
       </section>
 
-      {/* ── Problem ─────────────────────────────────────────────────────── */}
-      <section style={{ backgroundColor: C.offwhite }} className="px-6 md:px-12 py-24">
+      {/* ── Realization ─────────────────────────────────────────────────── */}
+      <section style={{ backgroundColor: C.offwhite }} className="px-6 md:px-12 py-28">
         <div className="max-w-4xl mx-auto">
-          <p style={{ color: C.sage, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', fontFamily: "'Satoshi', sans-serif" }}
-            className="uppercase mb-4">
-            The problem
-          </p>
-          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', lineHeight: '1.15', letterSpacing: '-0.02em', color: C.midnight }}
-            className="mb-6 max-w-2xl">
-            You brought them in. The platform showed them where else to go.
-          </h2>
-          <p style={{ color: '#556070', fontSize: '1.0625rem', lineHeight: '1.7', maxWidth: '38rem' }} className="mb-16">
-            Every marketing dollar you spend drives guests to your restaurant. But when they open your booking page on a traditional platform, you're competing for their attention with every restaurant listed nearby.
+
+          {/* Insight hook — this is where the realization lands */}
+          <p style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.625rem, 3.5vw, 2.625rem)', lineHeight: '1.25', letterSpacing: '-0.025em', color: C.midnight }}
+            className="max-w-3xl mb-20">
+            Every time a guest decides to book at your restaurant,
+            the platform shows them{' '}
+            <span style={{ color: C.gold }}>where else they can go.</span>
           </p>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-10">
             {[
               {
                 number: '01',
-                title: 'Competing listings',
-                body: 'Guests booking at your restaurant are shown other restaurants on the same screen. You created the demand. The platform monetizes it.',
+                title: 'Your traffic. Their marketplace.',
+                body: 'You spent money on ads, social media and reputation. The moment a guest opens the platform, they\'re competing for their attention with every restaurant on the block.',
               },
               {
                 number: '02',
-                title: 'Someone else\'s brand',
-                body: 'The booking experience carries the platform\'s logo, colors and identity — not yours. Guests remember the platform, not your restaurant.',
+                title: 'Your guest. Their brand.',
+                body: 'The booking experience carries the platform\'s logo and identity. Guests remember where they booked — not who they dined with. You made the impression. They get the credit.',
               },
               {
                 number: '03',
-                title: 'Data you don\'t own',
-                body: 'Guest profiles, visit history and preferences belong to the platform. When you stop paying, so does your access to your own customers.',
+                title: 'Your data. Their database.',
+                body: 'Visit history, preferences, contact details — it all belongs to the platform. The day you stop paying, you lose access to your own customers.',
               },
             ].map(item => (
               <div key={item.number}>
-                <p style={{ color: C.gold, fontFamily: "'Satoshi', sans-serif", fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.1em', marginBottom: '1rem' }}
+                <p style={{ color: C.gold, fontFamily: "'Satoshi', sans-serif", fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.12em', marginBottom: '1rem' }}
                   className="uppercase">
                   {item.number}
                 </p>
-                <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 600, fontSize: '1.0625rem', color: C.midnight, marginBottom: '0.75rem' }}>
+                <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '1.0625rem', color: C.midnight, marginBottom: '0.75rem', lineHeight: '1.3' }}>
                   {item.title}
                 </h3>
-                <p style={{ color: '#556070', fontSize: '0.9375rem', lineHeight: '1.7' }}>
+                <p style={{ color: '#4a5a68', fontSize: '0.9375rem', lineHeight: '1.8' }}>
                   {item.body}
                 </p>
               </div>
@@ -434,189 +430,220 @@ function NativLanding() {
         </div>
       </section>
 
-      {/* ── Solution ────────────────────────────────────────────────────── */}
-      <section id="how-it-works" style={{ backgroundColor: C.sand }} className="px-6 md:px-12 py-24">
+      {/* ── The shift ───────────────────────────────────────────────────── */}
+      <section id="how-it-works" style={{ backgroundColor: C.sand }} className="px-6 md:px-12 py-28">
         <div className="max-w-4xl mx-auto">
           <p style={{ color: C.sage, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', fontFamily: "'Satoshi', sans-serif" }}
             className="uppercase mb-4">
             The shift
           </p>
-          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', lineHeight: '1.15', letterSpacing: '-0.02em', color: C.midnight }}
-            className="mb-6 max-w-2xl">
+          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.75rem, 4vw, 3rem)', lineHeight: '1.15', letterSpacing: '-0.025em', color: C.midnight }}
+            className="mb-5 max-w-2xl">
             Reservation software that disappears inside your brand.
           </h2>
-          <p style={{ color: '#4a5060', fontSize: '1.0625rem', lineHeight: '1.7', maxWidth: '38rem' }} className="mb-16">
-            Nativ lives entirely within your website, your domain and your visual identity. When a guest books a table, they never leave your world — and they never should.
+          <p style={{ color: '#4a5060', fontSize: '1.0625rem', lineHeight: '1.8', maxWidth: '38rem' }} className="mb-14">
+            Nativ lives entirely within your website, your domain and your visual identity. No marketplace. No competing restaurants. No platform taking center stage.
           </p>
 
           <div className="grid md:grid-cols-2 gap-5">
-            {[
-              {
-                label: 'Before Nativ',
-                bg: '#ffffff',
-                border: `1.5px solid ${C.sand}`,
-                items: [
-                  'Guests see competing restaurants',
-                  'Platform branding on every screen',
-                  'Data belongs to the platform',
-                  'You pay to strengthen competitors',
-                ],
-                icon: '✕',
-                iconColor: '#d4726a',
-              },
-              {
-                label: 'With Nativ',
-                bg: C.midnight,
-                border: 'none',
-                items: [
-                  'Only your restaurant, always',
-                  'Your brand on every touchpoint',
+            {/* Before */}
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid rgba(74,90,104,0.14)', borderRadius: '1.25rem', padding: '2.25rem' }}>
+              <p style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 600, fontSize: '0.75rem', color: '#8a9aaa', letterSpacing: '0.1em', marginBottom: '1.5rem' }}
+                className="uppercase">
+                Traditional platforms
+              </p>
+              <ul className="space-y-3.5">
+                {[
+                  'Competing restaurants on every screen',
+                  'Platform branding throughout the experience',
+                  'Guest data owned by the platform',
+                  'You pay — they profit from your traffic',
+                  'Guests remember the app, not your restaurant',
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-3">
+                    <span style={{ color: '#d4726a', fontWeight: 700, flexShrink: 0, marginTop: '0.125rem', fontSize: '0.875rem' }}>✕</span>
+                    <span style={{ color: '#4a5a68', fontSize: '0.9375rem', lineHeight: '1.55' }}>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* After */}
+            <div style={{ backgroundColor: C.midnight, borderRadius: '1.25rem', padding: '2.25rem' }}>
+              <p style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 600, fontSize: '0.75rem', color: C.sage, letterSpacing: '0.1em', marginBottom: '1.5rem' }}
+                className="uppercase">
+                With Nativ
+              </p>
+              <ul className="space-y-3.5">
+                {[
+                  'Only your restaurant, on every screen',
+                  'Your brand on every single touchpoint',
                   'Guest data is yours, forever',
-                  'Every dollar reinforces your brand',
-                ],
-                icon: '✓',
-                iconColor: C.sage,
-              },
-            ].map(col => (
-              <div key={col.label} style={{ backgroundColor: col.bg, border: col.border, borderRadius: '1rem', padding: '2rem' }}>
-                <p style={{
-                  fontFamily: "'Satoshi', sans-serif",
-                  fontWeight: 600,
-                  fontSize: '0.8125rem',
-                  color: col.bg === C.midnight ? C.sand : C.midnight,
-                  letterSpacing: '0.08em',
-                  marginBottom: '1.25rem',
-                  opacity: 0.7,
-                }}
-                  className="uppercase">
-                  {col.label}
-                </p>
-                <ul className="space-y-3">
-                  {col.items.map(item => (
-                    <li key={item} className="flex items-start gap-3">
-                      <span style={{ color: col.iconColor, fontWeight: 700, flexShrink: 0, marginTop: '0.1rem' }}>{col.icon}</span>
-                      <span style={{ color: col.bg === C.midnight ? '#d0dde8' : '#2a3540', fontSize: '0.9375rem', lineHeight: '1.5' }}>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+                  'Every dollar reinforces your own brand',
+                  'Guests remember you — they never left your world',
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-3">
+                    <span style={{ color: C.sage, fontWeight: 700, flexShrink: 0, marginTop: '0.125rem', fontSize: '0.875rem' }}>✓</span>
+                    <span style={{ color: 'rgba(250,250,248,0.78)', fontSize: '0.9375rem', lineHeight: '1.55' }}>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Features ────────────────────────────────────────────────────── */}
-      <section style={{ backgroundColor: C.offwhite }} className="px-6 md:px-12 py-24">
+      {/* ── What you get — 3 outcome pillars ────────────────────────────── */}
+      <section style={{ backgroundColor: C.offwhite }} className="px-6 md:px-12 py-28">
         <div className="max-w-4xl mx-auto">
           <p style={{ color: C.sage, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', fontFamily: "'Satoshi', sans-serif" }}
             className="uppercase mb-4">
             What you get
           </p>
-          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', lineHeight: '1.15', letterSpacing: '-0.02em', color: C.midnight }}
+          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.75rem, 4vw, 3rem)', lineHeight: '1.15', letterSpacing: '-0.025em', color: C.midnight }}
             className="mb-16 max-w-xl">
-            Everything you need. Nothing that shouldn't be there.
+            Everything a reservation system should do. Nothing it shouldn't.
           </h2>
 
-          <div className="grid sm:grid-cols-2 gap-x-10 gap-y-12">
+          {/* 3 big outcome pillars */}
+          <div className="grid sm:grid-cols-3 gap-8 mb-16">
             {[
               {
-                title: 'White-label booking widget',
-                body: 'Embed the reservation experience directly on your website. Your colors, your fonts, your domain. Guests never land on a third-party page.',
+                accent: C.gold,
+                title: 'Your brand.\nTheir reservation.',
+                body: 'The booking widget lives inside your website. Your colors, your fonts, your domain. Guests never land on a third-party page — and they never should.',
               },
               {
-                title: 'Guest profiles you own',
-                body: 'Every reservation builds a profile: name, visit history, preferences, birthday. That data is yours — not ours, not the platform\'s.',
+                accent: C.sage,
+                title: 'Your guests.\nYour data.',
+                body: 'Every visit builds a profile you own: name, history, preferences, birthday. That data is yours permanently — not ours, not the platform\'s.',
               },
               {
-                title: 'Automated reminders',
-                body: 'Confirmation and 24-hour reminder emails arrive branded as your restaurant. Not as Nativ. Guests remember who they dined with.',
+                accent: C.sage,
+                title: 'Your marketing.\nFull ROI.',
+                body: 'Confirmations, reminders and birthday campaigns — all sent as your restaurant. Not as Nativ. Every touchpoint reinforces your brand, not ours.',
               },
-              {
-                title: 'Smart availability engine',
-                body: 'Configure shifts, seating areas, capacity and blocked dates. The system surfaces exactly the right slots without exposing internal complexity.',
-              },
-              {
-                title: 'AI campaigns — when you approve them',
-                body: 'The AI suggests re-engagement campaigns based on guest behavior. You review, edit and send. You stay in control of your voice.',
-              },
-              {
-                title: 'Birthday campaigns',
-                body: 'Send automatically branded birthday emails to guests. A small gesture that reinforces the relationship — in your name, not ours.',
-              },
-            ].map(f => (
-              <div key={f.title}>
-                <div style={{ width: '2rem', height: '2px', backgroundColor: C.gold, marginBottom: '1rem' }} />
-                <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 600, fontSize: '1.0625rem', color: C.midnight, marginBottom: '0.625rem' }}>
-                  {f.title}
+            ].map((pillar, i) => (
+              <div key={i} style={{ paddingTop: '1.5rem', borderTop: `2px solid ${pillar.accent}` }}>
+                <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '1.25rem', color: C.midnight, marginBottom: '1rem', lineHeight: '1.2', whiteSpace: 'pre-line' }}>
+                  {pillar.title}
                 </h3>
-                <p style={{ color: '#556070', fontSize: '0.9375rem', lineHeight: '1.7' }}>
-                  {f.body}
+                <p style={{ color: '#4a5a68', fontSize: '0.9375rem', lineHeight: '1.8' }}>
+                  {pillar.body}
                 </p>
               </div>
             ))}
+          </div>
+
+          {/* Also included — compact secondary list */}
+          <div style={{ borderTop: '1px solid rgba(74,90,104,0.12)', paddingTop: '2rem' }}>
+            <p style={{ color: '#8a9aaa', fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.12em', marginBottom: '1.25rem' }}
+              className="uppercase">
+              Also included
+            </p>
+            <div className="grid sm:grid-cols-2 gap-x-12 gap-y-3">
+              {[
+                'Smart availability engine with shifts and areas',
+                'Employee management and access control',
+                'AI campaign suggestions — you approve before sending',
+                'Birthday campaigns sent as your brand, automatically',
+                'Embed on your site with one line of code',
+                'Full reservation dashboard with complete guest history',
+              ].map(item => (
+                <div key={item} className="flex items-center gap-2.5">
+                  <span style={{ color: C.sage, fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>✓</span>
+                  <span style={{ color: '#4a5a68', fontSize: '0.9375rem' }}>{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── Quote ───────────────────────────────────────────────────────── */}
-      <section style={{ backgroundColor: C.midnight }} className="px-6 md:px-12 py-24">
+      <section style={{ backgroundColor: C.midnight }} className="px-6 md:px-12 py-28">
         <div className="max-w-3xl mx-auto text-center">
-          <p style={{ color: C.gold, fontSize: '1.5rem', marginBottom: '1rem', opacity: 0.6 }}>&ldquo;</p>
-          <blockquote style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 500, fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', lineHeight: '1.5', color: C.offwhite, letterSpacing: '-0.01em' }}
+          <p style={{ color: C.gold, fontSize: '3rem', marginBottom: '1.5rem', opacity: 0.4, fontFamily: 'Georgia, serif', lineHeight: 1 }}>
+            "
+          </p>
+          <blockquote style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 500, fontSize: 'clamp(1.375rem, 3vw, 2rem)', lineHeight: '1.5', color: C.offwhite, letterSpacing: '-0.015em' }}
             className="mb-8">
-            I finally stopped paying OpenTable to show my customers where else they could eat.
+            I finally stopped paying a platform to show my customers where else they could eat.
           </blockquote>
-          <p style={{ color: C.sage, fontSize: '0.875rem', fontWeight: 500 }}>— Restaurant owner, Buenos Aires</p>
+          <p style={{ color: C.sage, fontSize: '0.875rem', fontWeight: 500 }}>— Restaurant owner, New York City</p>
         </div>
       </section>
 
-      {/* ── Pricing / CTA ───────────────────────────────────────────────── */}
-      <section style={{ backgroundColor: C.offwhite }} className="px-6 md:px-12 py-24">
+      {/* ── Mid-page CTA — strike at peak emotion ───────────────────────── */}
+      <section style={{ backgroundColor: C.offwhite, borderTop: `1px solid ${C.sand}`, borderBottom: `1px solid ${C.sand}` }}
+        className="px-6 md:px-12 py-14">
+        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+          <div>
+            <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.375rem, 3vw, 2rem)', color: C.midnight, letterSpacing: '-0.02em', lineHeight: '1.2' }}>
+              Ready to stop paying your competitors?
+            </h2>
+            <p style={{ color: '#7a8a98', fontSize: '0.9375rem', marginTop: '0.5rem' }}>
+              14 days free. No credit card. No commitment.
+            </p>
+          </div>
+          <a href="/register"
+            style={{ backgroundColor: C.midnight, color: C.offwhite, fontWeight: 700, fontSize: '0.9375rem', padding: '1rem 2rem', borderRadius: '0.625rem', fontFamily: "'Satoshi', sans-serif", textDecoration: 'none', whiteSpace: 'nowrap' }}
+            className="hover:opacity-80 transition-opacity text-center shrink-0">
+            Start free trial →
+          </a>
+        </div>
+      </section>
+
+      {/* ── Pricing ─────────────────────────────────────────────────────── */}
+      <section style={{ backgroundColor: C.offwhite }} className="px-6 md:px-12 py-28">
         <div className="max-w-3xl mx-auto text-center">
           <p style={{ color: C.sage, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', fontFamily: "'Satoshi', sans-serif" }}
             className="uppercase mb-4">
             Simple pricing
           </p>
-          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.75rem, 4vw, 3rem)', lineHeight: '1.1', letterSpacing: '-0.02em', color: C.midnight }}
-            className="mb-6">
+          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.75rem, 4vw, 3rem)', lineHeight: '1.1', letterSpacing: '-0.025em', color: C.midnight }}
+            className="mb-5">
             One plan. No surprises.
           </h2>
-          <p style={{ color: '#556070', fontSize: '1.0625rem', lineHeight: '1.7' }} className="mb-12 max-w-xl mx-auto">
-            A flat monthly rate that includes everything. No per-cover fees. No add-ons. No paying more as you grow.
+          <p style={{ color: '#5a6a78', fontSize: '1.0625rem', lineHeight: '1.8' }} className="mb-12 max-w-xl mx-auto">
+            A flat monthly rate that includes everything. No per-cover fees, no per-seat charges, no add-ons. Pay the same whether you do 50 reservations or 5,000.
           </p>
 
-          <div style={{ backgroundColor: C.midnight, borderRadius: '1.25rem', padding: '2.5rem', maxWidth: '28rem', margin: '0 auto 3rem' }}>
-            <p style={{ color: C.sage, fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', fontFamily: "'Satoshi', sans-serif", marginBottom: '1rem' }}
+          <div style={{ backgroundColor: C.midnight, borderRadius: '1.5rem', padding: '2.75rem 2.25rem', maxWidth: '30rem', margin: '0 auto 3rem' }}>
+            <p style={{ color: C.sage, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', fontFamily: "'Satoshi', sans-serif", marginBottom: '1.25rem' }}
               className="uppercase">
               Nativ Pro
             </p>
-            <div className="flex items-end gap-2 justify-center mb-6">
-              <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '3.5rem', color: C.offwhite, lineHeight: 1 }}>$49</span>
-              <span style={{ color: '#8fa0ae', fontSize: '0.9375rem', paddingBottom: '0.5rem' }}>/month</span>
+            <div className="flex items-end gap-2 justify-center mb-1">
+              <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '4.5rem', color: C.offwhite, lineHeight: 1 }}>$49</span>
+              <span style={{ color: 'rgba(250,250,248,0.35)', fontSize: '1rem', paddingBottom: '0.75rem' }}>/month</span>
             </div>
-            <ul className="space-y-3 mb-8 text-left">
+            <p style={{ color: 'rgba(250,250,248,0.28)', fontSize: '0.8125rem', marginBottom: '2.25rem' }}>
+              Traditional platforms: $300–$500/month + per-cover fees
+            </p>
+            <ul className="space-y-3.5 mb-8 text-left">
               {[
-                'Unlimited reservations',
+                'Unlimited reservations, always',
                 'White-label booking widget',
-                'Guest CRM with full data ownership',
-                'Automated branded emails',
+                'Guest CRM — your data, your ownership',
+                'Branded confirmations & reminders',
                 'AI campaign suggestions',
                 'Shifts, areas & availability engine',
                 'Employee management',
                 'Priority support',
               ].map(item => (
                 <li key={item} className="flex items-center gap-3">
-                  <span style={{ color: C.sage, fontWeight: 700, flexShrink: 0 }}>✓</span>
-                  <span style={{ color: '#c8d8e4', fontSize: '0.9375rem' }}>{item}</span>
+                  <span style={{ color: C.sage, fontWeight: 700, flexShrink: 0, fontSize: '0.875rem' }}>✓</span>
+                  <span style={{ color: 'rgba(250,250,248,0.72)', fontSize: '0.9375rem' }}>{item}</span>
                 </li>
               ))}
             </ul>
             <a href="/register"
-              style={{ display: 'block', backgroundColor: C.offwhite, color: C.midnight, fontWeight: 700, fontSize: '0.9375rem', padding: '1rem', borderRadius: '0.625rem', fontFamily: "'Satoshi', sans-serif", textAlign: 'center' }}
+              style={{ display: 'block', backgroundColor: C.offwhite, color: C.midnight, fontWeight: 700, fontSize: '0.9375rem', padding: '1.125rem', borderRadius: '0.75rem', fontFamily: "'Satoshi', sans-serif", textAlign: 'center', textDecoration: 'none' }}
               className="hover:opacity-90 transition-opacity">
               Start free 14-day trial
             </a>
-            <p style={{ color: '#4a6070', fontSize: '0.8125rem', marginTop: '1rem', textAlign: 'center' }}>
+            <p style={{ color: 'rgba(250,250,248,0.22)', fontSize: '0.8125rem', marginTop: '1rem', textAlign: 'center' }}>
               No credit card required
             </p>
           </div>
@@ -624,48 +651,68 @@ function NativLanding() {
       </section>
 
       {/* ── Final CTA ───────────────────────────────────────────────────── */}
-      <section style={{ backgroundColor: C.sand }} className="px-6 md:px-12 py-24">
+      <section style={{ backgroundColor: C.sand }} className="px-6 md:px-12 py-28">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(2rem, 5vw, 3.5rem)', lineHeight: '1.1', letterSpacing: '-0.03em', color: C.midnight }}
+          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(2.5rem, 6vw, 4.25rem)', lineHeight: '1.05', letterSpacing: '-0.035em', color: C.midnight }}
             className="mb-6">
             Your restaurant.<br />Your guests.<br />Your brand.
           </h2>
-          <p style={{ color: '#4a5060', fontSize: '1.0625rem', lineHeight: '1.7' }} className="mb-10 max-w-xl mx-auto">
+          <p style={{ color: '#4a5060', fontSize: '1.125rem', lineHeight: '1.8' }} className="mb-10 max-w-xl mx-auto">
             Nativ doesn't help restaurants borrow customers. It helps them own the relationship with the ones they've already earned.
           </p>
           <a href="/register"
-            style={{ display: 'inline-block', backgroundColor: C.midnight, color: C.offwhite, fontWeight: 700, fontSize: '1rem', padding: '1.125rem 2.5rem', borderRadius: '0.75rem', fontFamily: "'Satoshi', sans-serif" }}
+            style={{ display: 'inline-block', backgroundColor: C.midnight, color: C.offwhite, fontWeight: 700, fontSize: '1.0625rem', padding: '1.125rem 2.75rem', borderRadius: '0.75rem', fontFamily: "'Satoshi', sans-serif", textDecoration: 'none' }}
             className="hover:opacity-80 transition-opacity">
             Start your free trial
           </a>
-          <p style={{ color: '#6a7880', fontSize: '0.8125rem', marginTop: '1.25rem' }}>
+          <p style={{ color: '#7a8890', fontSize: '0.8125rem', marginTop: '1.25rem' }}>
             14 days free · No credit card · Cancel anytime
           </p>
         </div>
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
-      <footer style={{ backgroundColor: C.midnight, borderTop: `1px solid rgba(255,255,255,0.06)` }}
-        className="px-6 md:px-12 py-10">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '1rem', color: C.offwhite, letterSpacing: '-0.02em' }}>
-            NATIV
-          </span>
-          <div className="flex flex-wrap gap-6">
-            {[
-              { label: 'Log in', href: '/login' },
-              { label: 'Get started', href: '/register' },
-            ].map(link => (
-              <a key={link.href} href={link.href}
-                style={{ color: '#6a8090', fontSize: '0.875rem' }}
-                className="hover:text-white transition-colors">
-                {link.label}
-              </a>
-            ))}
+      <footer style={{ backgroundColor: C.midnight, borderTop: '1px solid rgba(255,255,255,0.06)' }}
+        className="px-6 md:px-12 pt-10 pb-8">
+        <div className="max-w-4xl mx-auto">
+
+          {/* Top row: brand + nav */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
+            <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '1.0625rem', color: C.offwhite, letterSpacing: '-0.02em' }}>
+              Nativ
+            </span>
+            <div className="flex flex-wrap gap-8">
+              {[
+                { label: 'Log in', href: '/login' },
+                { label: 'Get started', href: '/register' },
+              ].map(link => (
+                <a key={link.href} href={link.href}
+                  style={{ color: 'rgba(250,250,248,0.35)', fontSize: '0.875rem', textDecoration: 'none' }}
+                  className="hover:text-white/70 transition-colors">
+                  {link.label}
+                </a>
+              ))}
+            </div>
           </div>
-          <p style={{ color: '#3a5060', fontSize: '0.8125rem' }}>
-            © {new Date().getFullYear()} Nativ
-          </p>
+
+          {/* Bottom row: copyright + developed by */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem' }}
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <p style={{ color: 'rgba(250,250,248,0.18)', fontSize: '0.8125rem' }}>
+              © {new Date().getFullYear()} Nativ
+            </p>
+            <div className="flex items-center gap-2">
+              <span style={{ color: 'rgba(250,250,248,0.18)', fontSize: '0.75rem' }}>Developed by</span>
+              <a href="https://norvex.dev" target="_blank" rel="noopener noreferrer"
+                className="hover:opacity-60 transition-opacity">
+                <img
+                  src="/oa-global-logo.png"
+                  alt="OA Global"
+                  style={{ height: '18px', width: '72px', objectFit: 'contain', objectPosition: 'left', opacity: 0.35, filter: 'brightness(0) invert(1)' }}
+                />
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

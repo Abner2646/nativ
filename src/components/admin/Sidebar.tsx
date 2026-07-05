@@ -39,41 +39,51 @@ export function Sidebar({ slug, name, userEmail }: { slug: string; name: string;
   const initial = (userEmail?.[0] ?? '?').toUpperCase()
 
   return (
-    <aside className="w-60 border-r border-gray-800 flex flex-col fixed h-screen bg-gray-950 z-10">
+    <aside className="w-60 flex flex-col fixed h-screen bg-midnight z-10"
+      style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
 
       {/* ── Header: restaurant + user avatar ── */}
-      <div className="px-4 py-3.5 border-b border-gray-800 flex items-center justify-between gap-2">
+      <div className="px-4 pt-3 pb-3.5 flex items-center justify-between gap-2"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="min-w-0">
-          <p className="font-bold text-white truncate text-sm leading-tight">{name}</p>
-          <p className="text-[10px] text-gray-600 mt-0.5 truncate">{getTenantDomain(slug)}</p>
+          <Link
+            href="/dashboard"
+            className="text-[10px] text-offwhite/30 hover:text-offwhite/60 transition-colors flex items-center gap-1 mb-1.5 w-fit"
+          >
+            ← All restaurants
+          </Link>
+          <p className="font-satoshi font-bold text-offwhite truncate text-sm leading-tight">{name}</p>
+          <p className="text-[10px] text-offwhite/25 mt-0.5 truncate">{getTenantDomain(slug)}</p>
         </div>
 
         {/* Avatar dropdown */}
         <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setOpen(v => !v)}
-            className="w-7 h-7 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center text-xs font-semibold text-gray-300 transition select-none"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-offwhite/60 transition-colors select-none"
+            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
             aria-label="Account menu"
           >
             {initial}
           </button>
 
           {open && (
-            <div className="absolute right-0 top-full mt-2 w-52 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl overflow-hidden z-50">
-              <div className="px-3 py-2.5 border-b border-gray-800">
-                <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+            <div className="absolute right-0 top-full mt-2 w-52 rounded-xl shadow-2xl overflow-hidden z-50"
+              style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <p className="text-xs text-offwhite/35 truncate">{userEmail}</p>
               </div>
               <Link href="/account" onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/70 transition">
+                className="flex items-center gap-2 px-3 py-2 text-sm text-offwhite/60 hover:text-offwhite hover:bg-white/[0.04] transition-colors">
                 My account
               </Link>
               <Link href="/dashboard" onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/70 transition">
+                className="flex items-center gap-2 px-3 py-2 text-sm text-offwhite/60 hover:text-offwhite hover:bg-white/[0.04] transition-colors">
                 All restaurants
               </Link>
-              <div className="border-t border-gray-800">
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <form action="/api/auth/logout" method="POST">
-                  <button className="w-full text-left px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-gray-800/70 transition">
+                  <button className="w-full text-left px-3 py-2 text-sm text-red-400/80 hover:text-red-400 hover:bg-white/[0.04] transition-colors">
                     Sign out
                   </button>
                 </form>
@@ -87,14 +97,15 @@ export function Sidebar({ slug, name, userEmail }: { slug: string; name: string;
       <nav className="flex-1 overflow-y-auto py-2">
         {NAV(slug).map((item, i) => {
           if (item === '---') {
-            return <div key={i} className="my-1 mx-3 border-t border-gray-800/50" />
+            return <div key={i} className="my-1 mx-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }} />
           }
           if (item.comingSoon) {
             return (
               <span key={item.href}
-                className="flex items-center justify-between mx-2 px-3 py-2 rounded-md text-sm text-gray-600 cursor-default select-none">
+                className="flex items-center justify-between mx-2 px-3 py-2 rounded-lg text-sm text-offwhite/25 cursor-default select-none">
                 {item.label}
-                <span className="text-[9px] font-semibold uppercase tracking-widest bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded">
+                <span className="text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded text-offwhite/25"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
                   Soon
                 </span>
               </span>
@@ -103,11 +114,12 @@ export function Sidebar({ slug, name, userEmail }: { slug: string; name: string;
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
           return (
             <Link key={item.href} href={item.href}
-              className={`block mx-2 px-3 py-2 rounded-md text-sm transition ${
+              className={`block mx-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                 active
-                  ? 'bg-gray-800 text-white font-medium'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
-              }`}>
+                  ? 'text-offwhite font-medium'
+                  : 'text-offwhite/50 hover:text-offwhite hover:bg-white/[0.04]'
+              }`}
+              style={active ? { backgroundColor: 'rgba(255,255,255,0.08)' } : undefined}>
               {item.label}
             </Link>
           )
@@ -115,14 +127,17 @@ export function Sidebar({ slug, name, userEmail }: { slug: string; name: string;
       </nav>
 
       {/* ── Footer: public page ── */}
-      <div className="p-3 border-t border-gray-800">
+      <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <a href={getTenantBaseUrl(slug)} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 transition group">
+          className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors group"
+          style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+          onMouseOver={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
+          onMouseOut={e  => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
           <div className="min-w-0">
-            <p className="text-xs font-medium text-gray-300 group-hover:text-white transition">Your public page</p>
-            <p className="text-[10px] text-gray-600 truncate mt-0.5">{getTenantDomain(slug)}</p>
+            <p className="text-xs font-medium text-offwhite/60">Your public page</p>
+            <p className="text-[10px] text-offwhite/25 truncate mt-0.5">{getTenantDomain(slug)}</p>
           </div>
-          <span className="text-gray-600 group-hover:text-gray-400 transition ml-2 shrink-0 text-sm">↗</span>
+          <span className="text-offwhite/25 ml-2 shrink-0 text-sm">↗</span>
         </a>
       </div>
     </aside>

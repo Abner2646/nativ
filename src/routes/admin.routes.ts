@@ -346,6 +346,11 @@ export async function inviteEmployee(req: NextRequest) {
   const adminErr = requireAdmin(role); if (adminErr) return adminErr
   const { email } = await req.json()
   if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 })
+
+  // Verify the email belongs to a registered Nativ user
+  const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('email', email).maybeSingle()
+  if (!profile) return NextResponse.json({ error: 'No Nativ account found for this email. They need to register first.' }, { status: 422 })
+
   const token = randomUUID()
   const { error } = await supabaseAdmin.from('employee_invites')
     .upsert({ tenant_id: ctx.tenant.id, email, token, expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), created_by: user.id }, { onConflict: 'tenant_id,email' })

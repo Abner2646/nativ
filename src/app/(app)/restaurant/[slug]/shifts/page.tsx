@@ -28,8 +28,8 @@ export default async function ShiftsPage({ params }: { params: Promise<{ slug: s
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold">Shifts</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="font-satoshi font-bold text-[22px] text-offwhite">Shifts</h1>
+        <p className="text-sm text-offwhite/40 mt-1">
           Configure when your restaurant accepts reservations and how many covers each area can take.
         </p>
       </div>

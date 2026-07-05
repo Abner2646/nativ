@@ -22,7 +22,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ slug:
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-8">Settings</h1>
+      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-8">Settings</h1>
       <SettingsClient settings={settings as TenantSettings} slug={slug} />
     </div>
   )
