@@ -15,8 +15,9 @@ function isLocal(): boolean {
   return url.includes('localhost') || url.includes('127.0.0.1')
 }
 
-// "oth.yourdomain.com" — for display only
+// "slug.yourdomain.com" — for display only; shows tenant param in dev
 export function getTenantDomain(slug: string): string {
+  if (isLocal()) return `localhost · ${slug}`
   return `${slug}.${getAppDomain()}`
 }
 

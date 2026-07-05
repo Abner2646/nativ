@@ -32,23 +32,23 @@ export default async function AccountPage() {
   const firstSlug = tenants[0]?.slug ?? null
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-midnight text-offwhite">
       {/* Top bar */}
-      <div className="border-b border-gray-800 px-6 py-3 flex items-center gap-4">
+      <div className="px-6 py-3 flex items-center gap-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <a
           href={firstSlug ? `/restaurant/${firstSlug}` : '/dashboard'}
-          className="text-sm text-gray-400 hover:text-white transition flex items-center gap-1.5"
+          className="text-sm text-offwhite/40 hover:text-offwhite/80 transition-colors flex items-center gap-1.5"
         >
           ← {firstSlug ? 'Back to restaurant' : 'Dashboard'}
         </a>
-        <span className="text-gray-700">|</span>
-        <span className="text-sm font-semibold text-white">My account</span>
+        <span className="text-offwhite/15">|</span>
+        <span className="text-sm font-semibold text-offwhite">My account</span>
       </div>
 
       <div className="max-w-2xl mx-auto px-8 py-12">
         <div className="mb-10">
-          <h1 className="text-2xl font-bold">My account</h1>
-          <p className="text-sm text-gray-500 mt-1">Profile and referrals</p>
+          <h1 className="font-satoshi font-bold text-[22px] text-offwhite">My account</h1>
+          <p className="text-sm text-offwhite/40 mt-1">Profile and referrals</p>
         </div>
         <AccountClient
           userEmail={user.email ?? ''}

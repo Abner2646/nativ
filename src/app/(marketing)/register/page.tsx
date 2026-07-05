@@ -10,10 +10,15 @@ export default function RegisterPage() {
   const [name, setName]         = useState('')
   const [refCode, setRefCode]   = useState(() => {
     if (typeof window !== 'undefined') {
-      // Accept ?ref= from a shared referral link
       return new URLSearchParams(window.location.search).get('ref') || ''
     }
     return ''
+  })
+  const [refOpen, setRefOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!new URLSearchParams(window.location.search).get('ref')
+    }
+    return false
   })
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
@@ -102,18 +107,29 @@ export default function RegisterPage() {
           <input type="password" placeholder="Password (min. 6 characters)" value={password} onChange={e => setPassword(e.target.value)}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gray-400" />
 
-          {/* Referral code */}
+          {/* Referral code — visually secondary */}
           <div>
-            <input
-              type="text"
-              placeholder="Referral code (optional)"
-              value={refCode}
-              onChange={e => setRefCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              maxLength={6}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gray-400 font-mono tracking-widest"
-            />
-            {refCode.length === 6 && (
-              <p className="text-green-400 text-xs mt-1 pl-1">Code applied — 50% off for 3 months ✓</p>
+            {!refOpen ? (
+              <button type="button" onClick={() => setRefOpen(true)}
+                className="text-xs text-gray-600 hover:text-gray-400 transition-colors underline underline-offset-2">
+                Have a referral code?
+              </button>
+            ) : (
+              <div>
+                <p className="text-xs text-gray-500 mb-1.5">Referral code</p>
+                <input
+                  type="text"
+                  placeholder="6-digit code"
+                  value={refCode}
+                  onChange={e => setRefCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  maxLength={6}
+                  autoFocus
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-gray-500 font-mono tracking-widest text-sm"
+                />
+                {refCode.length === 6 && (
+                  <p className="text-green-400 text-xs mt-1 pl-1">Code applied — 50% off for 3 months ✓</p>
+                )}
+              </div>
             )}
           </div>
 

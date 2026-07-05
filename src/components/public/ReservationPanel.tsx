@@ -1,5 +1,6 @@
 'use client'
 import { useState, useCallback, useEffect } from 'react'
+import type { Theme } from '@/lib/theme'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,14 +49,12 @@ interface CalendarProps {
   min: string
   availableDaysOfWeek: number[]
   blockedDates: string[]
-  accent: string
-  accentText: string
-  font: string
-  C: Record<string, string>
+  theme: Theme
   onChange: (date: string) => void
 }
 
-function CalendarPicker({ value, min, availableDaysOfWeek, blockedDates, accent, accentText, font, C, onChange }: CalendarProps) {
+function CalendarPicker({ value, min, availableDaysOfWeek, blockedDates, theme, onChange }: CalendarProps) {
+  const { primary: accent, primaryText: accentText, font, faint: C_faint, muted: C_muted, text: C_text, surface: C_surface } = theme
   const [view, setView] = useState(() => {
     const [y, m] = (value || tomorrowStr()).split('-').map(Number)
     return { year: y, month: m - 1 }
@@ -108,21 +107,21 @@ function CalendarPicker({ value, min, availableDaysOfWeek, blockedDates, accent,
           onClick={prevMonth}
           disabled={!canGoPrev}
           style={{
-            color: canGoPrev ? C.muted : C.faint,
+            color: canGoPrev ? C_muted : C_faint,
             background: 'none', border: 'none', cursor: canGoPrev ? 'pointer' : 'default',
             fontSize: '1rem', padding: '0.25rem 0.5rem', borderRadius: '0.375rem',
           }}
         >
           ‹
         </button>
-        <span style={{ color: C.text, fontSize: '0.875rem', fontWeight: 600 }}>
+        <span style={{ color: C_text, fontSize: '0.875rem', fontWeight: 600 }}>
           {MONTH_NAMES[month]} {year}
         </span>
         <button
           type="button"
           onClick={nextMonth}
           style={{
-            color: C.muted,
+            color: C_muted,
             background: 'none', border: 'none', cursor: 'pointer',
             fontSize: '1rem', padding: '0.25rem 0.5rem', borderRadius: '0.375rem',
           }}
@@ -134,7 +133,7 @@ function CalendarPicker({ value, min, availableDaysOfWeek, blockedDates, accent,
       {/* Day-of-week headers */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '0.375rem' }}>
         {DAY_NAMES.map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: '0.625rem', color: C.faint, fontWeight: 600, letterSpacing: '0.05em', paddingBottom: '0.375rem' }}>
+          <div key={d} style={{ textAlign: 'center', fontSize: '0.625rem', color: C_faint, fontWeight: 600, letterSpacing: '0.05em', paddingBottom: '0.375rem' }}>
             {d}
           </div>
         ))}
@@ -166,7 +165,7 @@ function CalendarPicker({ value, min, availableDaysOfWeek, blockedDates, accent,
           }
           if (!cell.avail) {
             return (
-              <div key={cell.date} style={{ ...baseStyle, color: C.faint, opacity: 0.4 }}>
+              <div key={cell.date} style={{ ...baseStyle, color: C_faint, opacity: 0.4 }}>
                 {cell.day}
               </div>
             )
@@ -176,8 +175,8 @@ function CalendarPicker({ value, min, availableDaysOfWeek, blockedDates, accent,
               key={cell.date}
               type="button"
               onClick={() => onChange(cell.date)}
-              style={{ ...baseStyle, color: C.text, backgroundColor: 'transparent' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = C.surface)}
+              style={{ ...baseStyle, color: C_text, backgroundColor: 'transparent' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = C_surface)}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               {cell.day}
@@ -199,14 +198,14 @@ function normalizeWebsiteUrl(raw: string): string {
 
 interface Props {
   slug: string
-  accent: string
-  fontFamily: string
+  theme: Theme
   availableDaysOfWeek: number[]
   blockedDates: string[]
   websiteUrl?: string | null
 }
 
-export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek, blockedDates, websiteUrl }: Props) {
+export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDates, websiteUrl }: Props) {
+  const fontFamily = theme.fontFamily
   const [step, setStep] = useState<Step>('search')
 
   const [date, setDate] = useState(tomorrowStr())
@@ -245,26 +244,13 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
     return () => clearInterval(interval)
   }, [step, targetUrl])
 
-  const C = {
-    bg:          '#1c1a22',
-    surface:     'rgba(255,255,255,0.05)',
-    input:       '#111015',
-    border:      'rgba(255,255,255,0.07)',
-    text:        '#F2EFE9',
-    muted:       'rgba(242,239,233,0.45)',
-    faint:       'rgba(242,239,233,0.2)',
-    accent,
-    accentText:  '#0F1015',
-    errorBg:     'rgba(220,80,70,0.08)',
-    errorBorder: 'rgba(220,80,70,0.25)',
-    errorText:   '#f07070',
-  }
+  const C = theme
 
   const inputStyle: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box',
     backgroundColor: C.input,
     border: `1px solid ${C.border}`,
-    color: C.text, borderRadius: '0.625rem',
+    color: C.text, borderRadius: C.btnRadius,
     padding: '0.6875rem 0.875rem',
     fontSize: '0.875rem', fontFamily: fontFamily,
     outline: 'none', display: 'block',
@@ -357,7 +343,7 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
     <div
       id="reserve-panel"
       style={{
-        backgroundColor: C.bg,
+        backgroundColor: C.surface,
         border: `1px solid ${C.border}`,
         borderRadius: '1rem',
         padding: '1.5rem',
@@ -393,7 +379,7 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
           </div>
           <button
             onClick={() => step === 'details' ? setStep('slots') : setStep('search')}
-            style={{ color: accent, fontSize: '0.8125rem', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+            style={{ color: C.primary, fontSize: '0.8125rem', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
           >
             Edit
           </button>
@@ -416,8 +402,8 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
                     padding: '0.625rem 0', borderRadius: '0.5rem',
                     fontSize: '0.875rem', fontWeight: 600, border: 'none',
                     cursor: 'pointer', transition: 'all 0.1s',
-                    backgroundColor: partySize === n ? accent : C.input,
-                    color: partySize === n ? C.accentText : C.muted,
+                    backgroundColor: partySize === n ? C.primary : C.input,
+                    color: partySize === n ? C.primaryText : C.muted,
                     fontFamily,
                   }}
                 >
@@ -441,10 +427,7 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
                 min={todayStr()}
                 availableDaysOfWeek={availableDaysOfWeek}
                 blockedDates={blockedDates}
-                accent={accent}
-                accentText={C.accentText}
-                font={fontFamily}
-                C={C}
+                theme={theme}
                 onChange={setDate}
               />
             </div>
@@ -453,7 +436,7 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
           <button
             type="button" onClick={handleSearch}
             style={{
-              backgroundColor: accent, color: C.accentText,
+              backgroundColor: C.primary, color: C.primaryText,
               fontWeight: 700, fontSize: '0.9375rem',
               padding: '0.875rem', borderRadius: '0.625rem',
               border: 'none', cursor: 'pointer', width: '100%', fontFamily,
@@ -504,7 +487,7 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
                         key={slot.time} type="button"
                         onClick={() => handleSelectSlot(slot)}
                         style={{
-                          backgroundColor: accent, color: C.accentText,
+                          backgroundColor: C.primary, color: C.primaryText,
                           border: 'none', borderRadius: '0.5rem',
                           padding: '0.625rem 0', fontSize: '0.875rem',
                           fontWeight: 700, cursor: 'pointer', fontFamily,
@@ -567,7 +550,7 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
 
           <button type="submit" disabled={submitting}
             style={{
-              backgroundColor: accent, color: C.accentText,
+              backgroundColor: C.primary, color: C.primaryText,
               fontWeight: 700, fontSize: '0.9375rem', padding: '0.875rem',
               borderRadius: '0.625rem', border: 'none',
               cursor: submitting ? 'not-allowed' : 'pointer',
@@ -586,9 +569,9 @@ export function ReservationPanel({ slug, accent, fontFamily, availableDaysOfWeek
         <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
           <div style={{
             width: '3.5rem', height: '3.5rem', borderRadius: '50%',
-            backgroundColor: `${accent}1a`, border: `1.5px solid ${accent}50`,
+            backgroundColor: `${C.primary}1a`, border: `1.5px solid ${C.primary}50`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 1.25rem', fontSize: '1.375rem', color: accent,
+            margin: '0 auto 1.25rem', fontSize: '1.375rem', color: C.primary,
           }}>
             ✓
           </div>

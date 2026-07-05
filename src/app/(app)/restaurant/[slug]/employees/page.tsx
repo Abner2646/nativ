@@ -26,7 +26,7 @@ export default async function EmployeesPage({ params }: { params: Promise<{ slug
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-8">Employees</h1>
+      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-8">Employees</h1>
       <EmployeesClient
         initialEmployees={employees || []}
         initialInvites={pendingInvites || []}

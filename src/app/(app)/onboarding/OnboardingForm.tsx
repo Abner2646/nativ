@@ -48,7 +48,7 @@ export function OnboardingForm() {
         <div className="space-y-5">
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Restaurant name</label>
-            <input type="text" placeholder="Off The Hook NYC" value={name}
+            <input type="text" placeholder="Your restaurant name" value={name}
               onChange={e => { setName(e.target.value); setSlug(slugify(e.target.value)) }}
               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gray-400" />
           </div>
