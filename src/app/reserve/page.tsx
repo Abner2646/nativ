@@ -29,11 +29,24 @@ export default async function ReservePage({
     return <ReserveClient slug={slug} theme={buildTheme({})} />
   }
 
-  const { data: settings } = await supabaseAdmin
-    .from('tenant_settings')
-    .select('background_color, primary_color, secondary_color, font_family, button_style, min_party_size, max_party_size')
-    .eq('tenant_id', tenant.id)
-    .maybeSingle()
+  const threeMonthsOut = new Date()
+  threeMonthsOut.setMonth(threeMonthsOut.getMonth() + 3)
+
+  const [{ data: settings }, { data: shiftsData }, { data: blockedDatesData }] = await Promise.all([
+    supabaseAdmin
+      .from('tenant_settings')
+      .select('background_color, primary_color, secondary_color, font_family, button_style, min_party_size, max_party_size')
+      .eq('tenant_id', tenant.id)
+      .maybeSingle(),
+    supabaseAdmin.from('shifts').select('day_of_week').eq('tenant_id', tenant.id).eq('is_active', true),
+    supabaseAdmin.from('blocked_dates').select('date')
+      .eq('tenant_id', tenant.id)
+      .gte('date', new Date().toISOString().split('T')[0])
+      .lte('date', threeMonthsOut.toISOString().split('T')[0]),
+  ])
+
+  const availableDaysOfWeek = [...new Set((shiftsData || []).map((s: { day_of_week: number }) => s.day_of_week))]
+  const blockedDates = (blockedDatesData || []).map((b: { date: string }) => b.date)
 
   const theme = buildTheme(settings ?? {})
 
@@ -43,6 +56,8 @@ export default async function ReservePage({
       theme={theme}
       minPartySize={settings?.min_party_size ?? 1}
       maxPartySize={settings?.max_party_size ?? 10}
+      availableDaysOfWeek={availableDaysOfWeek}
+      blockedDates={blockedDates}
     />
   )
 }
