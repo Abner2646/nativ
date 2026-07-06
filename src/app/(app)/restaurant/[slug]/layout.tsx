@@ -36,7 +36,7 @@ export default async function RestaurantLayout({
         todayCount={todayCount ?? 0}
         trialEndsAt={tenant.status === 'trial' ? (tenant.trial_ends_at ?? null) : null}
       />
-      <main className="flex-1 min-h-screen md:ml-60 pb-16 md:pb-0">
+      <main className="flex-1 min-h-screen md:ml-[60px] lg:ml-60 pb-16 md:pb-0">
         {children}
       </main>
       <BottomNav slug={slug} todayCount={todayCount ?? 0} role={access.role} />

@@ -21,6 +21,8 @@ const secondaryBtn = 'px-4 py-2.5 border border-white/[0.12] text-offwhite/50 ro
 
 function fmtTime(t: string) { return t.slice(0, 5) }
 
+const card = { backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }
+
 interface Props {
   initialReservations: Reservation[]
   slug: string
@@ -35,34 +37,168 @@ interface NewResForm {
 
 const OCCASIONS = ['', 'Birthday', 'Anniversary', 'Business', 'Date', 'Other']
 
+// ── Compact list row (left panel on tablet/desktop) ──────────────────────────
+function CompactRow({
+  r, selected, onClick,
+}: { r: Reservation; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left px-4 py-3.5 transition-colors"
+      style={{
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        borderLeft: selected ? '2px solid #C9A96E' : '2px solid transparent',
+        backgroundColor: selected ? 'rgba(255,255,255,0.05)' : undefined,
+      }}
+      onMouseOver={e => { if (!selected) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.025)' }}
+      onMouseOut={e  => { if (!selected) e.currentTarget.style.backgroundColor = '' }}
+    >
+      <div className="flex items-center gap-3">
+        <span className="font-mono text-lg font-semibold text-offwhite leading-none w-[46px] shrink-0">
+          {fmtTime(r.time)}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-offwhite truncate">{r.guest?.name}</p>
+          <p className="text-xs text-offwhite/35 mt-0.5">{r.party_size} {r.party_size === 1 ? 'person' : 'people'}</p>
+        </div>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border shrink-0 ${STATUS_BADGE[r.status] || ''}`}>
+          {r.status}
+        </span>
+      </div>
+    </button>
+  )
+}
+
+// ── Detail panel (right side on tablet/desktop) ──────────────────────────────
+function DetailPanel({
+  r, updating, onStatusChange,
+}: { r: Reservation; updating: string | null; onStatusChange: (id: string, s: ReservationStatus) => void }) {
+  const divider = { borderTop: '1px solid rgba(255,255,255,0.06)' }
+
+  return (
+    <div className="p-6">
+      {/* Time + status */}
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <p className="font-mono text-5xl font-bold text-offwhite leading-none">{fmtTime(r.time)}</p>
+          <p className="text-sm text-offwhite/35 mt-1.5">
+            {r.party_size} {r.party_size === 1 ? 'person' : 'people'}
+          </p>
+        </div>
+        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border mt-1 ${STATUS_BADGE[r.status] || ''}`}>
+          {r.status}
+        </span>
+      </div>
+
+      {/* Guest info */}
+      <div className="pb-5 mb-5 space-y-0.5" style={divider}>
+        <p className="text-base font-semibold text-offwhite">{r.guest?.name}</p>
+        <p className="text-sm text-offwhite/45">{r.guest?.email}</p>
+        {r.guest?.phone && <p className="text-sm text-offwhite/30">{r.guest.phone}</p>}
+      </div>
+
+      {/* Details grid */}
+      {(r.shift?.name || r.seating_area?.name || r.occasion || r.deposit_amount) && (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4 pb-5 mb-5" style={divider}>
+          {r.shift?.name && (
+            <div>
+              <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1">Shift</p>
+              <p className="text-sm text-offwhite/70">{r.shift.name}</p>
+            </div>
+          )}
+          {r.seating_area?.name && (
+            <div>
+              <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1">Area</p>
+              <p className="text-sm text-offwhite/70">{r.seating_area.name}</p>
+            </div>
+          )}
+          {r.occasion && (
+            <div>
+              <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1">Occasion</p>
+              <p className="text-sm text-offwhite/70">{r.occasion}</p>
+            </div>
+          )}
+          {r.deposit_amount && (
+            <div>
+              <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1">Deposit</p>
+              <p className="text-sm font-semibold" style={{ color: '#C9A96E' }}>
+                ${r.deposit_amount.toFixed(2)}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Notes */}
+      {r.notes && (
+        <div className="pb-5 mb-5" style={divider}>
+          <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1.5">Notes</p>
+          <p className="text-sm text-offwhite/50 italic">"{r.notes}"</p>
+        </div>
+      )}
+
+      {/* Status buttons */}
+      <div>
+        <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-2.5">Change status</p>
+        <div className="flex gap-2">
+          {(['confirmed', 'completed', 'cancelled'] as const).map(s => (
+            <button
+              key={s}
+              disabled={updating === r.id}
+              onClick={() => onStatusChange(r.id, s)}
+              className="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-colors disabled:opacity-40"
+              style={
+                r.status === s
+                  ? { backgroundColor: '#F2EFE9', color: '#0F1720' }
+                  : { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(242,239,233,0.45)' }
+              }
+              onMouseOver={e => { if (r.status !== s) e.currentTarget.style.color = 'rgba(242,239,233,0.85)' }}
+              onMouseOut={e  => { if (r.status !== s) e.currentTarget.style.color = 'rgba(242,239,233,0.45)' }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export function ReservationsClient({ initialReservations, slug, defaultDate }: Props) {
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations)
-  const [date, setDate] = useState(defaultDate)
+  const [date, setDate]                 = useState(defaultDate)
   const [statusFilter, setStatusFilter] = useState('all')
-  const [loading, setLoading] = useState(false)
-  const [updating, setUpdating] = useState<string | null>(null)
+  const [loading, setLoading]           = useState(false)
+  const [updating, setUpdating]         = useState<string | null>(null)
+  const [selectedId, setSelectedId]     = useState<string | null>(
+    initialReservations.length > 0 ? initialReservations[0].id : null
+  )
 
-  const [showModal, setShowModal] = useState(false)
-  const [modalStep, setModalStep] = useState<'slot' | 'guest'>('slot')
-  const [slots, setSlots] = useState<AvailabilitySlot[]>([])
+  const [showModal, setShowModal]       = useState(false)
+  const [modalStep, setModalStep]       = useState<'slot' | 'guest'>('slot')
+  const [slots, setSlots]               = useState<AvailabilitySlot[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
-  const [slotsError, setSlotError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState('')
-  const [form, setForm] = useState<NewResForm>({
+  const [slotsError, setSlotError]      = useState('')
+  const [submitting, setSubmitting]     = useState(false)
+  const [submitError, setSubmitError]   = useState('')
+  const [form, setForm]                 = useState<NewResForm>({
     date: defaultDate, party_size: 2, shift_id: '', time: '', area_id: '',
     guest_name: '', guest_email: '', guest_phone: '', occasion: '', notes: '',
   })
 
   const fetchReservations = useCallback(async (d: string) => {
     setLoading(true)
+    setSelectedId(null)
     try {
       const token = await getToken()
       const res = await fetch(`/api/admin?resource=reservations&date=${d}&tenant=${slug}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      setReservations(data.reservations || [])
+      const list: Reservation[] = data.reservations || []
+      setReservations(list)
+      if (list.length > 0) setSelectedId(list[0].id)
     } finally { setLoading(false) }
   }, [slug])
 
@@ -126,14 +262,15 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
   }
 
   const selectedSlot = slots.find(s => s.shift_id === form.shift_id && s.time === form.time)
-  const canProceed = !!selectedSlot
-  const canSubmit = form.guest_name.trim() && form.guest_email.trim() && canProceed
-  const filtered = statusFilter === 'all' ? reservations : reservations.filter(r => r.status === statusFilter)
+  const canProceed   = !!selectedSlot
+  const canSubmit    = form.guest_name.trim() && form.guest_email.trim() && canProceed
+  const filtered     = statusFilter === 'all' ? reservations : reservations.filter(r => r.status === statusFilter)
+  const selectedRes  = filtered.find(r => r.id === selectedId) ?? null
 
   return (
     <div>
       {/* ── Toolbar ── */}
-      <div className="flex flex-col gap-3 mb-6 md:flex-row md:flex-wrap md:items-center">
+      <div className="flex flex-col gap-3 mb-5 md:flex-row md:items-center">
         <div className="flex gap-3">
           <input
             type="date" value={date} onChange={e => handleDateChange(e.target.value)}
@@ -151,22 +288,17 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
         <button onClick={openModal} className={`w-full md:w-auto ${primaryBtn}`}>+ New reservation</button>
       </div>
 
-      {/* ── Empty ── */}
+      {/* ── Empty state ── */}
       {filtered.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="p-12 text-center rounded-2xl" style={card}>
           <p className="text-sm text-offwhite/35">No reservations for this date</p>
         </div>
       ) : (
         <>
-          {/* ── Mobile cards ── */}
+          {/* ── Mobile cards (< md) ── */}
           <div className="md:hidden space-y-2">
             {filtered.map(r => (
-              <div
-                key={r.id}
-                className="rounded-2xl p-4"
-                style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}
-              >
-                {/* Time + status + party */}
+              <div key={r.id} className="rounded-2xl p-4" style={card}>
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <span className="font-mono text-2xl font-semibold text-offwhite leading-none">
                     {fmtTime(r.time)}
@@ -178,55 +310,35 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                     <span className="text-xs text-offwhite/40 font-medium">{r.party_size} pax</span>
                   </div>
                 </div>
-
-                {/* Guest */}
                 <p className="text-sm font-semibold text-offwhite">{r.guest?.name}</p>
                 <p className="text-xs text-offwhite/40 mt-0.5">{r.guest?.email}</p>
                 {r.guest?.phone && <p className="text-xs text-offwhite/30 mt-0.5">{r.guest.phone}</p>}
-
-                {/* Details row */}
                 {(r.shift?.name || r.seating_area?.name || r.occasion) && (
                   <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-                    {r.shift?.name && (
-                      <span className="text-[11px] text-offwhite/30">{r.shift.name}</span>
-                    )}
+                    {r.shift?.name && <span className="text-[11px] text-offwhite/30">{r.shift.name}</span>}
                     {r.seating_area?.name && (
-                      <>
-                        <span className="text-offwhite/15 text-[11px]">·</span>
-                        <span className="text-[11px] text-offwhite/30">{r.seating_area.name}</span>
-                      </>
+                      <><span className="text-offwhite/15 text-[11px]">·</span>
+                      <span className="text-[11px] text-offwhite/30">{r.seating_area.name}</span></>
                     )}
                     {r.occasion && (
-                      <>
-                        <span className="text-offwhite/15 text-[11px]">·</span>
-                        <span className="text-[11px] text-offwhite/30">{r.occasion}</span>
-                      </>
+                      <><span className="text-offwhite/15 text-[11px]">·</span>
+                      <span className="text-[11px] text-offwhite/30">{r.occasion}</span></>
                     )}
                     {r.deposit_amount && (
-                      <>
-                        <span className="text-offwhite/15 text-[11px]">·</span>
-                        <span className="text-[11px] font-medium" style={{ color: '#C9A96E' }}>
-                          ${r.deposit_amount.toFixed(2)} deposit
-                        </span>
-                      </>
+                      <><span className="text-offwhite/15 text-[11px]">·</span>
+                      <span className="text-[11px] font-medium" style={{ color: '#C9A96E' }}>
+                        ${r.deposit_amount.toFixed(2)} deposit
+                      </span></>
                     )}
                   </div>
                 )}
-
-                {/* Notes */}
-                {r.notes && (
-                  <p className="text-[11px] text-offwhite/25 mt-1.5 italic">"{r.notes}"</p>
-                )}
-
-                {/* Status action */}
+                {r.notes && <p className="text-[11px] text-offwhite/25 mt-1.5 italic">"{r.notes}"</p>}
                 <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                   <select
-                    value={r.status}
-                    disabled={updating === r.id}
+                    value={r.status} disabled={updating === r.id}
                     onChange={e => updateStatus(r.id, e.target.value as ReservationStatus)}
                     className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none disabled:opacity-40 text-offwhite"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
-                  >
+                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <option value="confirmed">confirmed</option>
                     <option value="completed">completed</option>
                     <option value="cancelled">cancelled</option>
@@ -236,53 +348,35 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
             ))}
           </div>
 
-          {/* ── Desktop table ── */}
-          <div className="hidden md:block rounded-2xl overflow-hidden" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <table className="w-full">
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['Time', 'Guest', 'Party', 'Shift', 'Area', 'Occasion', 'Status', 'Actions'].map(h => (
-                    <th key={h} className="text-left text-xs text-offwhite/35 uppercase tracking-widest px-5 py-4 font-semibold">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(r => (
-                  <tr key={r.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                    onMouseOver={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.025)')}
-                    onMouseOut={e  => (e.currentTarget.style.backgroundColor = '')}>
-                    <td className="px-5 py-4 font-mono text-sm tabular-nums text-offwhite/70">{fmtTime(r.time)}</td>
-                    <td className="px-5 py-4">
-                      <p className="text-sm font-medium text-offwhite">{r.guest?.name}</p>
-                      <p className="text-xs text-offwhite/40 mt-0.5">{r.guest?.email}</p>
-                      {r.guest?.phone && <p className="text-xs text-offwhite/30">{r.guest.phone}</p>}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-offwhite/60">{r.party_size}</td>
-                    <td className="px-5 py-4 text-sm text-offwhite/40">{r.shift?.name || '—'}</td>
-                    <td className="px-5 py-4 text-sm text-offwhite/40">{r.seating_area?.name || '—'}</td>
-                    <td className="px-5 py-4 text-sm text-offwhite/40">{r.occasion || '—'}</td>
-                    <td className="px-5 py-4">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_BADGE[r.status] || ''}`}>{r.status}</span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <select value={r.status} disabled={updating === r.id}
-                        onChange={e => updateStatus(r.id, e.target.value as ReservationStatus)}
-                        className="rounded-lg px-2 py-1 text-xs focus:outline-none disabled:opacity-40 text-offwhite"
-                        style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <option value="confirmed">confirmed</option>
-                        <option value="completed">completed</option>
-                        <option value="cancelled">cancelled</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* ── Tablet / Desktop split view (≥ md) ── */}
+          <div className="hidden md:flex gap-4 lg:gap-5 items-start">
+            {/* Left: compact list */}
+            <div className="w-[260px] lg:w-[280px] shrink-0 rounded-2xl overflow-hidden" style={card}>
+              {filtered.map(r => (
+                <CompactRow
+                  key={r.id}
+                  r={r}
+                  selected={selectedId === r.id}
+                  onClick={() => setSelectedId(r.id)}
+                />
+              ))}
+            </div>
+
+            {/* Right: detail panel — sticky so it stays visible while list scrolls */}
+            <div className="flex-1 sticky top-4 rounded-2xl min-h-[180px]" style={card}>
+              {selectedRes ? (
+                <DetailPanel r={selectedRes} updating={updating} onStatusChange={updateStatus} />
+              ) : (
+                <div className="p-10 text-center">
+                  <p className="text-sm text-offwhite/30">Select a reservation to view details</p>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
 
-      {/* ── Modal — bottom sheet on mobile, centered on desktop ── */}
+      {/* ── New reservation modal — bottom sheet on mobile, centered on desktop ── */}
       {showModal && (
         <div
           className="fixed inset-0 bg-black/75 z-50 flex items-end md:items-center justify-center md:p-4"
@@ -292,14 +386,12 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
             className="w-full md:max-w-lg max-h-[90vh] overflow-y-auto md:rounded-2xl rounded-t-2xl"
             style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.10)' }}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h2 className="font-satoshi font-bold text-[17px] text-offwhite">New reservation</h2>
               <button onClick={() => setShowModal(false)} className="text-offwhite/30 hover:text-offwhite transition-colors text-xl leading-none">×</button>
             </div>
 
-            {/* Step tabs */}
             <div className="flex" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               {(['slot', 'guest'] as const).map((step, i) => (
                 <button key={step}
