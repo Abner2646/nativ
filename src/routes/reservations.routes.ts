@@ -104,7 +104,7 @@ export async function createReservation(req: NextRequest) {
 
   await Promise.allSettled([
     sendConfirmationEmail(reservation, settings, tenant.slug, applicableRule?.refund_cutoff_hours),
-    sendOwnerNotification(reservation, settings),
+    sendOwnerNotification(reservation, settings, tenant.slug),
     sendConfirmationSMS(reservation, settings),
   ]).then(results => {
     results.forEach(r => { if (r.status === 'rejected') console.error('Notification error:', r.reason) })

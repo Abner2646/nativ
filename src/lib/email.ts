@@ -73,8 +73,9 @@ export async function sendCancellationEmail(r: Reservation, settings: TenantSett
   })
 }
 
-export async function sendOwnerNotification(r: Reservation, settings: TenantSettings) {
+export async function sendOwnerNotification(r: Reservation, settings: TenantSettings, slug: string) {
   const guest = r.guest!
+  const cancelUrl = `${getTenantUrl(slug)}/cancel?token=${r.cancellation_token}`
   await resend.emails.send({
     from: getFrom(settings),
     to: settings.notification_email,
@@ -90,7 +91,11 @@ export async function sendOwnerNotification(r: Reservation, settings: TenantSett
         <tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:4px 0">Guests</td><td>${r.party_size}</td></tr>
         ${r.occasion ? `<tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:4px 0">Occasion</td><td>${r.occasion}</td></tr>` : ''}
         ${r.notes ? `<tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:4px 0">Notes</td><td>${r.notes}</td></tr>` : ''}
+        ${r.deposit_amount ? `<tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:4px 0">Deposit</td><td>$${r.deposit_amount.toFixed(2)} paid</td></tr>` : ''}
       </table>
+      <p style="margin-top:16px;font-size:13px;color:#666;">
+        Guest cancel link (share if needed): <a href="${cancelUrl}">${cancelUrl}</a>
+      </p>
     </div>`
   })
 }
