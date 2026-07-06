@@ -68,6 +68,7 @@ export function Sidebar({
   const isAdmin = role === 'admin'
   const trialDaysLeft = trialEndsAt ? daysUntil(trialEndsAt) : null
   const trialWarning  = trialDaysLeft !== null && trialDaysLeft <= 3
+  const publicUrl = getTenantBaseUrl(slug)
 
   const visibleNav = NAV(slug).filter(item => {
     if (item === '---') return true
@@ -87,33 +88,48 @@ export function Sidebar({
   }
   if (cleanNav[cleanNav.length - 1] === '---') cleanNav.pop()
 
+  const border = '1px solid rgba(255,255,255,0.06)'
+
   return (
-    <aside className="hidden md:flex w-60 flex-col fixed h-screen bg-midnight z-10"
-      style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+    // md: slim (60px), lg: full (240px)
+    <aside
+      className="hidden md:flex md:w-[60px] lg:w-60 flex-col fixed h-screen bg-midnight z-10 transition-[width]"
+      style={{ borderRight: border }}
+    >
 
       {/* ── Header ── */}
-      <div className="px-4 pt-3 pb-3.5 flex items-center justify-between gap-2"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="min-w-0">
-          <Link href="/dashboard"
-            className="text-[10px] text-offwhite/30 hover:text-offwhite/60 transition-colors flex items-center gap-1 mb-1.5 w-fit">
+      <div
+        className="flex items-center justify-center lg:justify-between px-2 lg:px-4 pt-3 pb-3.5 gap-2"
+        style={{ borderBottom: border }}
+      >
+        {/* Restaurant name + back link — hidden on slim */}
+        <div className="hidden lg:block min-w-0">
+          <Link
+            href="/dashboard"
+            className="text-[10px] text-offwhite/30 hover:text-offwhite/60 transition-colors flex items-center gap-1 mb-1.5 w-fit"
+          >
             ← All restaurants
           </Link>
           <p className="font-satoshi font-bold text-offwhite truncate text-sm leading-tight">{name}</p>
           <p className="text-[10px] text-offwhite/25 mt-0.5 truncate">{getTenantDomain(slug)}</p>
         </div>
 
+        {/* Avatar — always shown */}
         <div className="relative shrink-0" ref={menuRef}>
-          <button onClick={() => setOpen(v => !v)}
+          <button
+            onClick={() => setOpen(v => !v)}
             className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-offwhite/60 transition-colors select-none"
             style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
-            aria-label="Account menu">
+            aria-label="Account menu"
+          >
             {initial}
           </button>
           {open && (
-            <div className="absolute right-0 top-full mt-2 w-52 rounded-xl shadow-2xl overflow-hidden z-50"
-              style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div
+              className="absolute left-0 lg:right-0 lg:left-auto top-full mt-2 w-52 rounded-xl shadow-2xl overflow-hidden z-50"
+              style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <div className="px-3 py-2.5" style={{ borderBottom: border }}>
                 <p className="text-xs text-offwhite/35 truncate">{userEmail}</p>
                 <span className={`mt-1 inline-block text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded-full ${
                   isAdmin ? 'bg-gold/12 text-gold border border-gold/25' : 'bg-white/[0.06] text-offwhite/40 border border-white/[0.08]'
@@ -127,7 +143,7 @@ export function Sidebar({
                 className="flex items-center gap-2 px-3 py-2 text-sm text-offwhite/60 hover:text-offwhite hover:bg-white/[0.04] transition-colors">
                 All restaurants
               </Link>
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ borderTop: border }}>
                 <form action="/api/auth/logout" method="POST">
                   <button className="w-full text-left px-3 py-2 text-sm text-red-400/80 hover:text-red-400 hover:bg-white/[0.04] transition-colors">
                     Sign out
@@ -139,10 +155,10 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* ── Search shortcut ── */}
+      {/* ── Search shortcut — hidden on slim ── */}
       <button
         onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
-        className="mx-3 mt-2.5 flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-offwhite/30 hover:text-offwhite/50 transition-colors"
+        className="hidden lg:flex mx-3 mt-2.5 items-center gap-2 px-3 py-2 rounded-lg text-xs text-offwhite/30 hover:text-offwhite/50 transition-colors"
         style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
       >
         <Search size={12} />
@@ -156,15 +172,19 @@ export function Sidebar({
       <nav className="flex-1 overflow-y-auto py-2 mt-1">
         {cleanNav.map((item, i) => {
           if (item === '---') {
-            return <div key={i} className="my-1 mx-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }} />
+            return (
+              <div key={i} className="my-1 mx-2" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }} />
+            )
           }
+
           if (item.comingSoon) {
             const Icon = item.icon
             return (
               <span key={item.href}
-                className="flex items-center justify-between mx-2 px-3 py-2 rounded-lg text-sm text-offwhite/25 cursor-default select-none">
-                <span className="flex items-center gap-2.5"><Icon size={15} strokeWidth={1.6} />{item.label}</span>
-                <span className="text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded text-offwhite/25"
+                className="flex items-center gap-2.5 mx-1.5 px-1.5 py-3 md:justify-center lg:justify-start lg:mx-2 lg:px-3 lg:py-2 rounded-lg text-sm text-offwhite/25 cursor-default select-none">
+                <Icon size={15} strokeWidth={1.6} className="shrink-0" />
+                <span className="hidden lg:block flex-1">{item.label}</span>
+                <span className="hidden lg:flex text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded text-offwhite/25"
                   style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>Soon</span>
               </span>
             )
@@ -177,24 +197,22 @@ export function Sidebar({
 
           return (
             <Link key={item.href} href={item.href} title={item.label}
-              className={`flex items-center gap-2.5 mx-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-2.5 mx-1.5 px-1.5 py-3 md:justify-center lg:justify-start lg:mx-2 lg:px-3 lg:py-2 rounded-lg text-sm transition-colors ${
                 active ? 'text-offwhite font-medium' : 'text-offwhite/50 hover:text-offwhite hover:bg-white/[0.04]'
               }`}
-              style={active ? { backgroundColor: 'rgba(255,255,255,0.08)' } : undefined}>
-              <Icon size={15} strokeWidth={active ? 2 : 1.6} className={active ? 'text-offwhite' : 'text-offwhite/40'} />
-              <span className="flex-1">{item.label}</span>
+              style={active ? { backgroundColor: 'rgba(255,255,255,0.08)' } : undefined}
+            >
+              <Icon size={15} strokeWidth={active ? 2 : 1.6} className={`shrink-0 ${active ? 'text-offwhite' : 'text-offwhite/40'}`} />
+              <span className="hidden lg:block flex-1">{item.label}</span>
 
-              {/* Today's reservation badge */}
               {isReservations && todayCount > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                <span className="hidden lg:flex text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                   style={{ backgroundColor: 'rgba(201,169,110,0.15)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.25)' }}>
                   {todayCount}
                 </span>
               )}
-
-              {/* Trial warning badge */}
               {isBilling && trialWarning && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                <span className="hidden lg:flex text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                   style={{ backgroundColor: 'rgba(251,146,60,0.15)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.25)' }}>
                   {trialDaysLeft === 0 ? 'today' : `${trialDaysLeft}d`}
                 </span>
@@ -205,25 +223,43 @@ export function Sidebar({
       </nav>
 
       {/* ── Footer ── */}
-      <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="p-2 lg:p-3" style={{ borderTop: border }}>
         {isAdmin ? (
-          <a href={getTenantBaseUrl(slug)} target="_blank" rel="noopener noreferrer"
-            className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
-            style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-            onMouseOver={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
-            onMouseOut={e  => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-offwhite/60">Your public page</p>
-              <p className="text-[10px] text-offwhite/25 truncate mt-0.5">{getTenantDomain(slug)}</p>
+          <>
+            {/* Slim: just an icon */}
+            <div className="lg:hidden flex justify-center">
+              <a href={publicUrl} target="_blank" rel="noopener noreferrer"
+                title="Your public page"
+                className="p-2 rounded-lg text-offwhite/25 hover:text-offwhite/50 transition-colors">
+                <ExternalLink size={15} />
+              </a>
             </div>
-            <ExternalLink size={13} className="text-offwhite/25 ml-2 shrink-0" />
-          </a>
+            {/* Full */}
+            <a href={publicUrl} target="_blank" rel="noopener noreferrer"
+              className="hidden lg:flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+              onMouseOver={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
+              onMouseOut={e  => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-offwhite/60">Your public page</p>
+                <p className="text-[10px] text-offwhite/25 truncate mt-0.5">{getTenantDomain(slug)}</p>
+              </div>
+              <ExternalLink size={13} className="text-offwhite/25 ml-2 shrink-0" />
+            </a>
+          </>
         ) : (
-          <div className="px-3 py-2.5 rounded-xl"
-            style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-offwhite/25">Role</p>
-            <p className="text-xs text-offwhite/40 mt-0.5">Employee</p>
-          </div>
+          <>
+            {/* Slim: tiny "E" indicator */}
+            <div className="lg:hidden flex justify-center py-1">
+              <span className="text-[9px] text-offwhite/20 uppercase tracking-widest font-semibold">E</span>
+            </div>
+            {/* Full */}
+            <div className="hidden lg:block px-3 py-2.5 rounded-xl"
+              style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-offwhite/25">Role</p>
+              <p className="text-xs text-offwhite/40 mt-0.5">Employee</p>
+            </div>
+          </>
         )}
       </div>
     </aside>
