@@ -13,7 +13,7 @@ export function BottomNav({ slug, todayCount = 0, role = 'admin' }: Props) {
     { href: `/restaurant/${slug}`,              label: 'Home',         icon: LayoutDashboard, exact: true },
     { href: `/restaurant/${slug}/reservations`, label: 'Reservations', icon: CalendarDays },
     { href: `/restaurant/${slug}/guests`,       label: 'Guests',       icon: Users },
-    ...(isAdmin ? [{ href: `/restaurant/${slug}/settings`, label: 'More', icon: Menu, exact: false }] : []),
+    ...(isAdmin ? [{ href: `/restaurant/${slug}/more`, label: 'More', icon: Menu, exact: false }] : []),
   ]
 
   return (
