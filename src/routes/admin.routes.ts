@@ -431,6 +431,103 @@ export async function updateBirthdayConfig(req: NextRequest) {
   return NextResponse.json({ config: data })
 }
 
+// ── DEPOSIT RULES ─────────────────────────────────────────────
+
+export async function getDepositRules(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { data, error } = await supabaseAdmin
+    .from('deposit_rules').select('*').eq('tenant_id', ctx.tenant.id).order('rule_type')
+  if (error) return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 })
+  return NextResponse.json({ rules: data })
+}
+
+export async function createDepositRule(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const notAdmin = requireAdmin((r as any).role); if (notAdmin) return notAdmin
+  const { ctx } = r as any
+  const { rule_type, day_of_week, specific_date, amount_cents, refund_cutoff_hours } = await req.json()
+
+  if (!['all_days', 'day_of_week', 'specific_date'].includes(rule_type)) {
+    return NextResponse.json({ error: 'Invalid rule_type' }, { status: 400 })
+  }
+  if (!amount_cents || amount_cents < 50) {
+    return NextResponse.json({ error: 'Minimum amount is $0.50' }, { status: 400 })
+  }
+  if (rule_type === 'day_of_week' && day_of_week == null) {
+    return NextResponse.json({ error: 'day_of_week required' }, { status: 400 })
+  }
+  if (rule_type === 'specific_date' && !specific_date) {
+    return NextResponse.json({ error: 'specific_date required' }, { status: 400 })
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('deposit_rules')
+    .insert({
+      tenant_id: ctx.tenant.id,
+      rule_type,
+      day_of_week: rule_type === 'day_of_week' ? day_of_week : null,
+      specific_date: rule_type === 'specific_date' ? specific_date : null,
+      amount_cents,
+      refund_cutoff_hours: refund_cutoff_hours ?? 24,
+    })
+    .select().single()
+  if (error) return NextResponse.json({ error: 'Failed to create' }, { status: 500 })
+  return NextResponse.json({ rule: data }, { status: 201 })
+}
+
+export async function deleteDepositRule(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const notAdmin = requireAdmin((r as any).role); if (notAdmin) return notAdmin
+  const { ctx } = r as any
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const { error } = await supabaseAdmin
+    .from('deposit_rules').delete().eq('id', id).eq('tenant_id', ctx.tenant.id)
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
+// ── STRIPE CONNECT ─────────────────────────────────────────────
+
+export async function getStripeConnectStatus(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const accountId = ctx.settings.stripe_account_id
+  if (!accountId) return NextResponse.json({ connected: false, stripe_account_id: null })
+  try {
+    const { stripe } = await import('@/lib/stripe')
+    const account = await stripe.accounts.retrieve(accountId)
+    return NextResponse.json({ connected: account.charges_enabled, details_submitted: account.details_submitted, stripe_account_id: accountId })
+  } catch {
+    return NextResponse.json({ connected: false, stripe_account_id: accountId })
+  }
+}
+
+export async function createStripeConnectLink(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const notAdmin = requireAdmin((r as any).role); if (notAdmin) return notAdmin
+  const { ctx } = r as any
+
+  let accountId = ctx.settings.stripe_account_id
+  if (!accountId) {
+    const { stripe } = await import('@/lib/stripe')
+    const account = await stripe.accounts.create({ type: 'express', metadata: { tenant_id: ctx.tenant.id } })
+    accountId = account.id
+    await supabaseAdmin.from('tenant_settings').update({ stripe_account_id: accountId }).eq('tenant_id', ctx.tenant.id)
+  }
+
+  const { stripe } = await import('@/lib/stripe')
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  const link = await stripe.accountLinks.create({
+    account: accountId,
+    refresh_url: `${appUrl}/restaurant/${ctx.tenant.slug}/deposits?stripe=refresh`,
+    return_url: `${appUrl}/restaurant/${ctx.tenant.slug}/deposits?stripe=success`,
+    type: 'account_onboarding',
+  })
+  return NextResponse.json({ url: link.url })
+}
+
 // ── REFERRALS ─────────────────────────────────────────────────
 
 export async function getReferrals(req: NextRequest) {

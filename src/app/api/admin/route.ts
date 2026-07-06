@@ -12,6 +12,8 @@ import {
   getCampaigns, updateCampaign,
   getBirthdayConfig, updateBirthdayConfig,
   getReferrals,
+  getDepositRules, createDepositRule, deleteDepositRule,
+  getStripeConnectStatus, createStripeConnectLink,
 } from '@/routes/admin.routes'
 
 export async function GET(req: NextRequest) {
@@ -29,6 +31,8 @@ export async function GET(req: NextRequest) {
     case 'campaigns':       return getCampaigns(req)
     case 'birthday-config': return getBirthdayConfig(req)
     case 'referrals':       return getReferrals(req)
+    case 'deposit-rules':   return getDepositRules(req)
+    case 'stripe-connect':  return getStripeConnectStatus(req)
     default: return Response.json({ error: 'Unknown resource' }, { status: 400 })
   }
 }
@@ -42,6 +46,8 @@ export async function POST(req: NextRequest) {
     case 'events':        return createSpecialEvent(req)
     case 'employees':     return inviteEmployee(req)
     case 'guest-tag':     return addGuestTag(req)
+    case 'deposit-rules': return createDepositRule(req)
+    case 'stripe-connect': return createStripeConnectLink(req)
     default: return Response.json({ error: 'Unknown resource' }, { status: 400 })
   }
 }
@@ -69,6 +75,7 @@ export async function DELETE(req: NextRequest) {
     case 'events':        return deleteSpecialEvent(req)
     case 'employees':     return removeEmployee(req)
     case 'guest-tag':     return removeGuestTag(req)
+    case 'deposit-rules': return deleteDepositRule(req)
     default: return Response.json({ error: 'Unknown resource' }, { status: 400 })
   }
 }

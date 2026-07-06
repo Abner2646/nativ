@@ -1,5 +1,7 @@
 'use client'
 import { useState, useCallback, useEffect } from 'react'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import type { Theme } from '@/lib/theme'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -17,10 +19,64 @@ interface AvailabilityResponse {
   slots: AvailabilitySlot[]
   min?: number
   max?: number
-  special_event?: { name: string; deposit_amount: number } | null
+  special_event?: { name: string } | null
+  deposit_rule?: { id: string; amount_cents: number; refund_cutoff_hours: number } | null
 }
 
-type Step = 'search' | 'slots' | 'details' | 'success'
+type Step = 'search' | 'slots' | 'details' | 'payment' | 'success'
+
+// ─── PaymentForm (must be inside <Elements>) ──────────────────────────────────
+
+function PaymentForm({ amountCents, onSuccess, onError, theme: C, fontFamily }: {
+  amountCents: number
+  onSuccess: (piId: string) => void
+  onError: (msg: string) => void
+  theme: Theme
+  fontFamily: string
+}) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [paying, setPaying] = useState(false)
+
+  const handlePay = async () => {
+    if (!stripe || !elements) return
+    setPaying(true)
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: window.location.href },
+      redirect: 'if_required',
+    })
+    if (error) {
+      onError(error.message || 'Payment failed. Please try again.')
+      setPaying(false)
+    } else if (paymentIntent?.status === 'succeeded') {
+      onSuccess(paymentIntent.id)
+    } else {
+      onError('Unexpected payment status. Please try again.')
+      setPaying(false)
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <PaymentElement options={{ layout: 'tabs' }} />
+      <button
+        type="button"
+        onClick={handlePay}
+        disabled={paying || !stripe || !elements}
+        style={{
+          backgroundColor: C.primary, color: C.primaryText,
+          fontWeight: 700, fontSize: '0.9375rem', padding: '0.875rem',
+          borderRadius: '0.625rem', border: 'none', width: '100%', fontFamily,
+          cursor: paying || !stripe || !elements ? 'not-allowed' : 'pointer',
+          opacity: paying || !stripe || !elements ? 0.6 : 1,
+        }}
+      >
+        {paying ? 'Processing…' : `Pay $${(amountCents / 100).toFixed(2)}`}
+      </button>
+    </div>
+  )
+}
 
 const OCCASIONS = ['Birthday', 'Anniversary', 'Business dinner', 'Date night', 'Family gathering', 'Other']
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -224,10 +280,14 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
   const [guestPhone, setGuestPhone] = useState('')
   const [occasion, setOccasion]     = useState('')
   const [notes, setNotes]           = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [submitting, setSubmitting]   = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [confirmationRef, setConfirmationRef] = useState('')
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null)
+
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null)
+  const [clientSecret, setClientSecret]   = useState('')
+  const [paymentError, setPaymentError]   = useState('')
 
   const targetUrl = websiteUrl ? normalizeWebsiteUrl(websiteUrl) : null
 
@@ -301,8 +361,7 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
     setStep('details')
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const submitReservation = async (piId?: string) => {
     if (!selectedSlot) return
     setSubmitting(true)
     setSubmitError('')
@@ -316,6 +375,7 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
           date, time: selectedSlot.time, party_size: partySize,
           guest_name: guestName, guest_email: guestEmail,
           guest_phone: guestPhone || null, occasion: occasion || null, notes: notes || null,
+          ...(piId ? { stripe_payment_intent_id: piId } : {}),
         }),
       })
       const data = await res.json()
@@ -326,6 +386,34 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
       setSubmitError('Network error. Please try again.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedSlot) return
+    if (availability?.deposit_rule) {
+      setSubmitting(true)
+      setSubmitError('')
+      try {
+        const res = await fetch(`/api/deposit?tenant=${slug}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount_cents: availability.deposit_rule.amount_cents }),
+        })
+        const data = await res.json()
+        if (!res.ok) { setSubmitError(data.error || 'Payment setup failed.'); return }
+        setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!, { stripeAccount: data.stripe_account_id }))
+        setClientSecret(data.client_secret)
+        setPaymentError('')
+        setStep('payment')
+      } catch {
+        setSubmitError('Network error. Please try again.')
+      } finally {
+        setSubmitting(false)
+      }
+    } else {
+      await submitReservation()
     }
   }
 
@@ -359,6 +447,7 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
           {step === 'search'  && 'Make a reservation'}
           {step === 'slots'   && 'Choose a time'}
           {step === 'details' && 'Your details'}
+          {step === 'payment' && 'Complete payment'}
         </h2>
       )}
 
@@ -498,10 +587,19 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
               {availability.special_event && (
                 <div style={{
                   backgroundColor: 'rgba(201,169,110,0.08)', border: '1px solid rgba(201,169,110,0.3)',
-                  borderRadius: '0.625rem', padding: '0.75rem 1rem', marginBottom: '1.25rem',
+                  borderRadius: '0.625rem', padding: '0.75rem 1rem', marginBottom: '0.75rem',
                   fontSize: '0.8125rem', color: '#C9A96E',
                 }}>
-                  {availability.special_event.name} — ${availability.special_event.deposit_amount} deposit required
+                  {availability.special_event.name}
+                </div>
+              )}
+              {availability.deposit_rule && (
+                <div style={{
+                  backgroundColor: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)',
+                  borderRadius: '0.625rem', padding: '0.75rem 1rem', marginBottom: '1.25rem',
+                  fontSize: '0.8125rem', color: '#fbbf24',
+                }}>
+                  A deposit of <strong>${(availability.deposit_rule.amount_cents / 100).toFixed(2)}</strong> is required to confirm this reservation.
                 </div>
               )}
               {Object.entries(slotsByShift).map(([shiftName, slots]) => (
@@ -582,12 +680,55 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
               cursor: submitting ? 'not-allowed' : 'pointer',
               opacity: submitting ? 0.6 : 1, width: '100%', fontFamily,
             }}>
-            {submitting ? 'Confirming…' : 'Confirm reservation'}
+            {submitting
+              ? (availability?.deposit_rule ? 'Loading payment…' : 'Confirming…')
+              : (availability?.deposit_rule ? `Next: Pay $${(availability.deposit_rule.amount_cents / 100).toFixed(2)} →` : 'Confirm reservation')}
           </button>
           <p style={{ color: C.faint, fontSize: '0.75rem', textAlign: 'center' }}>
-            A confirmation email will be sent. You can cancel anytime.
+            {availability?.deposit_rule
+              ? `Refunds available up to ${availability.deposit_rule.refund_cutoff_hours}h before your reservation.`
+              : 'A confirmation email will be sent. You can cancel anytime.'}
           </p>
         </form>
+      )}
+
+      {/* ── PAYMENT ────────────────────────────────────────────── */}
+      {step === 'payment' && availability?.deposit_rule && stripePromise && clientSecret && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{
+            backgroundColor: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.20)',
+            borderRadius: '0.625rem', padding: '0.75rem 1rem', fontSize: '0.8125rem', color: '#fbbf24',
+          }}>
+            Deposit of <strong>${(availability.deposit_rule.amount_cents / 100).toFixed(2)}</strong> required · refunds up to {availability.deposit_rule.refund_cutoff_hours}h before
+          </div>
+          {paymentError && (
+            <p style={{ backgroundColor: C.errorBg, border: `1px solid ${C.errorBorder}`, borderRadius: '0.625rem', padding: '0.75rem 1rem', color: C.errorText, fontSize: '0.8125rem' }}>
+              {paymentError}
+            </p>
+          )}
+          <Elements
+            stripe={stripePromise}
+            options={{
+              clientSecret,
+              appearance: {
+                theme: 'night',
+                variables: { colorPrimary: C.primary, colorBackground: C.input, colorText: C.text, colorDanger: '#ef4444', borderRadius: '0.625rem', fontFamily },
+              },
+            }}
+          >
+            <PaymentForm
+              amountCents={availability.deposit_rule.amount_cents}
+              onSuccess={piId => submitReservation(piId)}
+              onError={msg => setPaymentError(msg)}
+              theme={C}
+              fontFamily={fontFamily}
+            />
+          </Elements>
+          <button type="button" onClick={() => setStep('details')}
+            style={{ color: C.muted, fontSize: '0.8125rem', background: 'none', border: 'none', cursor: 'pointer', fontFamily, textAlign: 'center' }}>
+            ← Back to details
+          </button>
+        </div>
       )}
 
       {/* ── SUCCESS ────────────────────────────────────────────── */}

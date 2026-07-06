@@ -188,6 +188,16 @@ export interface Referral {
   referred_coupon_id: string | null
 }
 
+export interface DepositRule {
+  id: string
+  tenant_id: string
+  rule_type: 'all_days' | 'day_of_week' | 'specific_date'
+  day_of_week: number | null
+  specific_date: string | null
+  amount_cents: number
+  refund_cutoff_hours: number
+}
+
 export interface AvailabilitySlot {
   shift_id: string
   shift_name: string

@@ -97,5 +97,17 @@ export async function getAvailability(req: NextRequest) {
     .from('special_events').select('*')
     .eq('tenant_id', tenant.id).eq('date', date).maybeSingle()
 
-  return NextResponse.json({ available: slots.length > 0, date, party_size: partySize, slots, special_event: specialEvent || null })
+  const { data: depositRules } = await supabaseAdmin
+    .from('deposit_rules').select('*').eq('tenant_id', tenant.id)
+
+  let depositRule = null
+  if (depositRules && depositRules.length > 0) {
+    const specific = depositRules.find((r: any) => r.rule_type === 'specific_date' && r.specific_date === date)
+    const dayRule  = depositRules.find((r: any) => r.rule_type === 'day_of_week' && r.day_of_week === dayOfWeek)
+    const allDays  = depositRules.find((r: any) => r.rule_type === 'all_days')
+    const match = specific || dayRule || allDays || null
+    if (match) depositRule = { id: match.id, amount_cents: match.amount_cents, refund_cutoff_hours: match.refund_cutoff_hours }
+  }
+
+  return NextResponse.json({ available: slots.length > 0, date, party_size: partySize, slots, special_event: specialEvent || null, deposit_rule: depositRule })
 }
