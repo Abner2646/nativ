@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { TenantSettings, TenantPhoto } from '@/lib/types'
 import { ReservationPanel } from '@/components/public/ReservationPanel'
 import { buildTheme } from '@/lib/theme'
+import { ReservationDemo } from '@/components/marketing/ReservationDemo'
 import Image from 'next/image'
 
 // Returns a Google Fonts URL for the restaurant's selected font (excluding Inter).
@@ -382,6 +383,40 @@ function NativLanding() {
           <p style={{ color: 'rgba(250,250,248,0.25)', fontSize: '0.8125rem', marginTop: '1.75rem' }}>
             No credit card required · 14-day free trial · Cancel anytime
           </p>
+
+          {/* ── Metrics strip ── */}
+          <div className="grid grid-cols-3 gap-px mt-14 max-w-xl"
+            style={{ backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {[
+              { stat: '$0',    label: 'Per booking',  sub: 'No cover fees, ever' },
+              { stat: '5 min', label: 'To go live',   sub: 'Widget on your site' },
+              { stat: '100%',  label: 'Your data',    sub: 'Forever. No lock-in' },
+            ].map((m, i) => (
+              <div key={i} className="flex flex-col px-5 py-4"
+                style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: '1.625rem', color: C.offwhite, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                  {m.stat}
+                </span>
+                <span style={{ color: C.gold, fontSize: '0.75rem', fontWeight: 600, marginTop: '5px' }}>{m.label}</span>
+                <span style={{ color: 'rgba(250,250,248,0.25)', fontSize: '0.6875rem', marginTop: '3px' }}>{m.sub}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Product demo ────────────────────────────────────────────────── */}
+      <section style={{ backgroundColor: '#0a131e' }} className="px-6 md:px-12 py-20">
+        <div className="max-w-4xl mx-auto">
+          <p style={{ color: C.sage, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.16em', fontFamily: "'Satoshi', sans-serif' " }}
+            className="uppercase mb-3">
+            The dashboard
+          </p>
+          <p style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.25rem, 2.5vw, 1.75rem)', color: C.offwhite, letterSpacing: '-0.02em', maxWidth: '32rem' }}
+            className="mb-10">
+            Every reservation. Every guest. One screen.
+          </p>
+          <ReservationDemo />
         </div>
       </section>
 
@@ -492,6 +527,17 @@ function NativLanding() {
               </ul>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── Mission ─────────────────────────────────────────────────────── */}
+      <section style={{ backgroundColor: C.offwhite, borderTop: `1px solid ${C.sand}` }}
+        className="px-6 md:px-12 py-16">
+        <div className="max-w-4xl mx-auto">
+          <p style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 500, fontSize: 'clamp(1.125rem, 2.5vw, 1.5rem)', color: '#4a5a68', lineHeight: '1.6', maxWidth: '42rem' }}>
+            We got tired of watching great restaurants pay platforms to compete with their own neighbors.{' '}
+            <span style={{ color: C.midnight, fontWeight: 700 }}>So we built the alternative.</span>
+          </p>
         </div>
       </section>
 
