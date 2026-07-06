@@ -103,7 +103,7 @@ export async function createReservation(req: NextRequest) {
   if (error || !reservation) return NextResponse.json({ error: 'Failed to create reservation' }, { status: 500 })
 
   await Promise.allSettled([
-    sendConfirmationEmail(reservation, settings, tenant.slug),
+    sendConfirmationEmail(reservation, settings, tenant.slug, applicableRule?.refund_cutoff_hours),
     sendOwnerNotification(reservation, settings),
     sendConfirmationSMS(reservation, settings),
   ]).then(results => {
@@ -152,7 +152,7 @@ export async function cancelReservation(req: NextRequest) {
   await supabaseAdmin.from('reservations').update({ status: 'cancelled', cancelled_at: new Date().toISOString(), ...(refunded ? { deposit_refunded: true } : {}) }).eq('id', reservation.id)
 
   const { data: settings } = await supabaseAdmin.from('tenant_settings').select('*').eq('tenant_id', reservation.tenant_id).single()
-  if (settings) sendCancellationEmail(reservation, settings).catch(console.error)
+  if (settings) sendCancellationEmail(reservation, settings, refunded).catch(console.error)
 
   return NextResponse.json({ success: true, refunded })
 }

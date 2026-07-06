@@ -17,9 +17,18 @@ function getTenantUrl(slug: string) {
   return getTenantBaseUrl(slug)
 }
 
-export async function sendConfirmationEmail(r: Reservation, settings: TenantSettings, slug: string) {
+export async function sendConfirmationEmail(
+  r: Reservation, settings: TenantSettings, slug: string,
+  refundCutoffHours?: number
+) {
   const cancelUrl = `${getTenantUrl(slug)}/cancel?token=${r.cancellation_token}`
   const guest = r.guest!
+  const depositRow = r.deposit_amount
+    ? `<tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:4px 0">Deposit</td><td>$${r.deposit_amount.toFixed(2)} paid</td></tr>`
+    : ''
+  const refundNote = r.deposit_amount && refundCutoffHours != null
+    ? `<p style="font-size:13px;color:#666;">Free cancellation if cancelled at least <strong>${refundCutoffHours} hours</strong> before your reservation. After that, the deposit is non-refundable.</p>`
+    : ''
   await resend.emails.send({
     from: getFrom(settings),
     to: guest.email,
@@ -35,15 +44,22 @@ export async function sendConfirmationEmail(r: Reservation, settings: TenantSett
           <tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:4px 0">Guests</td><td>${r.party_size}</td></tr>
           ${r.occasion ? `<tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:4px 0">Occasion</td><td>${r.occasion}</td></tr>` : ''}
           ${r.notes ? `<tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:4px 0">Notes</td><td>${r.notes}</td></tr>` : ''}
+          ${depositRow}
         </table>
         <br>
+        ${refundNote}
         <p><a href="${cancelUrl}" style="color:${settings.primary_color}">Need to cancel? Click here.</a></p>
       </div>`
   })
 }
 
-export async function sendCancellationEmail(r: Reservation, settings: TenantSettings) {
+export async function sendCancellationEmail(r: Reservation, settings: TenantSettings, refunded?: boolean) {
   const guest = r.guest!
+  const refundLine = r.deposit_amount
+    ? refunded
+      ? `<p style="font-size:13px;color:#16a34a;">Your deposit of <strong>$${r.deposit_amount.toFixed(2)}</strong> has been refunded and will appear on your statement within a few business days.</p>`
+      : `<p style="font-size:13px;color:#666;">Your deposit of <strong>$${r.deposit_amount.toFixed(2)}</strong> was not refunded as the cancellation was made within the refund cutoff window.</p>`
+    : ''
   await resend.emails.send({
     from: getFrom(settings),
     to: guest.email,
@@ -51,6 +67,7 @@ export async function sendCancellationEmail(r: Reservation, settings: TenantSett
     html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto">
       <h2>Reservation Cancelled</h2>
       <p>Hi ${guest.name}, your reservation for ${r.date} at ${r.time} has been cancelled.</p>
+      ${refundLine}
       <p>We hope to see you another time!</p>
     </div>`
   })

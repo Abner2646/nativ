@@ -20,6 +20,7 @@ export function CancelClient({ token, reservation: r, restaurantName, theme: t }
   const [email, setEmail]     = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone]       = useState(false)
+  const [refunded, setRefunded] = useState(false)
   const [error, setError]     = useState('')
 
   const handleCancel = async () => {
@@ -37,6 +38,7 @@ export function CancelClient({ token, reservation: r, restaurantName, theme: t }
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Could not cancel the reservation.'); setLoading(false); return }
+      setRefunded(!!data.refunded)
       setDone(true)
     } catch {
       setError('Network error. Please try again.')
@@ -67,6 +69,15 @@ export function CancelClient({ token, reservation: r, restaurantName, theme: t }
             Your reservation at <strong style={{ color: t.text }}>{restaurantName}</strong> on{' '}
             {fmtDate(r.date)} at {r.time} has been cancelled.
           </p>
+          {refunded && (
+            <p style={{
+              color: t.primary, fontSize: '0.875rem', marginTop: '1rem',
+              backgroundColor: `${t.primary}12`, border: `1px solid ${t.primary}30`,
+              borderRadius: '0.5rem', padding: '0.625rem 0.875rem',
+            }}>
+              Your deposit has been refunded and will appear on your statement within a few business days.
+            </p>
+          )}
           <p style={{ color: t.faint, fontSize: '0.8125rem', marginTop: '1.25rem' }}>
             We hope to see you another time.
           </p>
