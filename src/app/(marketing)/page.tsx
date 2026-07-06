@@ -697,12 +697,18 @@ function NativLanding() {
             </div>
           </div>
 
-          {/* Bottom row: copyright + developed by */}
+          {/* Bottom row: copyright + legal + developed by */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem' }}
             className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <p style={{ color: 'rgba(250,250,248,0.18)', fontSize: '0.8125rem' }}>
-              © {new Date().getFullYear()} Nativ
-            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              <p style={{ color: 'rgba(250,250,248,0.18)', fontSize: '0.8125rem' }}>
+                © {new Date().getFullYear()} Nativ
+              </p>
+              <a href="/privacy" style={{ color: 'rgba(250,250,248,0.25)', fontSize: '0.8125rem', textDecoration: 'none' }}
+                className="hover:text-white/50 transition-colors">Privacy Policy</a>
+              <a href="/terms" style={{ color: 'rgba(250,250,248,0.25)', fontSize: '0.8125rem', textDecoration: 'none' }}
+                className="hover:text-white/50 transition-colors">Terms of Service</a>
+            </div>
             <div className="flex items-center gap-2">
               <span style={{ color: 'rgba(250,250,248,0.18)', fontSize: '0.75rem' }}>Developed by</span>
               <a href="https://norvex.dev" target="_blank" rel="noopener noreferrer"
