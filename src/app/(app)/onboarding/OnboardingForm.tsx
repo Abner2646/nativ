@@ -65,7 +65,10 @@ export function OnboardingForm() {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold mb-2">Welcome to Nativ</h1>
+          <a href="/dashboard" className="text-gray-500 text-sm mb-8 hover:text-gray-300 transition inline-block">
+            ← Back to dashboard
+          </a>
+          <h1 className="text-3xl font-bold mb-2 mt-4">Welcome to Nativ</h1>
           <p className="text-gray-500 text-sm mb-10">What would you like to do?</p>
           <div className="space-y-4">
             <button onClick={() => setMode('create')}

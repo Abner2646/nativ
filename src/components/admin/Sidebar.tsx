@@ -88,7 +88,7 @@ export function Sidebar({
   if (cleanNav[cleanNav.length - 1] === '---') cleanNav.pop()
 
   return (
-    <aside className="w-60 flex flex-col fixed h-screen bg-midnight z-10"
+    <aside className="hidden md:flex w-60 flex-col fixed h-screen bg-midnight z-10"
       style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
 
       {/* ── Header ── */}

@@ -2,6 +2,7 @@ import { requireUser, getTenantBySlug } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { Sidebar } from '@/components/admin/Sidebar'
+import { BottomNav } from '@/components/admin/BottomNav'
 import { GlobalSearch } from '@/components/admin/GlobalSearch'
 
 export default async function RestaurantLayout({
@@ -35,9 +36,10 @@ export default async function RestaurantLayout({
         todayCount={todayCount ?? 0}
         trialEndsAt={tenant.status === 'trial' ? (tenant.trial_ends_at ?? null) : null}
       />
-      <main className="ml-60 flex-1 min-h-screen">
+      <main className="flex-1 min-h-screen md:ml-60 pb-16 md:pb-0">
         {children}
       </main>
+      <BottomNav slug={slug} todayCount={todayCount ?? 0} />
       <GlobalSearch slug={slug} />
     </div>
   )
