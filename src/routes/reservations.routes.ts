@@ -65,11 +65,13 @@ export async function createReservation(req: NextRequest) {
 
   if (error || !reservation) return NextResponse.json({ error: 'Failed to create reservation' }, { status: 500 })
 
-  Promise.all([
+  await Promise.allSettled([
     sendConfirmationEmail(reservation, settings, tenant.slug),
     sendOwnerNotification(reservation, settings),
     sendConfirmationSMS(reservation, settings),
-  ]).catch(e => console.error('Notification error:', e))
+  ]).then(results => {
+    results.forEach(r => { if (r.status === 'rejected') console.error('Notification error:', r.reason) })
+  })
 
   return NextResponse.json({ success: true, reservation }, { status: 201 })
 }
