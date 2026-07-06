@@ -20,8 +20,8 @@ export default async function ReservationsPage({ params }: { params: Promise<{ s
     .order('time')
 
   return (
-    <div className="p-8">
-      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-8">Reservations</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-6 md:mb-8">Reservations</h1>
       <ReservationsClient
         initialReservations={reservations || []}
         slug={slug}

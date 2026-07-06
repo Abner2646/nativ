@@ -19,6 +19,8 @@ const labelCls = 'text-xs text-offwhite/35 uppercase tracking-widest mb-2 block 
 const primaryBtn = 'bg-offwhite text-midnight font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-offwhite/90 transition-colors disabled:opacity-40'
 const secondaryBtn = 'px-4 py-2.5 border border-white/[0.12] text-offwhite/50 rounded-xl text-sm hover:border-white/25 hover:text-offwhite transition-colors'
 
+function fmtTime(t: string) { return t.slice(0, 5) }
+
 interface Props {
   initialReservations: Reservation[]
   slug: string
@@ -131,75 +133,165 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
   return (
     <div>
       {/* ── Toolbar ── */}
-      <div className="flex gap-3 mb-6 flex-wrap">
-        <input type="date" value={date} onChange={e => handleDateChange(e.target.value)} className={inputCls} />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={inputCls}>
-          <option value="all">All statuses</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+      <div className="flex flex-col gap-3 mb-6 md:flex-row md:flex-wrap md:items-center">
+        <div className="flex gap-3">
+          <input
+            type="date" value={date} onChange={e => handleDateChange(e.target.value)}
+            className={`flex-1 md:flex-none ${inputCls}`}
+          />
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={inputCls}>
+            <option value="all">All</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
         {loading && <span className="text-xs text-offwhite/30 self-center">Loading…</span>}
-        <div className="flex-1" />
-        <button onClick={openModal} className={primaryBtn}>+ New reservation</button>
+        <div className="hidden md:flex flex-1" />
+        <button onClick={openModal} className={`w-full md:w-auto ${primaryBtn}`}>+ New reservation</button>
       </div>
 
       {/* ── Empty ── */}
       {filtered.length === 0 ? (
-        <div className="p-16 text-center rounded-2xl" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="p-12 text-center rounded-2xl" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
           <p className="text-sm text-offwhite/35">No reservations for this date</p>
         </div>
       ) : (
-        <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                {['Time', 'Guest', 'Party', 'Shift', 'Area', 'Occasion', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="text-left text-xs text-offwhite/35 uppercase tracking-widest px-5 py-4 font-semibold">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(r => (
-                <tr key={r.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                  onMouseOver={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.025)')}
-                  onMouseOut={e  => (e.currentTarget.style.backgroundColor = '')}>
-                  <td className="px-5 py-4 font-mono text-sm tabular-nums text-offwhite/70">{r.time}</td>
-                  <td className="px-5 py-4">
-                    <p className="text-sm font-medium text-offwhite">{r.guest?.name}</p>
-                    <p className="text-xs text-offwhite/40 mt-0.5">{r.guest?.email}</p>
-                    {r.guest?.phone && <p className="text-xs text-offwhite/30">{r.guest.phone}</p>}
-                  </td>
-                  <td className="px-5 py-4 text-sm text-offwhite/60">{r.party_size}</td>
-                  <td className="px-5 py-4 text-sm text-offwhite/40">{r.shift?.name || '—'}</td>
-                  <td className="px-5 py-4 text-sm text-offwhite/40">{r.seating_area?.name || '—'}</td>
-                  <td className="px-5 py-4 text-sm text-offwhite/40">{r.occasion || '—'}</td>
-                  <td className="px-5 py-4">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_BADGE[r.status] || ''}`}>{r.status}</span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <select value={r.status} disabled={updating === r.id}
-                      onChange={e => updateStatus(r.id, e.target.value as ReservationStatus)}
-                      className="rounded-lg px-2 py-1 text-xs focus:outline-none disabled:opacity-40 text-offwhite"
-                      style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <option value="confirmed">confirmed</option>
-                      <option value="completed">completed</option>
-                      <option value="cancelled">cancelled</option>
-                    </select>
-                  </td>
+        <>
+          {/* ── Mobile cards ── */}
+          <div className="md:hidden space-y-2">
+            {filtered.map(r => (
+              <div
+                key={r.id}
+                className="rounded-2xl p-4"
+                style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                {/* Time + status + party */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <span className="font-mono text-2xl font-semibold text-offwhite leading-none">
+                    {fmtTime(r.time)}
+                  </span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${STATUS_BADGE[r.status] || ''}`}>
+                      {r.status}
+                    </span>
+                    <span className="text-xs text-offwhite/40 font-medium">{r.party_size} pax</span>
+                  </div>
+                </div>
+
+                {/* Guest */}
+                <p className="text-sm font-semibold text-offwhite">{r.guest?.name}</p>
+                <p className="text-xs text-offwhite/40 mt-0.5">{r.guest?.email}</p>
+                {r.guest?.phone && <p className="text-xs text-offwhite/30 mt-0.5">{r.guest.phone}</p>}
+
+                {/* Details row */}
+                {(r.shift?.name || r.seating_area?.name || r.occasion) && (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                    {r.shift?.name && (
+                      <span className="text-[11px] text-offwhite/30">{r.shift.name}</span>
+                    )}
+                    {r.seating_area?.name && (
+                      <>
+                        <span className="text-offwhite/15 text-[11px]">·</span>
+                        <span className="text-[11px] text-offwhite/30">{r.seating_area.name}</span>
+                      </>
+                    )}
+                    {r.occasion && (
+                      <>
+                        <span className="text-offwhite/15 text-[11px]">·</span>
+                        <span className="text-[11px] text-offwhite/30">{r.occasion}</span>
+                      </>
+                    )}
+                    {r.deposit_amount && (
+                      <>
+                        <span className="text-offwhite/15 text-[11px]">·</span>
+                        <span className="text-[11px] font-medium" style={{ color: '#C9A96E' }}>
+                          ${r.deposit_amount.toFixed(2)} deposit
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Notes */}
+                {r.notes && (
+                  <p className="text-[11px] text-offwhite/25 mt-1.5 italic">"{r.notes}"</p>
+                )}
+
+                {/* Status action */}
+                <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <select
+                    value={r.status}
+                    disabled={updating === r.id}
+                    onChange={e => updateStatus(r.id, e.target.value as ReservationStatus)}
+                    className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none disabled:opacity-40 text-offwhite"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  >
+                    <option value="confirmed">confirmed</option>
+                    <option value="completed">completed</option>
+                    <option value="cancelled">cancelled</option>
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Desktop table ── */}
+          <div className="hidden md:block rounded-2xl overflow-hidden" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <table className="w-full">
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  {['Time', 'Guest', 'Party', 'Shift', 'Area', 'Occasion', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="text-left text-xs text-offwhite/35 uppercase tracking-widest px-5 py-4 font-semibold">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map(r => (
+                  <tr key={r.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                    onMouseOver={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.025)')}
+                    onMouseOut={e  => (e.currentTarget.style.backgroundColor = '')}>
+                    <td className="px-5 py-4 font-mono text-sm tabular-nums text-offwhite/70">{fmtTime(r.time)}</td>
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-medium text-offwhite">{r.guest?.name}</p>
+                      <p className="text-xs text-offwhite/40 mt-0.5">{r.guest?.email}</p>
+                      {r.guest?.phone && <p className="text-xs text-offwhite/30">{r.guest.phone}</p>}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-offwhite/60">{r.party_size}</td>
+                    <td className="px-5 py-4 text-sm text-offwhite/40">{r.shift?.name || '—'}</td>
+                    <td className="px-5 py-4 text-sm text-offwhite/40">{r.seating_area?.name || '—'}</td>
+                    <td className="px-5 py-4 text-sm text-offwhite/40">{r.occasion || '—'}</td>
+                    <td className="px-5 py-4">
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_BADGE[r.status] || ''}`}>{r.status}</span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <select value={r.status} disabled={updating === r.id}
+                        onChange={e => updateStatus(r.id, e.target.value as ReservationStatus)}
+                        className="rounded-lg px-2 py-1 text-xs focus:outline-none disabled:opacity-40 text-offwhite"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <option value="confirmed">confirmed</option>
+                        <option value="completed">completed</option>
+                        <option value="cancelled">cancelled</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
-      {/* ── Modal ── */}
+      {/* ── Modal — bottom sheet on mobile, centered on desktop ── */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4"
-          onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl"
-            style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.10)' }}>
+        <div
+          className="fixed inset-0 bg-black/75 z-50 flex items-end md:items-center justify-center md:p-4"
+          onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}
+        >
+          <div
+            className="w-full md:max-w-lg max-h-[90vh] overflow-y-auto md:rounded-2xl rounded-t-2xl"
+            style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.10)' }}
+          >
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -243,7 +335,7 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                   {slots.length > 0 && (
                     <div>
                       <p className={labelCls}>Available slots</p>
-                      <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                      <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                         {Array.from(new Set(slots.map(s => s.shift_name))).map(shiftName => (
                           <div key={shiftName}>
                             <p className="text-xs text-offwhite/25 mb-2">{shiftName}</p>
@@ -256,7 +348,7 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                                       isSelected ? 'bg-offwhite text-midnight font-semibold' : 'text-offwhite/60 hover:text-offwhite'
                                     }`}
                                     style={!isSelected ? { backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' } : undefined}>
-                                    {slot.time}
+                                    {fmtTime(slot.time)}
                                   </button>
                                 )
                               })}
@@ -290,15 +382,15 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
 
               {modalStep === 'guest' && (
                 <>
-                  <div className="px-4 py-3 rounded-xl text-sm text-offwhite/50 flex gap-4 flex-wrap"
+                  <div className="px-4 py-3 rounded-xl text-sm text-offwhite/50 flex gap-3 flex-wrap"
                     style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
                     <span>{form.date}</span><span>·</span>
-                    <span>{selectedSlot?.shift_name} {form.time}</span><span>·</span>
+                    <span>{selectedSlot?.shift_name} {fmtTime(form.time)}</span><span>·</span>
                     <span>{form.party_size} covers</span>
                   </div>
                   <div className="space-y-4">
                     {[
-                      { label: 'Name *', type: 'text',  key: 'guest_name',  ph: 'Full name' },
+                      { label: 'Name *',  type: 'text',  key: 'guest_name',  ph: 'Full name' },
                       { label: 'Email *', type: 'email', key: 'guest_email', ph: 'guest@email.com' },
                       { label: 'Phone',   type: 'tel',   key: 'guest_phone', ph: '+1 555 000 0000' },
                     ].map(f => (
