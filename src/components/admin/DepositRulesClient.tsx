@@ -91,11 +91,13 @@ export function DepositRulesClient({ initialRules, stripeAccountId, slug }: Prop
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
-      const data = await res.json()
-      if (!res.ok) { setConnectError(data.error || 'Failed'); setConnectLoading(false); return }
+      let data: any = {}
+      try { data = await res.json() } catch { /* HTML error page */ }
+      if (!res.ok) { setConnectError(data?.error || `Server error (${res.status})`); setConnectLoading(false); return }
+      if (!data?.url) { setConnectError('No redirect URL received'); setConnectLoading(false); return }
       window.location.href = data.url
-    } catch {
-      setConnectError('Network error')
+    } catch (err: any) {
+      setConnectError(err?.message || 'Network error')
       setConnectLoading(false)
     }
   }
