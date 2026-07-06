@@ -21,6 +21,7 @@ const NAV = (slug: string): NavItem[] => [
   { href: `/restaurant/${slug}/shifts`,       label: 'Shifts',         adminOnly: true },
   { href: `/restaurant/${slug}/areas`,        label: 'Seating areas',  adminOnly: true },
   { href: `/restaurant/${slug}/events`,       label: 'Special events', adminOnly: true },
+  { href: `/restaurant/${slug}/deposits`,     label: 'Deposits',       adminOnly: true },
   '---',
   { href: `/restaurant/${slug}/employees`,    label: 'Employees',      adminOnly: true },
   { href: `/restaurant/${slug}/photos`,       label: 'Photos',         adminOnly: true },
