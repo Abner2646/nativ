@@ -28,9 +28,9 @@ export default async function DepositsPage({ params }: { params: Promise<{ slug:
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-2">Deposits & Payments</h1>
-      <p className="text-sm text-offwhite/40 mb-8">Require a deposit to confirm reservations on specific days.</p>
+      <p className="text-sm text-offwhite/40 mb-6 md:mb-8">Require a deposit to confirm reservations on specific days.</p>
       <DepositRulesClient
         initialRules={(rules || []) as DepositRule[]}
         stripeAccountId={accountId}

@@ -94,7 +94,7 @@ export function AreasClient({ initialAreas, slug }: Props) {
       ) : (
         <div className="space-y-2">
           {areas.map(area => (
-            <div key={area.id} className="flex items-center gap-4 px-6 py-4 rounded-2xl"
+            <div key={area.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl"
               style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
               {editingId === area.id ? (
                 <input value={editName} onChange={e => setEditName(e.target.value)} autoFocus
@@ -105,7 +105,7 @@ export function AreasClient({ initialAreas, slug }: Props) {
                 <span className="flex-1 text-sm font-medium text-offwhite">{area.name}</span>
               )}
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 <button onClick={() => toggleActive(area)}
                   className={`text-xs px-3 py-1 rounded-full transition-colors font-semibold ${
                     area.is_active

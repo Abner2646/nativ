@@ -3,15 +3,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, CalendarDays, Users, Menu } from 'lucide-react'
 
-const NAV_ITEMS = (slug: string) => [
-  { href: `/restaurant/${slug}`,              label: 'Home',         icon: LayoutDashboard, exact: true },
-  { href: `/restaurant/${slug}/reservations`, label: 'Reservations', icon: CalendarDays },
-  { href: `/restaurant/${slug}/guests`,       label: 'Guests',       icon: Users },
-  { href: `/restaurant/${slug}/settings`,     label: 'More',         icon: Menu },
-]
+interface Props { slug: string; todayCount?: number; role?: 'admin' | 'employee' }
 
-export function BottomNav({ slug, todayCount = 0 }: { slug: string; todayCount?: number }) {
+export function BottomNav({ slug, todayCount = 0, role = 'admin' }: Props) {
   const pathname = usePathname()
+  const isAdmin = role === 'admin'
+
+  const items = [
+    { href: `/restaurant/${slug}`,              label: 'Home',         icon: LayoutDashboard, exact: true },
+    { href: `/restaurant/${slug}/reservations`, label: 'Reservations', icon: CalendarDays },
+    { href: `/restaurant/${slug}/guests`,       label: 'Guests',       icon: Users },
+    ...(isAdmin ? [{ href: `/restaurant/${slug}/settings`, label: 'More', icon: Menu, exact: false }] : []),
+  ]
 
   return (
     <nav
@@ -22,7 +25,7 @@ export function BottomNav({ slug, todayCount = 0 }: { slug: string; todayCount?:
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
-      {NAV_ITEMS(slug).map(({ href, label, icon: Icon, exact }) => {
+      {items.map(({ href, label, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href)
         const isReservations = href.endsWith('/reservations')
         return (

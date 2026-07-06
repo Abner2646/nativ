@@ -20,8 +20,8 @@ export default async function SettingsPage({ params }: { params: Promise<{ slug:
   if (!settings) return notFound()
 
   return (
-    <div className="p-8">
-      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-8">Settings</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-6 md:mb-8">Settings</h1>
       <SettingsClient settings={settings as TenantSettings} slug={slug} />
     </div>
   )

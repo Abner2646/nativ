@@ -13,7 +13,7 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
 
   const now = new Date()
   const today = now.toISOString().split('T')[0]
-  const nowTime = now.toTimeString().slice(0, 5) // HH:MM
+  const nowTime = now.toTimeString().slice(0, 5)
 
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1))
@@ -30,18 +30,18 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
   ])
 
   const sum = (d: { party_size: number }[] | null) => (d || []).reduce((s, r) => s + r.party_size, 0)
-  const todayCount = todayRes.data?.length ?? 0
-  const weekCount  = weekRes.data?.length ?? 0
+  const todayCount  = todayRes.data?.length ?? 0
+  const weekCount   = weekRes.data?.length ?? 0
   const todayCovers = sum(todayRes.data)
   const weekCovers  = sum(weekRes.data)
-  const next = nextRes.data?.[0] ?? null
+  const next        = nextRes.data?.[0] ?? null
 
   const settings = settingsRes.data
   const onboarding = {
-    hasShift:    (shiftsRes.count ?? 0) > 0,
-    hasArea:     (areasRes.count ?? 0) > 0,
-    hasProfile:  !!(settings?.description || settings?.address),
-    hasStripe:   !!settings?.stripe_account_id,
+    hasShift:   (shiftsRes.count ?? 0) > 0,
+    hasArea:    (areasRes.count ?? 0) > 0,
+    hasProfile: !!(settings?.description || settings?.address),
+    hasStripe:  !!settings?.stripe_account_id,
   }
   const onboardingDone = Object.values(onboarding).every(Boolean)
 
@@ -51,96 +51,68 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
     : status === 'trial' ? { background: 'rgba(201,169,110,0.12)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.25)' }
     :                      { background: 'rgba(224,85,85,0.12)',   color: '#e05555', border: '1px solid rgba(224,85,85,0.25)' }
 
-  const cardBase: React.CSSProperties = {
-    backgroundColor: '#162232',
-    border: '1px solid rgba(255,255,255,0.06)',
-    borderRadius: '14px',
-    padding: '24px',
-  }
-
-  const statLabel: React.CSSProperties = {
-    fontSize: '11px',
-    fontWeight: 600,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    color: 'rgba(242,239,233,0.4)',
-    marginBottom: '12px',
-  }
-
-  const statNumber: React.CSSProperties = {
-    fontFamily: 'Satoshi, sans-serif',
-    fontWeight: 700,
-    fontSize: '40px',
-    lineHeight: 1,
-    color: '#F2EFE9',
-  }
-
-  const statSub: React.CSSProperties = {
-    fontSize: '13px',
-    color: 'rgba(242,239,233,0.4)',
-    marginTop: '6px',
-  }
+  const card = 'rounded-2xl p-5 md:p-6'
+  const cardBg: React.CSSProperties = { backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }
 
   return (
-    <div className="p-8 bg-midnight min-h-screen">
+    <div className="p-4 md:p-8 bg-midnight min-h-screen">
+
       {/* ── Page title ── */}
-      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-8">Dashboard</h1>
+      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-6 md:mb-8">Dashboard</h1>
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-5 mb-6 md:mb-8">
 
-        {/* Today — gold accent border */}
-        <div style={{ ...cardBase, borderLeft: '2px solid #C9A96E' }}>
-          <p style={statLabel}>Today</p>
-          <p style={statNumber}>{todayCount}</p>
-          <p style={statSub}>{todayCovers} covers</p>
+        {/* Today — gold accent */}
+        <div className={card} style={{ ...cardBg, borderLeft: '2px solid #C9A96E' }}>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-offwhite/40 mb-3">Today</p>
+          <p className="font-satoshi font-bold text-[36px] md:text-[40px] leading-none text-offwhite">{todayCount}</p>
+          <p className="text-[13px] text-offwhite/40 mt-1.5">{todayCovers} covers</p>
         </div>
 
         {/* This week */}
-        <div style={cardBase}>
-          <p style={statLabel}>This week</p>
-          <p style={statNumber}>{weekCount}</p>
-          <p style={statSub}>{weekCovers} covers</p>
+        <div className={card} style={cardBg}>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-offwhite/40 mb-3">This week</p>
+          <p className="font-satoshi font-bold text-[36px] md:text-[40px] leading-none text-offwhite">{weekCount}</p>
+          <p className="text-[13px] text-offwhite/40 mt-1.5">{weekCovers} covers</p>
         </div>
 
         {/* Status */}
-        <div style={cardBase}>
-          <p style={statLabel}>Status</p>
-          <div className="mt-1">
-            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={badgeStyle}>
-              {status}
-            </span>
-          </div>
+        <div className={card} style={cardBg}>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-offwhite/40 mb-3">Status</p>
+          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={badgeStyle}>
+            {status}
+          </span>
           {status === 'trial' && tenant.trial_ends_at && (
-            <p style={{ ...statSub, marginTop: '10px' }}>
-              Trial ends {new Date(tenant.trial_ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            <p className="text-[13px] text-offwhite/40 mt-2.5">
+              Ends {new Date(tenant.trial_ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </p>
           )}
         </div>
 
-        {/* Next reservation today */}
-        <div style={cardBase}>
-          <p style={statLabel}>Next up today</p>
+        {/* Next reservation */}
+        <div className={card} style={cardBg}>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-offwhite/40 mb-3">Next up</p>
           {next ? (
             <>
-              <p style={{ ...statNumber, fontSize: '28px' }}>{next.time.slice(0, 5)}</p>
-              <p style={statSub}>{next.guest_name} · {next.party_size} {next.party_size === 1 ? 'person' : 'people'}</p>
+              <p className="font-satoshi font-bold text-[28px] leading-none text-offwhite">{next.time.slice(0, 5)}</p>
+              <p className="text-[13px] text-offwhite/40 mt-1.5 truncate">
+                {next.guest_name} · {next.party_size} {next.party_size === 1 ? 'person' : 'people'}
+              </p>
             </>
           ) : (
-            <p style={{ color: 'rgba(242,239,233,0.25)', fontSize: '14px', marginTop: '4px' }}>
-              No more reservations today
-            </p>
+            <p className="text-[14px] text-offwhite/25 mt-1">No more today</p>
           )}
         </div>
       </div>
 
       {/* ── Onboarding checklist ── */}
       {!onboardingDone && (
-        <div className="rounded-2xl px-6 py-5 mb-8"
-          style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl px-4 py-4 md:px-6 md:py-5 mb-6 md:mb-8"
+          style={cardBg}>
           <p className="font-satoshi font-bold text-[15px] text-offwhite mb-1">Get started</p>
           <p className="text-sm text-offwhite/40 mb-4">Complete these steps to start accepting reservations.</p>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {[
               { done: onboarding.hasShift,   label: 'Create your first shift',           href: `/restaurant/${slug}/shifts` },
               { done: onboarding.hasArea,    label: 'Add a seating area',                href: `/restaurant/${slug}/areas` },
@@ -148,7 +120,9 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
               { done: onboarding.hasStripe,  label: 'Connect Stripe to accept deposits', href: `/restaurant/${slug}/deposits` },
             ].map(step => (
               <Link key={step.href} href={step.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors group ${step.done ? 'opacity-50 pointer-events-none' : 'hover:bg-white/[0.03]'}`}
+                className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 rounded-xl transition-colors group ${
+                  step.done ? 'opacity-50 pointer-events-none' : 'hover:bg-white/[0.03]'
+                }`}
                 style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
                 <span className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs"
                   style={step.done
@@ -156,10 +130,12 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
                     : { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(242,239,233,0.3)' }}>
                   {step.done ? '✓' : ''}
                 </span>
-                <span className={`text-sm flex-1 ${step.done ? 'line-through text-offwhite/30' : 'text-offwhite/70 group-hover:text-offwhite'}`}>
+                <span className={`text-sm flex-1 min-w-0 truncate ${
+                  step.done ? 'line-through text-offwhite/30' : 'text-offwhite/70 group-hover:text-offwhite'
+                }`}>
                   {step.label}
                 </span>
-                {!step.done && <span className="text-xs text-offwhite/25 group-hover:text-offwhite/50 transition-colors">→</span>}
+                {!step.done && <span className="text-xs text-offwhite/25 group-hover:text-offwhite/50 shrink-0">→</span>}
               </Link>
             ))}
           </div>
@@ -168,19 +144,19 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
 
       {/* ── AI campaign alert ── */}
       {(pendingCampaigns.count ?? 0) > 0 && (
-        <div className="flex items-center justify-between rounded-2xl px-6 py-5"
+        <div className="flex items-center justify-between gap-4 flex-wrap rounded-2xl px-4 py-4 md:px-6 md:py-5"
           style={{ backgroundColor: 'rgba(201,169,110,0.08)', border: '1px solid rgba(201,169,110,0.2)' }}>
-          <div>
+          <div className="min-w-0">
             <p className="font-satoshi font-semibold text-[15px]" style={{ color: '#C9A96E' }}>
               AI Campaign ready
             </p>
-            <p className="text-sm mt-1" style={{ color: 'rgba(201,169,110,0.7)' }}>
+            <p className="text-sm mt-0.5" style={{ color: 'rgba(201,169,110,0.7)' }}>
               {pendingCampaigns.count} campaign{(pendingCampaigns.count ?? 0) > 1 ? 's' : ''} waiting for your approval.
             </p>
           </div>
           <Link href={`/restaurant/${slug}/campaigns`}
-            className="text-sm font-semibold px-4 py-2.5 rounded-xl transition"
-            style={{ backgroundColor: '#C9A96E', color: '#0F1720', borderRadius: '10px' }}>
+            className="shrink-0 text-sm font-semibold px-4 py-2.5 rounded-xl transition"
+            style={{ backgroundColor: '#C9A96E', color: '#0F1720' }}>
             Review
           </Link>
         </div>

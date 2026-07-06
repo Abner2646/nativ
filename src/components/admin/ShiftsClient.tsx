@@ -217,7 +217,7 @@ export function ShiftsClient({ initialShifts, areas, slug }: Props) {
         {shiftsByDay.map(({ day, index, shifts: dayShifts }) => (
           <div key={index} className="rounded-2xl overflow-hidden"
             style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="px-6 py-3 flex items-center justify-between"
+            <div className="px-4 py-3 flex items-center justify-between"
               style={{ borderBottom: dayShifts.length > 0 ? '1px solid rgba(255,255,255,0.06)' : undefined }}>
               <h3 className="text-sm font-semibold text-offwhite/60">{day}</h3>
               {dayShifts.length === 0 && <span className="text-xs text-offwhite/25">No shifts</span>}
@@ -225,7 +225,7 @@ export function ShiftsClient({ initialShifts, areas, slug }: Props) {
             {dayShifts.length > 0 && (
               <div>
                 {dayShifts.map((shift, i) => (
-                  <div key={shift.id} className="px-6 py-4 flex items-start gap-4"
+                  <div key={shift.id} className="px-4 py-3.5 flex items-start gap-3"
                     style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1 flex-wrap">
