@@ -109,7 +109,7 @@ export default async function DashboardPage() {
           })}
 
           {/* ── Add restaurant card ── */}
-          <Link href="/onboarding"
+          <Link href="/onboarding?new=true"
             className="group flex flex-col rounded-2xl overflow-hidden border border-dashed border-white/[0.12] hover:border-white/[0.28] hover:-translate-y-0.5 transition-all duration-150">
             {/* Same height ratio as other cards */}
             <div className="w-full flex flex-col items-center justify-center gap-2 transition-colors"
