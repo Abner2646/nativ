@@ -6,7 +6,7 @@ import { getTenantDomain, getTenantBaseUrl } from '@/lib/domain'
 import {
   LayoutDashboard, CalendarDays, Users, Sparkles, Clock, Armchair,
   CalendarRange, CreditCard, UserCog, Image, Code2, Settings,
-  Receipt, ExternalLink, Search, type LucideIcon,
+  Receipt, ExternalLink, Search, Table2, type LucideIcon,
 } from 'lucide-react'
 
 type NavItem = {
@@ -26,6 +26,7 @@ const NAV = (slug: string): NavItem[] => [
   '---',
   { href: `/restaurant/${slug}/shifts`,       label: 'Shifts',         icon: Clock,         adminOnly: true },
   { href: `/restaurant/${slug}/areas`,        label: 'Seating areas',  icon: Armchair,      adminOnly: true },
+  { href: `/restaurant/${slug}/tables`,       label: 'Tables',         icon: Table2,        comingSoon: true, adminOnly: true },
   { href: `/restaurant/${slug}/events`,       label: 'Special events', icon: CalendarRange, adminOnly: true },
   { href: `/restaurant/${slug}/deposits`,     label: 'Deposits',       icon: CreditCard,    adminOnly: true },
   '---',

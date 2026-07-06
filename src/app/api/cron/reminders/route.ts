@@ -3,9 +3,9 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { sendReminderEmail } from '@/lib/email'
 import { TenantSettings } from '@/lib/types'
 
-export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET) {
+export async function GET(req: NextRequest) {
+  const auth = req.headers.get('authorization')
+  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
