@@ -26,9 +26,6 @@ export async function sendConfirmationEmail(
   const depositRow = r.deposit_amount
     ? `<tr><td style="color:#888;font-size:12px;text-transform:uppercase;padding:4px 0">Deposit</td><td>$${r.deposit_amount.toFixed(2)} paid</td></tr>`
     : ''
-  const refundNote = r.deposit_amount && refundCutoffHours != null
-    ? `<p style="font-size:13px;color:#666;">Free cancellation if cancelled at least <strong>${refundCutoffHours} hours</strong> before your reservation. After that, the deposit is non-refundable.</p>`
-    : ''
   await resend.emails.send({
     from: getFrom(settings),
     to: guest.email,
@@ -47,7 +44,6 @@ export async function sendConfirmationEmail(
           ${depositRow}
         </table>
         <br>
-        ${refundNote}
         <p><a href="${cancelUrl}" style="color:${settings.primary_color}">Need to cancel? Click here.</a></p>
       </div>`
   })
