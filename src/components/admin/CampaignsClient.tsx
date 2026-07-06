@@ -239,8 +239,8 @@ export function CampaignsClient({ initialCampaigns, initialBirthdayConfig, slug 
 
       {/* Edit/approve modal */}
       {editing && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg p-6 my-4">
+        <div className="fixed inset-0 bg-black/70 flex items-end md:items-center justify-center z-50 p-0 md:p-4 overflow-y-auto">
+          <div className="bg-gray-900 border border-gray-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-lg p-6 md:my-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold">Review campaign</h2>
               <button onClick={() => setEditing(null)} className="text-gray-500 hover:text-white text-xl leading-none">×</button>

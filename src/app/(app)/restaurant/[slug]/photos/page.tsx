@@ -17,8 +17,8 @@ export default async function PhotosPage({ params }: { params: Promise<{ slug: s
   ])
 
   return (
-    <div className="p-8">
-      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-8">Photos</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-6 md:mb-8">Photos</h1>
       <PhotosClient
         slug={slug}
         initialLogo={settings?.logo_url ?? null}

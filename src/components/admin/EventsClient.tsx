@@ -92,6 +92,8 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
   const fmt = (d: string) =>
     new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 
+  const cardBg = { backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }
+
   return (
     <div className="max-w-2xl space-y-10">
       <ConfirmModal
@@ -104,7 +106,8 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
         onConfirm={doDeleteEvent}
         onCancel={() => setPendingDeleteEvent(null)}
       />
-      {/* Special events */}
+
+      {/* ── Special events ── */}
       <section>
         <SectionHeader title="Special events"
           action={
@@ -116,46 +119,70 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
         <p className="text-sm text-offwhite/50 mb-4">
           Special events require a deposit at the time of booking and appear in the availability calendar.
         </p>
+
         {events.length === 0 ? (
-          <div className="p-10 text-center rounded-2xl" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="p-10 text-center rounded-2xl" style={cardBg}>
             <p className="text-sm text-offwhite/35">No special events yet.</p>
           </div>
         ) : (
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <table className="w-full">
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['Event', 'Date', 'Deposit', 'Refund cutoff', ''].map(h => (
-                    <th key={h} className="text-left text-xs text-offwhite/35 uppercase tracking-widest px-5 py-3 font-semibold">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {events.map(ev => (
-                  <tr key={ev.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td className="px-5 py-4 text-sm font-medium text-offwhite">{ev.name}</td>
-                    <td className="px-5 py-4 text-sm text-offwhite/60">{fmt(ev.date)}</td>
-                    <td className="px-5 py-4 text-sm text-offwhite/60">${ev.deposit_amount}</td>
-                    <td className="px-5 py-4 text-sm text-offwhite/40">{ev.refund_cutoff_hours}h before</td>
-                    <td className="px-5 py-4 text-right">
-                      <button onClick={() => setPendingDeleteEvent({ id: ev.id, name: ev.name })} className="text-xs text-offwhite/25 hover:text-red-400 transition-colors">Delete</button>
-                    </td>
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-2">
+              {events.map(ev => (
+                <div key={ev.id} className="rounded-2xl px-4 py-3.5" style={cardBg}>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-medium text-offwhite">{ev.name}</p>
+                    <button onClick={() => setPendingDeleteEvent({ id: ev.id, name: ev.name })}
+                      className="text-xs text-offwhite/25 hover:text-red-400 transition-colors shrink-0">Delete</button>
+                  </div>
+                  <p className="text-xs text-offwhite/50 mt-1">{fmt(ev.date)}</p>
+                  <div className="flex gap-3 mt-2">
+                    <span className="text-xs text-offwhite/40">${ev.deposit_amount} deposit</span>
+                    <span className="text-xs text-offwhite/30">·</span>
+                    <span className="text-xs text-offwhite/40">refund within {ev.refund_cutoff_hours}h</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block rounded-2xl overflow-hidden" style={cardBg}>
+              <table className="w-full">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    {['Event', 'Date', 'Deposit', 'Refund cutoff', ''].map(h => (
+                      <th key={h} className="text-left text-xs text-offwhite/35 uppercase tracking-widest px-5 py-3 font-semibold">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {events.map(ev => (
+                    <tr key={ev.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td className="px-5 py-4 text-sm font-medium text-offwhite">{ev.name}</td>
+                      <td className="px-5 py-4 text-sm text-offwhite/60">{fmt(ev.date)}</td>
+                      <td className="px-5 py-4 text-sm text-offwhite/60">${ev.deposit_amount}</td>
+                      <td className="px-5 py-4 text-sm text-offwhite/40">{ev.refund_cutoff_hours}h before</td>
+                      <td className="px-5 py-4 text-right">
+                        <button onClick={() => setPendingDeleteEvent({ id: ev.id, name: ev.name })}
+                          className="text-xs text-offwhite/25 hover:text-red-400 transition-colors">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
 
-      {/* Blocked dates */}
+      {/* ── Blocked dates ── */}
       <section>
         <SectionHeader title="Blocked dates" />
         <p className="text-sm text-offwhite/50 mb-4">Block dates to prevent reservations (e.g. private events, holidays, renovations).</p>
         <div className="flex gap-3 mb-4 flex-wrap">
           <input type="date" value={blockDate} onChange={e => setBlockDate(e.target.value)} className={inputCls} />
           <input type="text" value={blockReason} onChange={e => setBlockReason(e.target.value)}
-            placeholder="Reason (optional)" className={`flex-1 ${inputCls}`} />
+            placeholder="Reason (optional)" className={`flex-1 min-w-[140px] ${inputCls}`} />
           <button onClick={blockDateSubmit} disabled={blockingDate || !blockDate}
             className="bg-offwhite text-midnight font-semibold px-4 py-2.5 rounded-xl text-sm hover:bg-offwhite/90 transition-colors disabled:opacity-40 whitespace-nowrap">
             {blockingDate ? 'Blocking…' : 'Block date'}
@@ -163,14 +190,16 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
         </div>
         {blockError && <p className="text-red-400 text-sm mb-3">{blockError}</p>}
         {blocked.length > 0 ? (
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl overflow-hidden" style={cardBg}>
             {blocked.map(b => (
-              <div key={b.id} className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <div key={b.id} className="flex items-center justify-between px-4 py-3.5"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <div>
                   <p className="text-sm font-medium text-offwhite">{fmt(b.date)}</p>
                   {b.reason && <p className="text-xs text-offwhite/40 mt-0.5">{b.reason}</p>}
                 </div>
-                <button onClick={() => unblockDate(b.id)} className="text-xs text-offwhite/25 hover:text-red-400 transition-colors">Unblock</button>
+                <button onClick={() => unblockDate(b.id)}
+                  className="text-xs text-offwhite/25 hover:text-red-400 transition-colors ml-3 shrink-0">Unblock</button>
               </div>
             ))}
           </div>
@@ -179,10 +208,10 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
         )}
       </section>
 
-      {/* Event modal */}
+      {/* ── Event modal ── */}
       {showEventModal && (
-        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md p-6 rounded-2xl" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.10)' }}>
+        <div className="fixed inset-0 bg-black/75 flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+          <div className="w-full md:max-w-md p-6 rounded-t-2xl md:rounded-2xl" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.10)' }}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-satoshi font-bold text-[17px] text-offwhite">New special event</h2>
               <button onClick={() => setShowEventModal(false)} className="text-offwhite/30 hover:text-offwhite text-xl leading-none transition-colors">×</button>

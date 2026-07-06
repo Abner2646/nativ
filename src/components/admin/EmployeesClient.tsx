@@ -30,13 +30,14 @@ const ROLE_BADGE: Record<string, string> = {
   employee: 'text-offwhite/40',
 }
 
+const cardBg = { backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }
+
 export function EmployeesClient({ initialEmployees, initialInvites, currentUserId, slug }: Props) {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
   const [invites, setInvites] = useState<Invite[]>(initialInvites)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState('')
-  const [inviteSent, setInviteSent] = useState(false)
   const [removing, setRemoving] = useState<string | null>(null)
   const [pendingRemove, setPendingRemove] = useState<{ userId: string; name: string } | null>(null)
 
@@ -50,7 +51,7 @@ export function EmployeesClient({ initialEmployees, initialInvites, currentUserI
 
   const sendInvite = async () => {
     if (!inviteEmail.trim()) return
-    setInviting(true); setInviteError(''); setInviteSent(false)
+    setInviting(true); setInviteError('')
     const res = await adminFetch('resource=employees', { method: 'POST', body: JSON.stringify({ email: inviteEmail.trim() }) })
     setInviting(false)
     const data = await res.json()
@@ -87,72 +88,114 @@ export function EmployeesClient({ initialEmployees, initialInvites, currentUserI
         onConfirm={doRemoveEmployee}
         onCancel={() => setPendingRemove(null)}
       />
-      {/* Removed inline state - now use toast */}
 
-      {/* Team */}
+      {/* ── Team members ── */}
       <section>
         <SectionHeader title="Team members" />
-        <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
-          {employees.length === 0 ? (
-            <p className="text-sm text-offwhite/35 p-6">No team members yet.</p>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['Member', 'Role', 'Since', ''].map(h => (
-                    <th key={h} className="text-left text-xs text-offwhite/35 uppercase tracking-widest px-5 py-3 font-semibold">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map(e => {
-                  const profile = e.profiles
-                  const isSelf = e.user_id === currentUserId
-                  return (
-                    <tr key={e.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <td className="px-5 py-4">
-                        <p className="text-sm font-medium text-offwhite">{profile?.full_name || '—'}</p>
-                        <p className="text-xs text-offwhite/40">{profile?.email || '—'}</p>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${ROLE_BADGE[e.role]}`}
-                          style={e.role === 'employee' ? { backgroundColor: 'rgba(255,255,255,0.05)' } : undefined}>
-                          {e.role}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-sm text-offwhite/40">
-                        {new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        {!isSelf && (
-                          <button
-                            onClick={() => setPendingRemove({ userId: e.user_id, name: profile?.full_name || profile?.email || 'this employee' })}
-                            disabled={removing === e.user_id}
-                            className="text-xs text-offwhite/25 hover:text-red-400 transition-colors disabled:opacity-40">
-                            {removing === e.user_id ? 'Removing…' : 'Remove'}
-                          </button>
-                        )}
-                        {isSelf && <span className="text-xs text-offwhite/20">You</span>}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+
+        {employees.length === 0 ? (
+          <div className="p-6 rounded-2xl" style={cardBg}>
+            <p className="text-sm text-offwhite/35">No team members yet.</p>
+          </div>
+        ) : (
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-2">
+              {employees.map(e => {
+                const profile = e.profiles
+                const isSelf = e.user_id === currentUserId
+                return (
+                  <div key={e.id} className="rounded-2xl px-4 py-3.5" style={cardBg}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-offwhite">{profile?.full_name || '—'}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${ROLE_BADGE[e.role]}`}
+                            style={e.role === 'employee' ? { backgroundColor: 'rgba(255,255,255,0.05)' } : undefined}>
+                            {e.role}
+                          </span>
+                        </div>
+                        <p className="text-xs text-offwhite/40 mt-0.5 truncate">{profile?.email || '—'}</p>
+                        <p className="text-xs text-offwhite/25 mt-0.5">
+                          Since {new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+                      {!isSelf ? (
+                        <button
+                          onClick={() => setPendingRemove({ userId: e.user_id, name: profile?.full_name || profile?.email || 'this employee' })}
+                          disabled={removing === e.user_id}
+                          className="text-xs text-offwhite/25 hover:text-red-400 transition-colors disabled:opacity-40 shrink-0">
+                          {removing === e.user_id ? '…' : 'Remove'}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-offwhite/20 shrink-0">You</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block rounded-2xl overflow-hidden" style={cardBg}>
+              <table className="w-full">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    {['Member', 'Role', 'Since', ''].map(h => (
+                      <th key={h} className="text-left text-xs text-offwhite/35 uppercase tracking-widest px-5 py-3 font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map(e => {
+                    const profile = e.profiles
+                    const isSelf = e.user_id === currentUserId
+                    return (
+                      <tr key={e.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-medium text-offwhite">{profile?.full_name || '—'}</p>
+                          <p className="text-xs text-offwhite/40">{profile?.email || '—'}</p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${ROLE_BADGE[e.role]}`}
+                            style={e.role === 'employee' ? { backgroundColor: 'rgba(255,255,255,0.05)' } : undefined}>
+                            {e.role}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-offwhite/40">
+                          {new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          {!isSelf && (
+                            <button
+                              onClick={() => setPendingRemove({ userId: e.user_id, name: profile?.full_name || profile?.email || 'this employee' })}
+                              disabled={removing === e.user_id}
+                              className="text-xs text-offwhite/25 hover:text-red-400 transition-colors disabled:opacity-40">
+                              {removing === e.user_id ? 'Removing…' : 'Remove'}
+                            </button>
+                          )}
+                          {isSelf && <span className="text-xs text-offwhite/20">You</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </section>
 
-      {/* Invite */}
+      {/* ── Invite employee ── */}
       <section>
         <SectionHeader title="Invite employee" />
         <p className="text-sm text-offwhite/50 mb-1">They'll receive an email with a link to join your restaurant on Nativ.</p>
         <p className="text-xs text-offwhite/30 mb-4">The person must already have a Nativ account. If they don't, ask them to register at nativ.app/register first.</p>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && sendInvite()}
             placeholder="employee@restaurant.com"
-            className="flex-1 bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/25 placeholder:text-offwhite/20" />
+            className="flex-1 min-w-[200px] bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/25 placeholder:text-offwhite/20" />
           <button onClick={sendInvite} disabled={inviting || !inviteEmail}
             className="bg-offwhite text-midnight font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-offwhite/90 transition-colors disabled:opacity-40">
             {inviting ? 'Sending…' : 'Send invite'}
@@ -161,21 +204,21 @@ export function EmployeesClient({ initialEmployees, initialInvites, currentUserI
         {inviteError && <p className="text-red-400 text-xs mt-2">{inviteError}</p>}
       </section>
 
-      {/* Pending invites */}
+      {/* ── Pending invites ── */}
       {invites.length > 0 && (
         <section>
           <SectionHeader title="Pending invites" />
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl overflow-hidden" style={cardBg}>
             {invites.map(inv => (
-              <div key={inv.id} className="flex items-center justify-between px-5 py-4"
+              <div key={inv.id} className="flex items-center justify-between px-4 py-3.5 gap-3"
                 style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <div>
-                  <p className="text-sm text-offwhite">{inv.email}</p>
+                <div className="min-w-0">
+                  <p className="text-sm text-offwhite truncate">{inv.email}</p>
                   <p className="text-xs text-offwhite/40">
                     Expires {new Date(inv.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </p>
                 </div>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gold/12 text-gold border border-gold/25">Pending</span>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gold/12 text-gold border border-gold/25 shrink-0">Pending</span>
               </div>
             ))}
           </div>

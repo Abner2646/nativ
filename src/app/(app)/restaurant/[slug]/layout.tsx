@@ -39,7 +39,7 @@ export default async function RestaurantLayout({
       <main className="flex-1 min-h-screen md:ml-60 pb-16 md:pb-0">
         {children}
       </main>
-      <BottomNav slug={slug} todayCount={todayCount ?? 0} />
+      <BottomNav slug={slug} todayCount={todayCount ?? 0} role={access.role} />
       <GlobalSearch slug={slug} />
     </div>
   )

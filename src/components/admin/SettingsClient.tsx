@@ -127,7 +127,7 @@ export function SettingsClient({ settings: initial, slug }: Props) {
             {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
           </select>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           {[
             { key: 'min_party_size',    label: 'Min party' },
             { key: 'max_party_size',    label: 'Max party' },
@@ -176,7 +176,7 @@ export function SettingsClient({ settings: initial, slug }: Props) {
               Reset to default
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {([
               { field: 'primary_color',    label: 'Primary' },
               { field: 'secondary_color',  label: 'Secondary' },
@@ -200,7 +200,7 @@ export function SettingsClient({ settings: initial, slug }: Props) {
         {/* Button style */}
         <div>
           <Label>Button style</Label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {BUTTON_STYLES.map(s => {
               const active = (form.button_style || 'rounded') === s.value
               return (

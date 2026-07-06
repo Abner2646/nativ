@@ -200,7 +200,7 @@ export function EmbedClient({ slug, settings }: Props) {
   const iframeSnippet = `<iframe\n  src="${reserveUrl}"\n  width="100%"\n  height="680"\n  frameborder="0"\n  style="border-radius:12px; border:none;"\n  title="Reserve a table"\n></iframe>`
 
   return (
-    <div className="grid gap-10 items-start" style={{ gridTemplateColumns: '1fr 320px' }}>
+    <div className="flex flex-col gap-8 md:grid md:gap-10 items-start" style={{ gridTemplateColumns: 'minmax(0,1fr) 320px' }}>
 
       {/* ══ LEFT COLUMN ══════════════════════════════════════ */}
       <div className="space-y-10 min-w-0">
@@ -231,7 +231,7 @@ export function EmbedClient({ slug, settings }: Props) {
         {/* Colors */}
         <div>
           <SectionH title="Colors" />
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {colorFields.map(({ label, value, set }) => (
               <div key={label}>
                 <FieldLabel>{label}</FieldLabel>
@@ -351,7 +351,7 @@ export function EmbedClient({ slug, settings }: Props) {
       </div>
 
       {/* ══ RIGHT COLUMN — sticky preview ════════════════════ */}
-      <div className="sticky top-8">
+      <div className="md:sticky md:top-8">
         <p className="text-xs text-offwhite/35 uppercase tracking-widest font-semibold mb-3">Live preview</p>
         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
           {/* Browser chrome */}

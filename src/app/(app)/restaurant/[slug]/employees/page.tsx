@@ -24,8 +24,8 @@ export default async function EmployeesPage({ params }: { params: Promise<{ slug
     .order('created_at', { ascending: false })
 
   return (
-    <div className="p-8">
-      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-8">Employees</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-6 md:mb-8">Employees</h1>
       <EmployeesClient
         initialEmployees={employees || []}
         initialInvites={pendingInvites || []}
