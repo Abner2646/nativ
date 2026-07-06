@@ -19,8 +19,8 @@ export default async function GuestsPage({ params }: { params: Promise<{ slug: s
     .limit(50)
 
   return (
-    <div className="p-8">
-      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-8">Guests</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-6 md:mb-8">Guests</h1>
       <GuestsClient
         initialGuests={guests || []}
         slug={slug}
