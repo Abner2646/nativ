@@ -17,13 +17,24 @@ export default async function DepositsPage({ params }: { params: Promise<{ slug:
 
   if (!settings) return notFound()
 
+  let stripeConnected = false
+  const accountId = settings.stripe_account_id || null
+  if (accountId) {
+    try {
+      const { stripe } = await import('@/lib/stripe')
+      const account = await stripe.accounts.retrieve(accountId)
+      stripeConnected = account.charges_enabled
+    } catch { /* account fetch failed — treat as not connected */ }
+  }
+
   return (
     <div className="p-8">
       <h1 className="font-satoshi font-bold text-[22px] text-offwhite mb-2">Deposits & Payments</h1>
       <p className="text-sm text-offwhite/40 mb-8">Require a deposit to confirm reservations on specific days.</p>
       <DepositRulesClient
         initialRules={(rules || []) as DepositRule[]}
-        stripeAccountId={settings.stripe_account_id || null}
+        stripeAccountId={accountId}
+        stripeConnected={stripeConnected}
         slug={slug}
       />
     </div>

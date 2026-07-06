@@ -15,6 +15,7 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 interface Props {
   initialRules: DepositRule[]
   stripeAccountId: string | null
+  stripeConnected: boolean
   slug: string
 }
 
@@ -67,9 +68,10 @@ function ruleLabel(r: DepositRule) {
   return r.specific_date!
 }
 
-export function DepositRulesClient({ initialRules, stripeAccountId, slug }: Props) {
+export function DepositRulesClient({ initialRules, stripeAccountId, stripeConnected: initialConnected, slug }: Props) {
   const [rules, setRules]         = useState<DepositRule[]>(initialRules)
   const [stripeId, setStripeId]   = useState(stripeAccountId)
+  const [connected, setConnected] = useState(initialConnected)
   const [connectLoading, setConnectLoading] = useState(false)
   const [connectError, setConnectError]     = useState('')
 
@@ -167,12 +169,27 @@ export function DepositRulesClient({ initialRules, stripeAccountId, slug }: Prop
         <p className="text-xs text-offwhite/40 mb-4">
           Connect your Stripe account to receive deposits directly — Nativ never touches the money.
         </p>
-        {stripeId ? (
+        {connected ? (
           <div className="flex items-center gap-3">
             <span className="text-xs text-green-400 bg-green-400/10 border border-green-400/20 px-2.5 py-1 rounded-full font-semibold">
               Connected
             </span>
-            <span className="text-xs text-offwhite/25 font-mono">{stripeId}</span>
+            <span className="text-xs text-offwhite/25 font-mono truncate max-w-[160px]">{stripeId}</span>
+          </div>
+        ) : stripeId ? (
+          <div>
+            <p className="text-xs text-gold/80 mb-3">
+              Account created but setup is incomplete. Complete the onboarding to start accepting payments.
+            </p>
+            <button
+              onClick={handleConnect}
+              disabled={connectLoading}
+              className="text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-40 transition-colors hover:opacity-80"
+              style={{ backgroundColor: 'rgba(201,169,110,0.12)', border: '1px solid rgba(201,169,110,0.25)', color: '#C9A96E' }}
+            >
+              {connectLoading ? 'Loading…' : 'Complete Stripe setup →'}
+            </button>
+            {connectError && <p className="text-xs text-red-400 mt-2">{connectError}</p>}
           </div>
         ) : (
           <div>
