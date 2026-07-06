@@ -509,23 +509,29 @@ export async function createStripeConnectLink(req: NextRequest) {
   const notAdmin = requireAdmin((r as any).role); if (notAdmin) return notAdmin
   const { ctx } = r as any
 
-  let accountId = ctx.settings.stripe_account_id
-  if (!accountId) {
+  try {
     const { stripe } = await import('@/lib/stripe')
-    const account = await stripe.accounts.create({ type: 'express', metadata: { tenant_id: ctx.tenant.id } })
-    accountId = account.id
-    await supabaseAdmin.from('tenant_settings').update({ stripe_account_id: accountId }).eq('tenant_id', ctx.tenant.id)
-  }
+    let accountId = ctx.settings.stripe_account_id
+    if (!accountId) {
+      const account = await stripe.accounts.create({ type: 'express', metadata: { tenant_id: ctx.tenant.id } })
+      accountId = account.id
+      await supabaseAdmin.from('tenant_settings').update({ stripe_account_id: accountId }).eq('tenant_id', ctx.tenant.id)
+    }
 
-  const { stripe } = await import('@/lib/stripe')
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
-  const link = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: `${appUrl}/restaurant/${ctx.tenant.slug}/deposits?stripe=refresh`,
-    return_url: `${appUrl}/restaurant/${ctx.tenant.slug}/deposits?stripe=success`,
-    type: 'account_onboarding',
-  })
-  return NextResponse.json({ url: link.url })
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (!appUrl) return NextResponse.json({ error: 'NEXT_PUBLIC_APP_URL not configured' }, { status: 500 })
+
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${appUrl}/restaurant/${ctx.tenant.slug}/deposits?stripe=refresh`,
+      return_url:  `${appUrl}/restaurant/${ctx.tenant.slug}/deposits?stripe=success`,
+      type: 'account_onboarding',
+    })
+    return NextResponse.json({ url: link.url })
+  } catch (err: any) {
+    console.error('[stripe-connect]', err)
+    return NextResponse.json({ error: err?.message || 'Stripe error' }, { status: 500 })
+  }
 }
 
 // ── REFERRALS ─────────────────────────────────────────────────

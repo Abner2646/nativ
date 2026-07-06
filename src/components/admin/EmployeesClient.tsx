@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 
 async function getToken() {
   const { data: { session } } = await getBrowserSupabase().auth.getSession()
@@ -36,6 +38,7 @@ export function EmployeesClient({ initialEmployees, initialInvites, currentUserI
   const [inviteError, setInviteError] = useState('')
   const [inviteSent, setInviteSent] = useState(false)
   const [removing, setRemoving] = useState<string | null>(null)
+  const [pendingRemove, setPendingRemove] = useState<{ userId: string; name: string } | null>(null)
 
   async function adminFetch(path: string, options?: RequestInit) {
     const token = await getToken()
@@ -54,26 +57,38 @@ export function EmployeesClient({ initialEmployees, initialInvites, currentUserI
     if (res.ok) {
       setInviteEmail('')
       if (data.emailSent === false) {
-        setInviteError('Invite saved, but the email failed to send. Verify the nativ.business domain in your Resend dashboard.')
+        toast.error('Invite saved, but email failed. Verify nativ.business domain in Resend.')
       } else {
-        setInviteSent(true)
-        setTimeout(() => setInviteSent(false), 3000)
+        toast.success('Invite sent!')
       }
     } else {
-      setInviteError(data.error || 'Failed to send invite')
+      toast.error(data.error || 'Failed to send invite')
     }
   }
 
-  const removeEmployee = async (userId: string) => {
-    if (!confirm('Remove this employee?')) return
-    setRemoving(userId)
-    const res = await adminFetch(`resource=employees&id=${userId}`, { method: 'DELETE' })
+  const doRemoveEmployee = async () => {
+    if (!pendingRemove) return
+    setRemoving(pendingRemove.userId)
+    const res = await adminFetch(`resource=employees&id=${pendingRemove.userId}`, { method: 'DELETE' })
     setRemoving(null)
-    if (res.ok) setEmployees(prev => prev.filter(e => e.user_id !== userId))
+    if (res.ok) { setEmployees(prev => prev.filter(e => e.user_id !== pendingRemove.userId)); toast.success('Employee removed') }
+    else toast.error('Failed to remove employee')
+    setPendingRemove(null)
   }
 
   return (
     <div className="max-w-2xl space-y-10">
+      <ConfirmModal
+        open={!!pendingRemove}
+        title={`Remove ${pendingRemove?.name}?`}
+        message="They will lose access to this restaurant immediately."
+        confirmLabel="Remove employee"
+        loading={!!removing}
+        onConfirm={doRemoveEmployee}
+        onCancel={() => setPendingRemove(null)}
+      />
+      {/* Removed inline state - now use toast */}
+
       {/* Team */}
       <section>
         <SectionHeader title="Team members" />
@@ -110,7 +125,9 @@ export function EmployeesClient({ initialEmployees, initialInvites, currentUserI
                       </td>
                       <td className="px-5 py-4 text-right">
                         {!isSelf && (
-                          <button onClick={() => removeEmployee(e.user_id)} disabled={removing === e.user_id}
+                          <button
+                            onClick={() => setPendingRemove({ userId: e.user_id, name: profile?.full_name || profile?.email || 'this employee' })}
+                            disabled={removing === e.user_id}
                             className="text-xs text-offwhite/25 hover:text-red-400 transition-colors disabled:opacity-40">
                             {removing === e.user_id ? 'Removing…' : 'Remove'}
                           </button>
@@ -141,8 +158,7 @@ export function EmployeesClient({ initialEmployees, initialInvites, currentUserI
             {inviting ? 'Sending…' : 'Send invite'}
           </button>
         </div>
-        {inviteError && <p className="text-red-400 text-sm mt-2">{inviteError}</p>}
-        {inviteSent && <p className="text-sage text-sm mt-2">Invite sent!</p>}
+        {inviteError && <p className="text-red-400 text-xs mt-2">{inviteError}</p>}
       </section>
 
       {/* Pending invites */}

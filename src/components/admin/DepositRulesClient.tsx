@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { DepositRule } from '@/lib/types'
 
 async function getToken() {
@@ -78,6 +80,8 @@ export function DepositRulesClient({ initialRules, stripeAccountId, slug }: Prop
   const [refundCutoff, setRefundCutoff]   = useState('24')
   const [adding, setAdding]   = useState(false)
   const [addError, setAddError] = useState('')
+  const [pendingDeleteRule, setPendingDeleteRule] = useState<{ id: string; label: string } | null>(null)
+  const [deletingRule, setDeletingRule] = useState(false)
 
   const handleConnect = async () => {
     setConnectLoading(true); setConnectError('')
@@ -87,11 +91,13 @@ export function DepositRulesClient({ initialRules, stripeAccountId, slug }: Prop
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
-      const data = await res.json()
-      if (!res.ok) { setConnectError(data.error || 'Failed'); setConnectLoading(false); return }
+      let data: any = {}
+      try { data = await res.json() } catch { /* HTML error page */ }
+      if (!res.ok) { setConnectError(data?.error || `Server error (${res.status})`); setConnectLoading(false); return }
+      if (!data?.url) { setConnectError('No redirect URL received'); setConnectLoading(false); return }
       window.location.href = data.url
-    } catch {
-      setConnectError('Network error')
+    } catch (err: any) {
+      setConnectError(err?.message || 'Network error')
       setConnectLoading(false)
     }
   }
@@ -120,6 +126,7 @@ export function DepositRulesClient({ initialRules, stripeAccountId, slug }: Prop
       setRules(prev => [...prev, data.rule])
       setAmountDollars('')
       setSpecificDate('')
+      toast.success('Deposit rule added')
     } catch {
       setAddError('Network error')
     } finally {
@@ -127,17 +134,32 @@ export function DepositRulesClient({ initialRules, stripeAccountId, slug }: Prop
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const doDeleteRule = async () => {
+    if (!pendingDeleteRule) return
+    setDeletingRule(true)
     const token = await getToken()
-    const res = await fetch(`/api/admin?resource=deposit-rules&id=${id}&tenant=${slug}`, {
+    const res = await fetch(`/api/admin?resource=deposit-rules&id=${pendingDeleteRule.id}&tenant=${slug}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (res.ok) setRules(prev => prev.filter(r => r.id !== id))
+    setDeletingRule(false)
+    if (res.ok) { setRules(prev => prev.filter(r => r.id !== pendingDeleteRule.id)); toast.success('Rule removed') }
+    else toast.error('Failed to remove rule')
+    setPendingDeleteRule(null)
   }
 
   return (
     <div style={{ maxWidth: '36rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <ConfirmModal
+        open={!!pendingDeleteRule}
+        title="Remove deposit rule?"
+        message={pendingDeleteRule ? `"${pendingDeleteRule.label}" will no longer require a deposit.` : undefined}
+        confirmLabel="Remove rule"
+        destructive
+        loading={deletingRule}
+        onConfirm={doDeleteRule}
+        onCancel={() => setPendingDeleteRule(null)}
+      />
 
       {/* ── Stripe Connect ── */}
       <Card>
@@ -190,7 +212,7 @@ export function DepositRulesClient({ initialRules, stripeAccountId, slug }: Prop
                   </span>
                 </div>
                 <button
-                  onClick={() => handleDelete(r.id)}
+                  onClick={() => setPendingDeleteRule({ id: r.id, label: ruleLabel(r) })}
                   className="text-xs text-red-400/50 hover:text-red-400 transition-colors ml-3 shrink-0"
                 >
                   Remove

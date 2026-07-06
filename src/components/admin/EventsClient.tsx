@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { SpecialEvent, BlockedDate } from '@/lib/types'
 
 async function getToken() {
@@ -35,6 +37,8 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
   const [blockReason, setBlockReason] = useState('')
   const [blockingDate, setBlockingDate] = useState(false)
   const [blockError, setBlockError] = useState('')
+  const [pendingDeleteEvent, setPendingDeleteEvent] = useState<{ id: string; name: string } | null>(null)
+  const [deletingEvent, setDeletingEvent] = useState(false)
 
   async function adminFetch(path: string, options?: RequestInit) {
     const token = await getToken()
@@ -53,13 +57,18 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
       const data = await res.json()
       setEvents(prev => [...prev, data.event].sort((a, b) => a.date.localeCompare(b.date)))
       setEventForm(EMPTY_EVENT); setShowEventModal(false)
+      toast.success('Event created')
     } else { const data = await res.json(); setEventError(data.error || 'Failed to create event') }
   }
 
-  const deleteEvent = async (id: string) => {
-    if (!confirm('Delete this special event?')) return
-    const res = await adminFetch(`resource=events&id=${id}`, { method: 'DELETE' })
-    if (res.ok) setEvents(prev => prev.filter(e => e.id !== id))
+  const doDeleteEvent = async () => {
+    if (!pendingDeleteEvent) return
+    setDeletingEvent(true)
+    const res = await adminFetch(`resource=events&id=${pendingDeleteEvent.id}`, { method: 'DELETE' })
+    setDeletingEvent(false)
+    if (res.ok) { setEvents(prev => prev.filter(e => e.id !== pendingDeleteEvent.id)); toast.success('Event deleted') }
+    else toast.error('Failed to delete event')
+    setPendingDeleteEvent(null)
   }
 
   const blockDateSubmit = async () => {
@@ -71,12 +80,13 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
       const data = await res.json()
       setBlocked(prev => [...prev, data.blocked_date].sort((a, b) => a.date.localeCompare(b.date)))
       setBlockDate(''); setBlockReason('')
+      toast.success('Date blocked')
     } else { const data = await res.json(); setBlockError(data.error || 'Failed to block date') }
   }
 
   const unblockDate = async (id: string) => {
     const res = await adminFetch(`resource=blocked-dates&id=${id}`, { method: 'DELETE' })
-    if (res.ok) setBlocked(prev => prev.filter(b => b.id !== id))
+    if (res.ok) { setBlocked(prev => prev.filter(b => b.id !== id)); toast.success('Date unblocked') }
   }
 
   const fmt = (d: string) =>
@@ -84,6 +94,16 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
 
   return (
     <div className="max-w-2xl space-y-10">
+      <ConfirmModal
+        open={!!pendingDeleteEvent}
+        title={`Delete "${pendingDeleteEvent?.name}"?`}
+        message="This special event will be permanently removed."
+        confirmLabel="Delete event"
+        destructive
+        loading={deletingEvent}
+        onConfirm={doDeleteEvent}
+        onCancel={() => setPendingDeleteEvent(null)}
+      />
       {/* Special events */}
       <section>
         <SectionHeader title="Special events"
@@ -118,7 +138,7 @@ export function EventsClient({ initialEvents, initialBlocked, slug }: Props) {
                     <td className="px-5 py-4 text-sm text-offwhite/60">${ev.deposit_amount}</td>
                     <td className="px-5 py-4 text-sm text-offwhite/40">{ev.refund_cutoff_hours}h before</td>
                     <td className="px-5 py-4 text-right">
-                      <button onClick={() => deleteEvent(ev.id)} className="text-xs text-offwhite/25 hover:text-red-400 transition-colors">Delete</button>
+                      <button onClick={() => setPendingDeleteEvent({ id: ev.id, name: ev.name })} className="text-xs text-offwhite/25 hover:text-red-400 transition-colors">Delete</button>
                     </td>
                   </tr>
                 ))}
