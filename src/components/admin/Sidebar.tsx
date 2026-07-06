@@ -3,31 +3,49 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { getTenantDomain, getTenantBaseUrl } from '@/lib/domain'
+import {
+  LayoutDashboard,
+  CalendarDays,
+  Users,
+  Sparkles,
+  Clock,
+  Armchair,
+  CalendarRange,
+  CreditCard,
+  UserCog,
+  Image,
+  Code2,
+  Settings,
+  Receipt,
+  ExternalLink,
+  type LucideIcon,
+} from 'lucide-react'
 
 type NavItem = {
   href: string
   label: string
+  icon: LucideIcon
   exact?: boolean
   comingSoon?: boolean
   adminOnly?: boolean
 } | '---'
 
 const NAV = (slug: string): NavItem[] => [
-  { href: `/restaurant/${slug}`,              label: 'Dashboard',      exact: true },
-  { href: `/restaurant/${slug}/reservations`, label: 'Reservations' },
-  { href: `/restaurant/${slug}/guests`,       label: 'Guests' },
-  { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',   comingSoon: true, adminOnly: true },
+  { href: `/restaurant/${slug}`,              label: 'Dashboard',      icon: LayoutDashboard,  exact: true },
+  { href: `/restaurant/${slug}/reservations`, label: 'Reservations',   icon: CalendarDays },
+  { href: `/restaurant/${slug}/guests`,       label: 'Guests',         icon: Users },
+  { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',   icon: Sparkles,         comingSoon: true, adminOnly: true },
   '---',
-  { href: `/restaurant/${slug}/shifts`,       label: 'Shifts',         adminOnly: true },
-  { href: `/restaurant/${slug}/areas`,        label: 'Seating areas',  adminOnly: true },
-  { href: `/restaurant/${slug}/events`,       label: 'Special events', adminOnly: true },
-  { href: `/restaurant/${slug}/deposits`,     label: 'Deposits',       adminOnly: true },
+  { href: `/restaurant/${slug}/shifts`,       label: 'Shifts',         icon: Clock,            adminOnly: true },
+  { href: `/restaurant/${slug}/areas`,        label: 'Seating areas',  icon: Armchair,         adminOnly: true },
+  { href: `/restaurant/${slug}/events`,       label: 'Special events', icon: CalendarRange,    adminOnly: true },
+  { href: `/restaurant/${slug}/deposits`,     label: 'Deposits',       icon: CreditCard,       adminOnly: true },
   '---',
-  { href: `/restaurant/${slug}/employees`,    label: 'Employees',      adminOnly: true },
-  { href: `/restaurant/${slug}/photos`,       label: 'Photos',         adminOnly: true },
-  { href: `/restaurant/${slug}/embed`,        label: 'Embed & share',  adminOnly: true },
-  { href: `/restaurant/${slug}/settings`,     label: 'Settings',       adminOnly: true },
-  { href: `/restaurant/${slug}/billing`,      label: 'Billing',        adminOnly: true },
+  { href: `/restaurant/${slug}/employees`,    label: 'Employees',      icon: UserCog,          adminOnly: true },
+  { href: `/restaurant/${slug}/photos`,       label: 'Photos',         icon: Image,            adminOnly: true },
+  { href: `/restaurant/${slug}/embed`,        label: 'Embed & share',  icon: Code2,            adminOnly: true },
+  { href: `/restaurant/${slug}/settings`,     label: 'Settings',       icon: Settings,         adminOnly: true },
+  { href: `/restaurant/${slug}/billing`,      label: 'Billing',        icon: Receipt,          adminOnly: true },
 ]
 
 export function Sidebar({
@@ -141,10 +159,14 @@ export function Sidebar({
             return <div key={i} className="my-1 mx-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }} />
           }
           if (item.comingSoon) {
+            const Icon = item.icon
             return (
               <span key={item.href}
                 className="flex items-center justify-between mx-2 px-3 py-2 rounded-lg text-sm text-offwhite/25 cursor-default select-none">
-                {item.label}
+                <span className="flex items-center gap-2.5">
+                  <Icon size={15} strokeWidth={1.6} />
+                  {item.label}
+                </span>
                 <span className="text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded text-offwhite/25"
                   style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
                   Soon
@@ -153,14 +175,20 @@ export function Sidebar({
             )
           }
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
+          const Icon = item.icon
           return (
             <Link key={item.href} href={item.href}
-              className={`block mx-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-2.5 mx-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                 active
                   ? 'text-offwhite font-medium'
                   : 'text-offwhite/50 hover:text-offwhite hover:bg-white/[0.04]'
               }`}
               style={active ? { backgroundColor: 'rgba(255,255,255,0.08)' } : undefined}>
+              <Icon
+                size={15}
+                strokeWidth={active ? 2 : 1.6}
+                className={active ? 'text-offwhite' : 'text-offwhite/40'}
+              />
               {item.label}
             </Link>
           )
@@ -179,7 +207,7 @@ export function Sidebar({
               <p className="text-xs font-medium text-offwhite/60">Your public page</p>
               <p className="text-[10px] text-offwhite/25 truncate mt-0.5">{getTenantDomain(slug)}</p>
             </div>
-            <span className="text-offwhite/25 ml-2 shrink-0 text-sm">↗</span>
+            <ExternalLink size={13} className="text-offwhite/25 ml-2 shrink-0" />
           </a>
         ) : (
           <div className="px-3 py-2.5 rounded-xl"
