@@ -19,11 +19,14 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
   weekStart.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1))
   const ws = weekStart.toISOString().split('T')[0]
 
-  const [todayRes, weekRes, pendingCampaigns, nextRes] = await Promise.all([
+  const [todayRes, weekRes, pendingCampaigns, nextRes, shiftsRes, areasRes, settingsRes] = await Promise.all([
     supabaseAdmin.from('reservations').select('party_size').eq('tenant_id', tenant.id).eq('date', today).eq('status', 'confirmed'),
     supabaseAdmin.from('reservations').select('party_size').eq('tenant_id', tenant.id).gte('date', ws).lte('date', today).eq('status', 'confirmed'),
     supabaseAdmin.from('ai_campaigns').select('id', { count: 'exact' }).eq('tenant_id', tenant.id).eq('status', 'pending'),
     supabaseAdmin.from('reservations').select('guest_name, time, party_size').eq('tenant_id', tenant.id).eq('date', today).eq('status', 'confirmed').gte('time', nowTime).order('time', { ascending: true }).limit(1),
+    supabaseAdmin.from('shifts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+    supabaseAdmin.from('seating_areas').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+    supabaseAdmin.from('tenant_settings').select('description, address, stripe_account_id').eq('tenant_id', tenant.id).single(),
   ])
 
   const sum = (d: { party_size: number }[] | null) => (d || []).reduce((s, r) => s + r.party_size, 0)
@@ -32,6 +35,15 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
   const todayCovers = sum(todayRes.data)
   const weekCovers  = sum(weekRes.data)
   const next = nextRes.data?.[0] ?? null
+
+  const settings = settingsRes.data
+  const onboarding = {
+    hasShift:    (shiftsRes.count ?? 0) > 0,
+    hasArea:     (areasRes.count ?? 0) > 0,
+    hasProfile:  !!(settings?.description || settings?.address),
+    hasStripe:   !!settings?.stripe_account_id,
+  }
+  const onboardingDone = Object.values(onboarding).every(Boolean)
 
   const status: string = tenant.status ?? 'unknown'
   const badgeStyle: React.CSSProperties =
@@ -121,6 +133,38 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
           )}
         </div>
       </div>
+
+      {/* ── Onboarding checklist ── */}
+      {!onboardingDone && (
+        <div className="rounded-2xl px-6 py-5 mb-8"
+          style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="font-satoshi font-bold text-[15px] text-offwhite mb-1">Get started</p>
+          <p className="text-sm text-offwhite/40 mb-4">Complete these steps to start accepting reservations.</p>
+          <div className="space-y-2.5">
+            {[
+              { done: onboarding.hasShift,   label: 'Create your first shift',           href: `/restaurant/${slug}/shifts` },
+              { done: onboarding.hasArea,    label: 'Add a seating area',                href: `/restaurant/${slug}/areas` },
+              { done: onboarding.hasProfile, label: 'Fill in your restaurant profile',   href: `/restaurant/${slug}/settings` },
+              { done: onboarding.hasStripe,  label: 'Connect Stripe to accept deposits', href: `/restaurant/${slug}/deposits` },
+            ].map(step => (
+              <Link key={step.href} href={step.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors group ${step.done ? 'opacity-50 pointer-events-none' : 'hover:bg-white/[0.03]'}`}
+                style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                  style={step.done
+                    ? { backgroundColor: 'rgba(111,143,123,0.2)', border: '1px solid rgba(111,143,123,0.4)', color: '#6F8F7B' }
+                    : { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(242,239,233,0.3)' }}>
+                  {step.done ? '✓' : ''}
+                </span>
+                <span className={`text-sm flex-1 ${step.done ? 'line-through text-offwhite/30' : 'text-offwhite/70 group-hover:text-offwhite'}`}>
+                  {step.label}
+                </span>
+                {!step.done && <span className="text-xs text-offwhite/25 group-hover:text-offwhite/50 transition-colors">→</span>}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── AI campaign alert ── */}
       {(pendingCampaigns.count ?? 0) > 0 && (

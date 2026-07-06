@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { SeatingArea } from '@/lib/types'
 
 async function getToken() {
@@ -16,6 +18,8 @@ export function AreasClient({ initialAreas, slug }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   async function adminFetch(path: string, options?: RequestInit) {
     const token = await getToken()
@@ -31,7 +35,8 @@ export function AreasClient({ initialAreas, slug }: Props) {
     try {
       const res = await adminFetch('resource=areas', { method: 'POST', body: JSON.stringify({ name: newName.trim(), position: areas.length }) })
       const data = await res.json()
-      if (data.area) { setAreas(prev => [...prev, data.area]); setNewName('') }
+      if (data.area) { setAreas(prev => [...prev, data.area]); setNewName(''); toast.success('Area added') }
+      else toast.error('Failed to add area')
     } finally { setSaving(false) }
   }
 
@@ -39,25 +44,38 @@ export function AreasClient({ initialAreas, slug }: Props) {
     if (!editName.trim()) return
     const res = await adminFetch(`resource=areas&id=${id}`, { method: 'PATCH', body: JSON.stringify({ name: editName.trim() }) })
     const data = await res.json()
-    if (data.area) { setAreas(prev => prev.map(a => a.id === id ? data.area : a)); setEditingId(null) }
+    if (data.area) { setAreas(prev => prev.map(a => a.id === id ? data.area : a)); setEditingId(null); toast.success('Area renamed') }
   }
 
   const toggleActive = async (area: SeatingArea) => {
     const res = await adminFetch(`resource=areas&id=${area.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !area.is_active }) })
     const data = await res.json()
-    if (data.area) setAreas(prev => prev.map(a => a.id === area.id ? data.area : a))
+    if (data.area) { setAreas(prev => prev.map(a => a.id === area.id ? data.area : a)); toast.success(data.area.is_active ? 'Area activated' : 'Area deactivated') }
   }
 
-  const deleteArea = async (id: string) => {
-    if (!confirm('Delete this area? Shifts using it will lose capacity data.')) return
-    const res = await adminFetch(`resource=areas&id=${id}`, { method: 'DELETE' })
-    if (res.ok) setAreas(prev => prev.filter(a => a.id !== id))
+  const doDeleteArea = async () => {
+    if (!pendingDelete) return
+    setDeleting(true)
+    const res = await adminFetch(`resource=areas&id=${pendingDelete.id}`, { method: 'DELETE' })
+    setDeleting(false)
+    if (res.ok) { setAreas(prev => prev.filter(a => a.id !== pendingDelete.id)); toast.success('Area deleted') }
+    else toast.error('Failed to delete area')
+    setPendingDelete(null)
   }
 
   const inputBase = 'bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/25 placeholder:text-offwhite/20'
 
   return (
     <div>
+      <ConfirmModal
+        open={!!pendingDelete}
+        title={`Delete "${pendingDelete?.name}"?`}
+        message="Shifts using this area will lose their capacity data. This cannot be undone."
+        confirmLabel="Delete area"
+        loading={deleting}
+        onConfirm={doDeleteArea}
+        onCancel={() => setPendingDelete(null)}
+      />
       <div className="flex gap-3 mb-6">
         <input value={newName} onChange={e => setNewName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && createArea()}
@@ -106,7 +124,7 @@ export function AreasClient({ initialAreas, slug }: Props) {
                   <button onClick={() => { setEditingId(area.id); setEditName(area.name) }}
                     className="text-xs text-offwhite/30 hover:text-offwhite transition-colors">Edit</button>
                 )}
-                <button onClick={() => deleteArea(area.id)}
+                <button onClick={() => setPendingDelete({ id: area.id, name: area.name })}
                   className="text-xs text-offwhite/25 hover:text-red-400 transition-colors">Delete</button>
               </div>
             </div>

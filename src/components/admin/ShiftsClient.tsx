@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Shift, SeatingArea } from '@/lib/types'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -32,6 +34,8 @@ export function ShiftsClient({ initialShifts, areas, slug }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   async function adminFetch(path: string, options?: RequestInit) {
     const token = await getToken()
@@ -65,15 +69,28 @@ export function ShiftsClient({ initialShifts, areas, slug }: Props) {
         const listRes = await adminFetch('resource=shifts')
         const listData = await listRes.json()
         setShifts(listData.shifts || [])
+        toast.success(editingId ? 'Shift updated' : 'Shift created')
+      } else {
+        toast.error('Failed to save shift')
       }
       setShowForm(false); setEditingId(null)
     } finally { setSaving(false) }
   }
 
-  const deleteShift = async (id: string) => {
-    if (!confirm('Delete this shift?')) return
-    const res = await adminFetch(`resource=shifts&id=${id}`, { method: 'DELETE' })
-    if (res.ok) setShifts(prev => prev.filter(s => s.id !== id))
+  const confirmDeleteShift = (id: string, name: string) => setPendingDelete({ id, name })
+
+  const doDeleteShift = async () => {
+    if (!pendingDelete) return
+    setDeleting(true)
+    const res = await adminFetch(`resource=shifts&id=${pendingDelete.id}`, { method: 'DELETE' })
+    setDeleting(false)
+    if (res.ok) {
+      setShifts(prev => prev.filter(s => s.id !== pendingDelete.id))
+      toast.success('Shift deleted')
+    } else {
+      toast.error('Failed to delete shift')
+    }
+    setPendingDelete(null)
   }
 
   const updateArea = (areaId: string, capacity: number) => {
@@ -93,6 +110,16 @@ export function ShiftsClient({ initialShifts, areas, slug }: Props) {
 
   return (
     <div>
+      <ConfirmModal
+        open={!!pendingDelete}
+        title={`Delete "${pendingDelete?.name}"?`}
+        message="This shift will be permanently removed. Any existing reservations won't be affected."
+        confirmLabel="Delete shift"
+        loading={deleting}
+        onConfirm={doDeleteShift}
+        onCancel={() => setPendingDelete(null)}
+      />
+
       <div className="flex justify-end mb-6">
         <button onClick={openCreate}
           className="bg-offwhite text-midnight font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-offwhite/90 transition-colors">
@@ -223,7 +250,7 @@ export function ShiftsClient({ initialShifts, areas, slug }: Props) {
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <button onClick={() => openEdit(shift)} className="text-xs text-offwhite/30 hover:text-offwhite transition-colors">Edit</button>
-                      <button onClick={() => deleteShift(shift.id)} className="text-xs text-offwhite/25 hover:text-red-400 transition-colors">Delete</button>
+                      <button onClick={() => confirmDeleteShift(shift.id, shift.name)} className="text-xs text-offwhite/25 hover:text-red-400 transition-colors">Delete</button>
                     </div>
                   </div>
                 ))}
