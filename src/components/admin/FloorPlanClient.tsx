@@ -5,7 +5,8 @@ import { toast } from 'sonner'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { RestaurantTable, TableShape, SeatingArea } from '@/lib/types'
-import { Circle, Square, RectangleHorizontal, RotateCw, Trash2, Plus } from 'lucide-react'
+import { Circle, Square, RectangleHorizontal, RotateCw, Trash2, Plus, Play, Pencil } from 'lucide-react'
+import { FloorService } from '@/components/admin/FloorService'
 
 async function getToken() {
   const { data: { session } } = await getBrowserSupabase().auth.getSession()
@@ -52,9 +53,12 @@ interface Props {
   initialTables: RestaurantTable[]
   areas: SeatingArea[]
   slug: string
+  role: 'admin' | 'employee'
+  tenantId: string
 }
 
-export function FloorPlanClient({ initialTables, areas, slug }: Props) {
+export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: Props) {
+  const [mode, setMode] = useState<'service' | 'edit'>('service')
   const [tables, setTables]         = useState<RestaurantTable[]>(initialTables)
   const [activeAreaId, setActiveAreaId] = useState<string | null>(areas[0]?.id ?? null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -225,6 +229,32 @@ export function FloorPlanClient({ initialTables, areas, slug }: Props) {
         onCancel={() => setPendingDelete(null)}
       />
 
+      {/* ── Mode toggle (editor solo admin) ── */}
+      {role === 'admin' && (
+        <div className="flex gap-1.5 mb-4">
+          {([
+            { value: 'service', label: 'Service', icon: Play },
+            { value: 'edit',    label: 'Edit layout', icon: Pencil },
+          ] as const).map(({ value, label, icon: Icon }) => (
+            <button key={value} onClick={() => setMode(value)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                mode === value ? 'text-midnight' : 'text-offwhite/40 hover:text-offwhite/70'
+              }`}
+              style={mode === value
+                ? { backgroundColor: '#F2EFE9' }
+                : { backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }
+              }>
+              <Icon size={13} strokeWidth={2} />
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {mode === 'service' ? (
+        <FloorService areas={areas} slug={slug} tenantId={tenantId} />
+      ) : (
+      <div>
       {/* ── Area tabs + add buttons ── */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="flex gap-1.5 flex-wrap flex-1">
@@ -429,6 +459,8 @@ export function FloorPlanClient({ initialTables, areas, slug }: Props) {
           )}
         </div>
       </div>
+      </div>
+      )}
     </div>
   )
 }
