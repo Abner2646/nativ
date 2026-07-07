@@ -56,7 +56,33 @@ export function Sidebar({
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  // Peek: expansión temporal por hover/focus. Nunca persiste — el pin es el toggle.
+  const [peek, setPeek] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const canHover = () => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
+
+  const onSidebarEnter = () => {
+    if (!collapsed || !canHover()) return
+    if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null }
+    if (!peek && !enterTimer.current) {
+      enterTimer.current = setTimeout(() => { setPeek(true); enterTimer.current = null }, 250)
+    }
+  }
+  const onSidebarLeave = () => {
+    if (enterTimer.current) { clearTimeout(enterTimer.current); enterTimer.current = null }
+    if (peek && !leaveTimer.current) {
+      // Salida más lenta que la entrada: perdona el overshoot del mouse
+      leaveTimer.current = setTimeout(() => { setPeek(false); leaveTimer.current = null }, 350)
+    }
+  }
+  // Teclado: foco dentro del sidebar expande igual que el hover
+  const onSidebarFocus = () => { if (collapsed) { if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null }; setPeek(true) } }
+  const onSidebarBlur = (e: React.FocusEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setPeek(false)
+  }
 
   // Colapso persistente por dispositivo. La clase en <body> coordina
   // el margen del <main> (ver layout) sin levantar estado al server.
@@ -67,6 +93,9 @@ export function Sidebar({
   }, [])
 
   const toggleCollapsed = () => {
+    setPeek(false)
+    if (enterTimer.current) { clearTimeout(enterTimer.current); enterTimer.current = null }
+    if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null }
     setCollapsed(prev => {
       const next = !prev
       localStorage.setItem('nativ:sidebar-collapsed', next ? '1' : '0')
@@ -74,6 +103,9 @@ export function Sidebar({
       return next
     })
   }
+
+  // Expandido visualmente = pineado abierto o peek activo
+  const expanded = !collapsed || peek
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -151,18 +183,22 @@ export function Sidebar({
       )}
     </div>
 
-    {/* md: slim (60px), lg: full (240px) */}
+    {/* md: slim (60px), lg: full (240px). Colapsado + hover = peek en overlay */}
     <aside
-      className={`hidden md:flex md:w-[60px] ${collapsed ? '' : 'lg:w-60'} flex-col fixed h-screen bg-midnight z-10 transition-[width]`}
+      onMouseEnter={onSidebarEnter}
+      onMouseLeave={onSidebarLeave}
+      onFocusCapture={onSidebarFocus}
+      onBlurCapture={onSidebarBlur}
+      className={`hidden md:flex md:w-[60px] ${expanded ? 'lg:w-60' : ''} flex-col fixed h-screen bg-midnight transition-[width] duration-200 ease-out motion-reduce:transition-none overflow-x-hidden ${peek ? 'z-30 shadow-2xl' : 'z-10'}`}
       style={{ borderRight: border }}
     >
 
       {/* ── Header: nombre + toggle de colapso (solo desktop) ── */}
       <div
-        className={`hidden lg:flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} pt-3 pb-3.5 gap-2`}
+        className={`hidden lg:flex items-center ${expanded ? 'justify-between px-4' : 'justify-center px-2'} pt-3 pb-3.5 gap-2`}
         style={{ borderBottom: border }}
       >
-        <div className={collapsed ? 'hidden' : 'min-w-0'}>
+        <div className={expanded ? 'min-w-0' : 'hidden'}>
           <Link
             href="/dashboard"
             className="text-[10px] text-offwhite/30 hover:text-offwhite/60 transition-colors flex items-center gap-1 mb-1.5 w-fit"
@@ -174,9 +210,11 @@ export function Sidebar({
         </div>
         <button
           onClick={toggleCollapsed}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Pin sidebar open' : 'Collapse sidebar'}
           className="p-1.5 rounded-lg text-offwhite/30 hover:text-offwhite/60 transition-colors shrink-0"
         >
+          {/* El ícono sigue la PREFERENCIA (no el peek): durante el peek muestra
+              "abrir" = anclar el sidebar expandido */}
           {collapsed ? <PanelLeftOpen size={15} strokeWidth={1.6} /> : <PanelLeftClose size={15} strokeWidth={1.6} />}
         </button>
       </div>
@@ -194,10 +232,10 @@ export function Sidebar({
             const Icon = item.icon
             return (
               <span key={item.href}
-                className={`flex items-center gap-2.5 mx-1.5 px-1.5 py-3 md:justify-center ${collapsed ? '' : 'lg:justify-start lg:mx-2 lg:px-3 lg:py-2'} rounded-lg text-sm text-offwhite/25 cursor-default select-none`}>
+                className={`flex items-center gap-2.5 mx-1.5 px-1.5 py-3 md:justify-center ${expanded ? 'lg:justify-start lg:mx-2 lg:px-3 lg:py-2' : ''} rounded-lg text-sm text-offwhite/25 cursor-default select-none`}>
                 <Icon size={15} strokeWidth={1.6} className="shrink-0" />
-                <span className={collapsed ? 'hidden' : 'hidden lg:block flex-1'}>{item.label}</span>
-                <span className={`${collapsed ? 'hidden' : 'hidden lg:flex'} text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded text-offwhite/25`}
+                <span className={expanded ? 'hidden lg:block flex-1 whitespace-nowrap' : 'hidden'}>{item.label}</span>
+                <span className={`${expanded ? 'hidden lg:flex' : 'hidden'} text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded text-offwhite/25`}
                   style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>Soon</span>
               </span>
             )
@@ -209,23 +247,23 @@ export function Sidebar({
           const isBilling      = item.href.endsWith('/billing')
 
           return (
-            <Link key={item.href} href={item.href} title={item.label}
-              className={`flex items-center gap-2.5 mx-1.5 px-1.5 py-3 md:justify-center ${collapsed ? '' : 'lg:justify-start lg:mx-2 lg:px-3 lg:py-2'} rounded-lg text-sm transition-colors ${
+            <Link key={item.href} href={item.href} title={expanded ? undefined : item.label}
+              className={`flex items-center gap-2.5 mx-1.5 px-1.5 py-3 md:justify-center ${expanded ? 'lg:justify-start lg:mx-2 lg:px-3 lg:py-2' : ''} rounded-lg text-sm transition-colors ${
                 active ? 'text-offwhite font-medium' : 'text-offwhite/50 hover:text-offwhite hover:bg-white/[0.04]'
               }`}
               style={active ? { backgroundColor: 'rgba(255,255,255,0.08)' } : undefined}
             >
               <Icon size={15} strokeWidth={active ? 2 : 1.6} className={`shrink-0 ${active ? 'text-offwhite' : 'text-offwhite/40'}`} />
-              <span className={collapsed ? 'hidden' : 'hidden lg:block flex-1'}>{item.label}</span>
+              <span className={expanded ? 'hidden lg:block flex-1 whitespace-nowrap' : 'hidden'}>{item.label}</span>
 
               {isReservations && todayCount > 0 && (
-                <span className={`${collapsed ? 'hidden' : 'hidden lg:flex'} text-[10px] font-bold px-1.5 py-0.5 rounded-full`}
+                <span className={`${expanded ? 'hidden lg:flex' : 'hidden'} text-[10px] font-bold px-1.5 py-0.5 rounded-full`}
                   style={{ backgroundColor: 'rgba(201,169,110,0.15)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.25)' }}>
                   {todayCount}
                 </span>
               )}
               {isBilling && trialWarning && (
-                <span className={`${collapsed ? 'hidden' : 'hidden lg:flex'} text-[9px] font-bold px-1.5 py-0.5 rounded-full`}
+                <span className={`${expanded ? 'hidden lg:flex' : 'hidden'} text-[9px] font-bold px-1.5 py-0.5 rounded-full`}
                   style={{ backgroundColor: 'rgba(251,146,60,0.15)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.25)' }}>
                   {trialDaysLeft === 0 ? 'today' : `${trialDaysLeft}d`}
                 </span>
@@ -236,11 +274,11 @@ export function Sidebar({
       </nav>
 
       {/* ── Footer ── */}
-      <div className={`p-2 ${collapsed ? '' : 'lg:p-3'}`} style={{ borderTop: border }}>
+      <div className={`p-2 ${expanded ? 'lg:p-3' : ''}`} style={{ borderTop: border }}>
         {isAdmin ? (
           <>
             {/* Slim: just an icon */}
-            <div className={`${collapsed ? 'flex' : 'lg:hidden flex'} justify-center`}>
+            <div className={`${expanded ? 'lg:hidden flex' : 'flex'} justify-center`}>
               <a href={publicUrl} target="_blank" rel="noopener noreferrer"
                 title="Your public page"
                 className="p-2 rounded-lg text-offwhite/25 hover:text-offwhite/50 transition-colors">
@@ -249,7 +287,7 @@ export function Sidebar({
             </div>
             {/* Full */}
             <a href={publicUrl} target="_blank" rel="noopener noreferrer"
-              className={`${collapsed ? 'hidden' : 'hidden lg:flex'} items-center justify-between px-3 py-2.5 rounded-xl transition-colors`}
+              className={`${expanded ? 'hidden lg:flex' : 'hidden'} items-center justify-between px-3 py-2.5 rounded-xl transition-colors`}
               style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
               onMouseOver={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
               onMouseOut={e  => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
@@ -263,11 +301,11 @@ export function Sidebar({
         ) : (
           <>
             {/* Slim: tiny "E" indicator */}
-            <div className={`${collapsed ? 'flex' : 'lg:hidden flex'} justify-center py-1`}>
+            <div className={`${expanded ? 'lg:hidden flex' : 'flex'} justify-center py-1`}>
               <span className="text-[9px] text-offwhite/20 uppercase tracking-widest font-semibold">E</span>
             </div>
             {/* Full */}
-            <div className={`${collapsed ? 'hidden' : 'hidden lg:block'} px-3 py-2.5 rounded-xl`}
+            <div className={`${expanded ? 'hidden lg:block' : 'hidden'} px-3 py-2.5 rounded-xl`}
               style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-offwhite/25">Role</p>
               <p className="text-xs text-offwhite/40 mt-0.5">Employee</p>
