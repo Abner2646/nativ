@@ -31,23 +31,53 @@ export async function createReservation(req: NextRequest) {
 
   if (!shift) return NextResponse.json({ error: 'Invalid shift' }, { status: 400 })
 
+  // Áreas con mesas dibujadas se validan y asignan atómicamente en el RPC;
+  // áreas sin mesas siguen el chequeo por covers de siempre.
+  const { data: tenantTables } = await supabaseAdmin
+    .from('restaurant_tables').select('seating_area_id, min_covers, max_covers')
+    .eq('tenant_id', tenant.id).eq('is_active', true)
+  const tableAreaIds = new Set((tenantTables || []).map(t => t.seating_area_id))
+
   const { data: existing } = await supabaseAdmin
     .from('reservations').select('party_size, seating_area_id')
     .eq('shift_id', shift_id).eq('tenant_id', tenant.id)
     .eq('date', date).eq('time', time).eq('status', 'confirmed')
 
-  if (seating_area_id) {
-    const sa = shift.shift_areas?.find((a: any) => a.seating_area_id === seating_area_id)
+  let targetAreaId: string | null = seating_area_id || null
+
+  if (targetAreaId) {
+    const sa = shift.shift_areas?.find((a: any) => a.seating_area_id === targetAreaId)
     if (!sa) return NextResponse.json({ error: 'Invalid seating area' }, { status: 400 })
-    const used = (existing || []).filter(r => r.seating_area_id === seating_area_id).reduce((s, r) => s + r.party_size, 0)
-    if (sa.capacity - used < party_size) return NextResponse.json({ error: 'Area no longer available' }, { status: 409 })
+    if (!tableAreaIds.has(targetAreaId)) {
+      const used = (existing || []).filter(r => r.seating_area_id === targetAreaId).reduce((s, r) => s + r.party_size, 0)
+      if (sa.capacity - used < party_size) return NextResponse.json({ error: 'Area no longer available' }, { status: 409 })
+    }
+    // Área con mesas: el RPC verifica y asigna con lock — sin pre-check acá.
   } else {
-    const hasAvail = shift.shift_areas?.some((sa: any) => {
+    // Sin área elegida: buscar la primera con lugar. Covers primero (chequeo
+    // exacto barato); si no, un área con mesas donde estáticamente calce el
+    // party (el RPC confirma atómicamente).
+    const coversArea = shift.shift_areas?.find((sa: any) => {
+      if (tableAreaIds.has(sa.seating_area_id)) return false
       const used = (existing || []).filter(r => r.seating_area_id === sa.seating_area_id).reduce((s, r) => s + r.party_size, 0)
       return sa.capacity - used >= party_size
     })
-    if (!hasAvail) return NextResponse.json({ error: 'No availability for this slot' }, { status: 409 })
+    if (coversArea) {
+      targetAreaId = null // covers path inserta sin área, como siempre
+    } else {
+      const tableArea = shift.shift_areas?.find((sa: any) =>
+        tableAreaIds.has(sa.seating_area_id) &&
+        (tenantTables || []).some(t => t.seating_area_id === sa.seating_area_id && t.min_covers <= party_size && t.max_covers >= party_size)
+      )
+      if (tableArea) {
+        targetAreaId = tableArea.seating_area_id
+      } else {
+        return NextResponse.json({ error: 'No availability for this slot' }, { status: 409 })
+      }
+    }
   }
+
+  const useTableBooking = !!targetAreaId && tableAreaIds.has(targetAreaId)
 
   // Check deposit rules
   const { data: depositRules } = await supabaseAdmin
@@ -90,17 +120,54 @@ export async function createReservation(req: NextRequest) {
 
   if (!guest) return NextResponse.json({ error: 'Failed to create guest' }, { status: 500 })
 
-  const { data: reservation, error } = await supabaseAdmin
-    .from('reservations')
-    .insert({
-      tenant_id: tenant.id, shift_id, guest_id: guest.id, seating_area_id: seating_area_id || null,
-      date, time, party_size, occasion: occasion || null, notes: notes || null, status: 'confirmed',
-      ...(applicableRule ? { deposit_amount: applicableRule.amount_cents / 100, stripe_payment_intent: stripe_payment_intent_id } : {}),
-    })
-    .select('*, guest:guests(*), seating_area:seating_areas(*), shift:shifts(*)')
-    .single()
+  const source = body.source === 'manual' ? 'manual' : 'online'
+  let reservation: any = null
 
-  if (error || !reservation) return NextResponse.json({ error: 'Failed to create reservation' }, { status: 500 })
+  if (useTableBooking) {
+    // Asignación atómica de mesa (best-fit + advisory lock por área+fecha)
+    const { data: booked, error: rpcError } = await supabaseAdmin.rpc('book_reservation_with_table', {
+      p_tenant_id: tenant.id,
+      p_shift_id: shift_id,
+      p_guest_id: guest.id,
+      p_area_id: targetAreaId,
+      p_date: date,
+      p_time: time,
+      p_duration_minutes: shift.duration_minutes,
+      p_party_size: party_size,
+      p_occasion: occasion || null,
+      p_notes: notes || null,
+      p_source: source,
+      p_deposit_amount: applicableRule ? applicableRule.amount_cents / 100 : null,
+      p_stripe_payment_intent: applicableRule ? stripe_payment_intent_id : null,
+    })
+    if (rpcError) {
+      if (rpcError.message?.includes('no_table_available')) {
+        return NextResponse.json({ error: 'This slot was just taken. Please pick another time.' }, { status: 409 })
+      }
+      console.error('book_reservation_with_table error:', rpcError)
+      return NextResponse.json({ error: 'Failed to create reservation' }, { status: 500 })
+    }
+    const { data: full } = await supabaseAdmin
+      .from('reservations')
+      .select('*, guest:guests(*), seating_area:seating_areas(*), shift:shifts(*)')
+      .eq('id', (booked as any).reservation_id)
+      .single()
+    reservation = full
+  } else {
+    const { data: inserted, error } = await supabaseAdmin
+      .from('reservations')
+      .insert({
+        tenant_id: tenant.id, shift_id, guest_id: guest.id, seating_area_id: targetAreaId,
+        date, time, party_size, occasion: occasion || null, notes: notes || null, status: 'confirmed', source,
+        ...(applicableRule ? { deposit_amount: applicableRule.amount_cents / 100, stripe_payment_intent: stripe_payment_intent_id } : {}),
+      })
+      .select('*, guest:guests(*), seating_area:seating_areas(*), shift:shifts(*)')
+      .single()
+    if (error) return NextResponse.json({ error: 'Failed to create reservation' }, { status: 500 })
+    reservation = inserted
+  }
+
+  if (!reservation) return NextResponse.json({ error: 'Failed to create reservation' }, { status: 500 })
 
   await Promise.allSettled([
     sendConfirmationEmail(reservation, settings, tenant.slug, applicableRule?.refund_cutoff_hours),

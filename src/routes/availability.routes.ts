@@ -54,9 +54,52 @@ export async function getAvailability(req: NextRequest) {
     return NextResponse.json({ available: false, reason: 'closed', slots: [] })
   }
 
-  const { data: existing } = await supabaseAdmin
-    .from('reservations').select('shift_id, time, party_size, seating_area_id')
-    .eq('tenant_id', tenant.id).eq('date', date).eq('status', 'confirmed')
+  const [{ data: existing }, { data: activeTables }, { data: dayAssignments }] = await Promise.all([
+    supabaseAdmin
+      .from('reservations').select('shift_id, time, party_size, seating_area_id')
+      .eq('tenant_id', tenant.id).eq('date', date).eq('status', 'confirmed'),
+    supabaseAdmin
+      .from('restaurant_tables').select('id, seating_area_id, min_covers, max_covers')
+      .eq('tenant_id', tenant.id).eq('is_active', true),
+    supabaseAdmin
+      .from('table_assignments')
+      .select('table_id, reservations!inner(time, status, date, shift_id)')
+      .eq('tenant_id', tenant.id)
+      .eq('reservations.date', date)
+      .eq('reservations.status', 'confirmed'),
+  ])
+
+  // Áreas con mesas dibujadas usan disponibilidad por mesa;
+  // áreas sin mesas siguen con covers (modo híbrido de migración).
+  const tablesByArea = new Map<string, { id: string; min_covers: number; max_covers: number }[]>()
+  for (const t of (activeTables || [])) {
+    const list = tablesByArea.get(t.seating_area_id) || []
+    list.push(t)
+    tablesByArea.set(t.seating_area_id, list)
+  }
+
+  const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+  const shiftDuration = new Map((shifts || []).map(s => [s.id, s.duration_minutes]))
+
+  // Ventanas ocupadas por mesa (en minutos del día)
+  const busyByTable = new Map<string, { start: number; end: number }[]>()
+  for (const a of (dayAssignments || []) as any[]) {
+    const r = a.reservations
+    const start = toMinutes(r.time)
+    const dur = shiftDuration.get(r.shift_id) ?? 90
+    const list = busyByTable.get(a.table_id) || []
+    list.push({ start, end: start + dur })
+    busyByTable.set(a.table_id, list)
+  }
+
+  const hasFreeTable = (areaId: string, slotStart: number, slotEnd: number) => {
+    const tables = tablesByArea.get(areaId) || []
+    return tables.some(t => {
+      if (t.min_covers > partySize || t.max_covers < partySize) return false
+      const busy = busyByTable.get(t.id) || []
+      return !busy.some(b => b.start < slotEnd && b.end > slotStart)
+    })
+  }
 
   const now = new Date()
   const minAdvanceMs = settings.min_advance_hours * 60 * 60 * 1000
@@ -79,12 +122,27 @@ export async function getAvailability(req: NextRequest) {
 
       const areas = []
       for (const sa of (shift.shift_areas || [])) {
-        const used = (existing || [])
-          .filter(r => r.shift_id === shift.id && r.time.startsWith(timeStr) && r.seating_area_id === sa.seating_area_id)
-          .reduce((s, r) => s + r.party_size, 0)
-        const avail = sa.capacity - used
-        if (avail >= partySize) {
-          areas.push({ area_id: sa.seating_area_id, area_name: sa.seating_areas?.name || '', available_capacity: Math.max(0, avail) })
+        const areaTables = tablesByArea.get(sa.seating_area_id)
+
+        if (areaTables && areaTables.length > 0) {
+          // ── Modo mesas: alcanza con una mesa libre donde entre el party
+          if (hasFreeTable(sa.seating_area_id, cur, cur + shift.duration_minutes)) {
+            const freeCount = areaTables.filter(t => {
+              if (t.min_covers > partySize || t.max_covers < partySize) return false
+              const busy = busyByTable.get(t.id) || []
+              return !busy.some(b => b.start < cur + shift.duration_minutes && b.end > cur)
+            }).length
+            areas.push({ area_id: sa.seating_area_id, area_name: sa.seating_areas?.name || '', available_capacity: freeCount })
+          }
+        } else {
+          // ── Modo covers (sin mesas dibujadas): lógica original intacta
+          const used = (existing || [])
+            .filter(r => r.shift_id === shift.id && r.time.startsWith(timeStr) && r.seating_area_id === sa.seating_area_id)
+            .reduce((s, r) => s + r.party_size, 0)
+          const avail = sa.capacity - used
+          if (avail >= partySize) {
+            areas.push({ area_id: sa.seating_area_id, area_name: sa.seating_areas?.name || '', available_capacity: Math.max(0, avail) })
+          }
         }
       }
 
