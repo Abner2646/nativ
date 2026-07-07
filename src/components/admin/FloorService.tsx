@@ -528,7 +528,9 @@ export function FloorService({ areas, slug, tenantId }: Props) {
             </div>
           ) : (
             /* ── Timeline view ── */
-            <div className="rounded-2xl p-4 overflow-x-auto" style={card}>
+            // El background va en el contenido interno (el que tiene minWidth):
+            // los backgrounds no se extienden al área de overflow del scroll.
+            <div>
               {/* Selected block action bar */}
               {timelineSel && (
                 <div className="flex flex-wrap items-center gap-3 px-3 py-2.5 rounded-xl mb-3"
@@ -564,7 +566,8 @@ export function FloorService({ areas, slug, tenantId }: Props) {
                 </div>
               )}
 
-              <div style={{ minWidth: `${Math.max(600, timeline.len * 2)}px` }}>
+              <div className="rounded-2xl overflow-x-auto" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="p-4" style={{ minWidth: `${Math.max(600, timeline.len * 2)}px`, backgroundColor: '#162232' }}>
                 {/* Hour header */}
                 <div className="relative h-6 mb-1" style={{ marginLeft: '72px' }}>
                   {timeline.hours.map(h => (
@@ -626,6 +629,7 @@ export function FloorService({ areas, slug, tenantId }: Props) {
                 {areaTables.length === 0 && unassigned.length === 0 && (
                   <p className="text-sm text-offwhite/25 py-8 text-center">Nothing scheduled today in this area.</p>
                 )}
+              </div>
               </div>
             </div>
           )}
