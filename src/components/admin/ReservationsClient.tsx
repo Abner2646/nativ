@@ -277,13 +277,14 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
   const submitReservation = async () => {
     setSubmitting(true); setSubmitError('')
     try {
-      const res = await fetch(`/api/reservations/create?tenant=${slug}`, {
+      const res = await fetch(`/api/reservations?tenant=${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shift_id: form.shift_id, date: form.date, time: form.time, party_size: form.party_size,
           seating_area_id: form.area_id || null, occasion: form.occasion || null, notes: form.notes || null,
           guest_name: form.guest_name, guest_email: form.guest_email, guest_phone: form.guest_phone || null,
+          source: 'manual',
         }),
       })
       const data = await res.json()
