@@ -425,10 +425,14 @@ function NativLanding() {
         <div className="max-w-4xl mx-auto">
 
           {/* Insight hook — this is where the realization lands */}
+          <p style={{ color: C.sage, fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.14em', fontFamily: "'Satoshi', sans-serif" }}
+            className="uppercase mb-5">
+            The problem with OpenTable, TheFork &amp; Resy
+          </p>
           <p style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 'clamp(1.625rem, 3.5vw, 2.625rem)', lineHeight: '1.25', letterSpacing: '-0.025em', color: C.midnight }}
             className="max-w-3xl mb-20">
             Every time a guest decides to book at your restaurant,
-            the platform shows them{' '}
+            those platforms show them{' '}
             <span style={{ color: C.gold }}>where else they can go.</span>
           </p>
 
