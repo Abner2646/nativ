@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { Reservation, ReservationStatus, AvailabilitySlot } from '@/lib/types'
+import { Cake, Heart, Briefcase, Flower2, Star, CreditCard, type LucideIcon } from 'lucide-react'
 
 async function getToken() {
   const { data: { session } } = await getBrowserSupabase().auth.getSession()
@@ -37,12 +38,18 @@ interface NewResForm {
 
 const OCCASIONS = ['', 'Birthday', 'Anniversary', 'Business', 'Date', 'Other']
 
-const OCCASION_ICON: Record<string, string> = {
-  Birthday:    '🎂',
-  Anniversary: '🥂',
-  Business:    '💼',
-  Date:        '🌹',
-  Other:       '✨',
+const OCCASION_ICON: Record<string, LucideIcon> = {
+  Birthday:    Cake,
+  Anniversary: Heart,
+  Business:    Briefcase,
+  Date:        Flower2,
+  Other:       Star,
+}
+
+function OccasionIcon({ occasion, size = 11 }: { occasion: string; size?: number }) {
+  const Icon = OCCASION_ICON[occasion]
+  if (!Icon) return null
+  return <Icon size={size} strokeWidth={1.6} className="shrink-0 inline-block" style={{ verticalAlign: 'middle', marginTop: '-1px' }} />
 }
 
 // ── Compact list row (left panel on tablet/desktop) ──────────────────────────
@@ -67,13 +74,11 @@ function CompactRow({
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-offwhite truncate">{r.guest?.name}</p>
-          <p className="text-xs text-offwhite/35 mt-0.5">
-            {r.occasion && OCCASION_ICON[r.occasion] && (
-              <span className="mr-1">{OCCASION_ICON[r.occasion]}</span>
-            )}
-            {r.party_size} {r.party_size === 1 ? 'person' : 'people'}
+          <p className="text-xs text-offwhite/35 mt-0.5 flex items-center gap-1.5">
+            {r.occasion && <OccasionIcon occasion={r.occasion} size={11} />}
+            <span>{r.party_size} {r.party_size === 1 ? 'person' : 'people'}</span>
             {r.deposit_amount && (
-              <span className="ml-1.5 font-semibold" style={{ color: '#C9A96E' }}>· ${r.deposit_amount.toFixed(0)}</span>
+              <span className="font-semibold" style={{ color: '#C9A96E' }}>· ${r.deposit_amount.toFixed(0)}</span>
             )}
           </p>
         </div>
@@ -110,7 +115,7 @@ function DetailPanel({
       {r.deposit_amount && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-5"
           style={{ backgroundColor: 'rgba(201,169,110,0.10)', border: '1px solid rgba(201,169,110,0.25)' }}>
-          <span className="text-xl leading-none">💰</span>
+          <CreditCard size={16} strokeWidth={1.6} style={{ color: '#C9A96E', flexShrink: 0 }} />
           <div className="min-w-0">
             <p className="text-sm font-bold" style={{ color: '#C9A96E' }}>
               ${r.deposit_amount.toFixed(2)} deposit paid
@@ -147,10 +152,8 @@ function DetailPanel({
           {r.occasion && (
             <div>
               <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1">Occasion</p>
-              <p className="text-sm text-offwhite/70">
-                {OCCASION_ICON[r.occasion] && (
-                  <span className="mr-1.5">{OCCASION_ICON[r.occasion]}</span>
-                )}
+              <p className="text-sm text-offwhite/70 flex items-center gap-1.5">
+                <OccasionIcon occasion={r.occasion} size={13} />
                 {r.occasion}
               </p>
             </div>
@@ -351,8 +354,8 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                     )}
                     {r.occasion && (
                       <><span className="text-offwhite/15 text-[11px]">·</span>
-                      <span className="text-[11px] text-offwhite/30">
-                        {OCCASION_ICON[r.occasion] && <span className="mr-0.5">{OCCASION_ICON[r.occasion]}</span>}
+                      <span className="text-[11px] text-offwhite/30 inline-flex items-center gap-1">
+                        <OccasionIcon occasion={r.occasion} size={10} />
                         {r.occasion}
                       </span></>
                     )}
@@ -361,7 +364,7 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                 {r.deposit_amount && (
                   <div className="flex items-center gap-2 mt-2.5 px-3 py-2 rounded-lg"
                     style={{ backgroundColor: 'rgba(201,169,110,0.08)', border: '1px solid rgba(201,169,110,0.20)' }}>
-                    <span className="text-sm leading-none">💰</span>
+                    <CreditCard size={13} strokeWidth={1.6} style={{ color: '#C9A96E', flexShrink: 0 }} />
                     <span className="text-xs font-semibold" style={{ color: '#C9A96E' }}>
                       ${r.deposit_amount.toFixed(2)} paid — discount from bill
                     </span>
