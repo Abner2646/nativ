@@ -487,7 +487,7 @@ export function FloorService({ areas, slug, tenantId }: Props) {
                         <button
                           key={t.id}
                           onClick={() => onTableTap(t)}
-                          className="absolute flex flex-col items-center justify-center transition-all"
+                          className="absolute flex flex-col items-center justify-center transition-all overflow-hidden"
                           style={{
                             left: `${t.x}%`,
                             top: `${t.y}%`,
@@ -507,14 +507,15 @@ export function FloorService({ areas, slug, tenantId }: Props) {
                             <span className="absolute w-2 h-2 rounded-full pointer-events-none"
                               style={{ top: '8%', right: '10%', backgroundColor: '#C9A96E', transform: `rotate(${-t.rotation}deg)` }} />
                           )}
-                          <span className="font-semibold pointer-events-none"
+                          <span className="font-semibold pointer-events-none whitespace-nowrap"
                             style={{ fontSize: 'clamp(10px, 1.4vw, 14px)', color: style.text, transform: `rotate(${-t.rotation}deg)` }}>
                             {t.name}
                           </span>
-                          <span className="pointer-events-none"
+                          <span className="pointer-events-none whitespace-nowrap"
                             style={{ fontSize: 'clamp(8px, 1vw, 11px)', color: 'rgba(242,239,233,0.40)', transform: `rotate(${-t.rotation}deg)` }}>
                             {status === 'seated' || status === 'overtime'
-                              ? `${info!.res!.party_size}p · ${info!.minutesSeated}m`
+                              // Mesas angostas: solo el timer — "2p · 58m" no entra en un round de 2
+                              ? (t.width < 10 ? `${info!.minutesSeated}m` : `${info!.res!.party_size}p · ${info!.minutesSeated}m`)
                               : status === 'reserved'
                               ? `${fmtTime(info!.res!.time)}`
                               : `${t.min_covers}–${t.max_covers}`}
