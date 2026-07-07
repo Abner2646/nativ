@@ -126,6 +126,18 @@ export interface TableAssignment {
   created_at: string
 }
 
+export interface TableCombination {
+  id: string
+  tenant_id: string
+  seating_area_id: string
+  name: string
+  min_covers: number
+  max_covers: number
+  is_active: boolean
+  created_at: string
+  table_combination_members?: { table_id: string }[]
+}
+
 export interface BlockedDate {
   id: string
   tenant_id: string

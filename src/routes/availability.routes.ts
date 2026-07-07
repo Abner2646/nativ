@@ -54,7 +54,7 @@ export async function getAvailability(req: NextRequest) {
     return NextResponse.json({ available: false, reason: 'closed', slots: [] })
   }
 
-  const [{ data: existing }, { data: activeTables }, { data: dayAssignments }] = await Promise.all([
+  const [{ data: existing }, { data: activeTables }, { data: dayAssignments }, { data: combos }] = await Promise.all([
     supabaseAdmin
       .from('reservations').select('shift_id, time, party_size, seating_area_id')
       .eq('tenant_id', tenant.id).eq('date', date).eq('status', 'confirmed'),
@@ -67,6 +67,10 @@ export async function getAvailability(req: NextRequest) {
       .eq('tenant_id', tenant.id)
       .eq('reservations.date', date)
       .eq('reservations.status', 'confirmed'),
+    supabaseAdmin
+      .from('table_combinations')
+      .select('id, seating_area_id, min_covers, max_covers, table_combination_members(table_id)')
+      .eq('tenant_id', tenant.id).eq('is_active', true),
   ])
 
   // Áreas con mesas dibujadas usan disponibilidad por mesa;
@@ -92,13 +96,31 @@ export async function getAvailability(req: NextRequest) {
     busyByTable.set(a.table_id, list)
   }
 
+  const combosByArea = new Map<string, { min_covers: number; max_covers: number; memberIds: string[] }[]>()
+  for (const c of (combos || []) as any[]) {
+    const list = combosByArea.get(c.seating_area_id) || []
+    list.push({ min_covers: c.min_covers, max_covers: c.max_covers, memberIds: (c.table_combination_members || []).map((m: any) => m.table_id) })
+    combosByArea.set(c.seating_area_id, list)
+  }
+
+  const tableIsFree = (tableId: string, slotStart: number, slotEnd: number) => {
+    const busy = busyByTable.get(tableId) || []
+    return !busy.some(b => b.start < slotEnd && b.end > slotStart)
+  }
+
   const hasFreeTable = (areaId: string, slotStart: number, slotEnd: number) => {
     const tables = tablesByArea.get(areaId) || []
-    return tables.some(t => {
-      if (t.min_covers > partySize || t.max_covers < partySize) return false
-      const busy = busyByTable.get(t.id) || []
-      return !busy.some(b => b.start < slotEnd && b.end > slotStart)
-    })
+    const single = tables.some(t =>
+      t.min_covers <= partySize && t.max_covers >= partySize && tableIsFree(t.id, slotStart, slotEnd)
+    )
+    if (single) return true
+    // Sin mesa individual: probar combos con todos sus miembros libres
+    const areaCombos = combosByArea.get(areaId) || []
+    return areaCombos.some(c =>
+      c.min_covers <= partySize && c.max_covers >= partySize &&
+      c.memberIds.length >= 2 &&
+      c.memberIds.every(id => tableIsFree(id, slotStart, slotEnd))
+    )
   }
 
   const now = new Date()
@@ -125,14 +147,17 @@ export async function getAvailability(req: NextRequest) {
         const areaTables = tablesByArea.get(sa.seating_area_id)
 
         if (areaTables && areaTables.length > 0) {
-          // ── Modo mesas: alcanza con una mesa libre donde entre el party
+          // ── Modo mesas: mesa individual libre o combo completo libre
           if (hasFreeTable(sa.seating_area_id, cur, cur + shift.duration_minutes)) {
-            const freeCount = areaTables.filter(t => {
-              if (t.min_covers > partySize || t.max_covers < partySize) return false
-              const busy = busyByTable.get(t.id) || []
-              return !busy.some(b => b.start < cur + shift.duration_minutes && b.end > cur)
-            }).length
-            areas.push({ area_id: sa.seating_area_id, area_name: sa.seating_areas?.name || '', available_capacity: freeCount })
+            const slotEnd = cur + shift.duration_minutes
+            const singles = areaTables.filter(t =>
+              t.min_covers <= partySize && t.max_covers >= partySize && tableIsFree(t.id, cur, slotEnd)
+            ).length
+            const comboCount = (combosByArea.get(sa.seating_area_id) || []).filter(c =>
+              c.min_covers <= partySize && c.max_covers >= partySize &&
+              c.memberIds.length >= 2 && c.memberIds.every(id => tableIsFree(id, cur, slotEnd))
+            ).length
+            areas.push({ area_id: sa.seating_area_id, area_name: sa.seating_areas?.name || '', available_capacity: singles + comboCount })
           }
         } else {
           // ── Modo covers (sin mesas dibujadas): lógica original intacta

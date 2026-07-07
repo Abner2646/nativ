@@ -8,6 +8,7 @@ import {
   getTables, createTable, updateTable, deleteTable,
   getServiceState, seatReservation, finishReservation,
   createWalkIn, assignTable, unassignTable,
+  getCombos, createCombo, deleteCombo,
   getBlockedDates, createBlockedDate, deleteBlockedDate,
   getSpecialEvents, createSpecialEvent, deleteSpecialEvent,
   getSettings, updateSettings, getStats,
@@ -28,6 +29,7 @@ export async function GET(req: NextRequest) {
     case 'areas':           return getAreas(req)
     case 'tables':          return getTables(req)
     case 'service':         return getServiceState(req)
+    case 'combos':          return getCombos(req)
     case 'blocked-dates':   return getBlockedDates(req)
     case 'events':          return getSpecialEvents(req)
     case 'settings':        return getSettings(req)
@@ -52,6 +54,7 @@ export async function POST(req: NextRequest) {
     case 'finish':        return finishReservation(req)
     case 'walk-in':       return createWalkIn(req)
     case 'assign-table':  return assignTable(req)
+    case 'combos':        return createCombo(req)
     case 'blocked-dates': return createBlockedDate(req)
     case 'events':        return createSpecialEvent(req)
     case 'employees':     return inviteEmployee(req)
@@ -84,6 +87,7 @@ export async function DELETE(req: NextRequest) {
     case 'areas':         return deleteArea(req)
     case 'tables':        return deleteTable(req)
     case 'assign-table':  return unassignTable(req)
+    case 'combos':        return deleteCombo(req)
     case 'blocked-dates': return deleteBlockedDate(req)
     case 'events':        return deleteSpecialEvent(req)
     case 'employees':     return removeEmployee(req)

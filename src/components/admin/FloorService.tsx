@@ -32,10 +32,20 @@ interface ServiceRes {
   shift: { duration_minutes: number } | null
 }
 
+interface ServiceCombo {
+  id: string
+  seating_area_id: string
+  name: string
+  min_covers: number
+  max_covers: number
+  table_combination_members: { table_id: string }[]
+}
+
 interface ServiceState {
   date: string
   tables: RestaurantTable[]
   reservations: ServiceRes[]
+  combos: ServiceCombo[]
 }
 
 type TableStatus = 'free' | 'reserved' | 'seated' | 'overtime'
@@ -156,13 +166,31 @@ export function FloorService({ areas, slug, tenantId }: Props) {
   const selectedInfo  = selectedTableId ? tableInfo.get(selectedTableId) : null
   const assigningRes  = (state?.reservations || []).find(r => r.id === assigningResId) ?? null
 
+  // Combos que le sirven al party en asignación: capacidad ok y todos los miembros libres
+  const comboCandidates = useMemo(() => {
+    if (!assigningRes || !state) return []
+    return (state.combos || []).filter(c =>
+      c.min_covers <= assigningRes.party_size &&
+      c.max_covers >= assigningRes.party_size &&
+      c.table_combination_members.length >= 2 &&
+      c.table_combination_members.every(m => tableInfo.get(m.table_id)?.status === 'free')
+    )
+  }, [assigningRes, state, tableInfo])
+
+  const comboMemberIds = useMemo(
+    () => new Set(comboCandidates.flatMap(c => c.table_combination_members.map(m => m.table_id))),
+    [comboCandidates]
+  )
+
   // Mesas candidatas cuando estamos asignando (chequeo aproximado; el server valida)
-  const isCandidate = (t: RestaurantTable) => {
+  const isSingleCandidate = (t: RestaurantTable) => {
     if (!assigningRes) return false
     if (assigningRes.party_size > t.max_covers) return false
     const info = tableInfo.get(t.id)
     return info?.status === 'free'
   }
+
+  const isCandidate = (t: RestaurantTable) => isSingleCandidate(t) || comboMemberIds.has(t.id)
 
   // ── Acciones ────────────────────────────────────────────────
   const act = async (fn: () => Promise<Response>, okMsg: string) => {
@@ -186,9 +214,10 @@ export function FloorService({ areas, slug, tenantId }: Props) {
   const walkIn = (tableId: string) =>
     act(() => adminFetch('resource=walk-in', { method: 'POST', body: JSON.stringify({ table_id: tableId, party_size: walkInParty }) }), 'Walk-in seated')
 
-  const assign = async (tableId: string) => {
+  const assign = async (tableIds: string[]) => {
     if (!assigningResId) return
-    await act(() => adminFetch('resource=assign-table', { method: 'POST', body: JSON.stringify({ reservation_id: assigningResId, table_id: tableId }) }), 'Table assigned')
+    await act(() => adminFetch('resource=assign-table', { method: 'POST', body: JSON.stringify({ reservation_id: assigningResId, table_ids: tableIds }) }),
+      tableIds.length > 1 ? 'Tables combined and assigned' : 'Table assigned')
     setAssigningResId(null)
   }
 
@@ -197,8 +226,14 @@ export function FloorService({ areas, slug, tenantId }: Props) {
 
   const onTableTap = (t: RestaurantTable) => {
     if (assigningResId) {
-      if (isCandidate(t)) assign(t.id)
-      else toast.error('That table doesn\'t fit this party or is occupied')
+      if (isSingleCandidate(t)) {
+        assign([t.id])
+      } else if (comboMemberIds.has(t.id)) {
+        const combo = comboCandidates.find(c => c.table_combination_members.some(m => m.table_id === t.id))
+        if (combo) assign(combo.table_combination_members.map(m => m.table_id))
+      } else {
+        toast.error('That table doesn\'t fit this party or is occupied')
+      }
       return
     }
     setSelectedTableId(prev => prev === t.id ? null : t.id)
@@ -327,9 +362,11 @@ export function FloorService({ areas, slug, tenantId }: Props) {
         {/* ── Side panel ── */}
         <div className="w-full lg:w-80 shrink-0 space-y-3">
 
-          {/* Selected table actions */}
+          {/* Selected table actions — bottom sheet en mobile, tarjeta en desktop */}
           {selectedTable && selectedInfo && (
-            <div className="rounded-2xl p-5" style={card}>
+            <div
+              className="rounded-2xl p-5 fixed bottom-[76px] md:bottom-4 left-3 right-3 z-30 shadow-2xl lg:static lg:z-auto lg:shadow-none lg:left-auto lg:right-auto lg:bottom-auto"
+              style={card}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-satoshi font-bold text-[15px] text-offwhite">
                   {selectedTable.name}

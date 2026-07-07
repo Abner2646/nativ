@@ -310,6 +310,63 @@ export async function deleteTable(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+// ── TABLE COMBINATIONS ────────────────────────────────────────
+
+export async function getCombos(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { data, error } = await supabaseAdmin
+    .from('table_combinations')
+    .select('*, table_combination_members(table_id)')
+    .eq('tenant_id', ctx.tenant.id)
+    .order('created_at')
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ combos: data })
+}
+
+export async function createCombo(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx, role } = r as any
+  const adminErr = requireAdmin(role); if (adminErr) return adminErr
+  const { seating_area_id, name, table_ids, min_covers, max_covers } = await req.json()
+  if (!seating_area_id || !name?.trim() || !Array.isArray(table_ids) || table_ids.length < 2) {
+    return NextResponse.json({ error: 'seating_area_id, name and at least 2 table_ids required' }, { status: 400 })
+  }
+  // Las mesas deben ser del área indicada
+  const { data: tables } = await supabaseAdmin
+    .from('restaurant_tables').select('id, seating_area_id')
+    .eq('tenant_id', ctx.tenant.id).in('id', table_ids)
+  if (!tables || tables.length !== table_ids.length || tables.some(t => t.seating_area_id !== seating_area_id)) {
+    return NextResponse.json({ error: 'All tables must belong to the given area' }, { status: 400 })
+  }
+  const { data: combo, error } = await supabaseAdmin
+    .from('table_combinations')
+    .insert({ tenant_id: ctx.tenant.id, seating_area_id, name: name.trim(), min_covers: min_covers ?? 1, max_covers })
+    .select().single()
+  if (error || !combo) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  const { error: mErr } = await supabaseAdmin
+    .from('table_combination_members')
+    .insert(table_ids.map((tid: string) => ({ tenant_id: ctx.tenant.id, combination_id: combo.id, table_id: tid })))
+  if (mErr) {
+    await supabaseAdmin.from('table_combinations').delete().eq('id', combo.id)
+    return NextResponse.json({ error: 'Failed to add members' }, { status: 500 })
+  }
+  return NextResponse.json({ combo: { ...combo, table_combination_members: table_ids.map((t: string) => ({ table_id: t })) } }, { status: 201 })
+}
+
+export async function deleteCombo(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx, role } = r as any
+  const adminErr = requireAdmin(role); if (adminErr) return adminErr
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const { error } = await supabaseAdmin
+    .from('table_combinations').delete()
+    .eq('id', id).eq('tenant_id', ctx.tenant.id)
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
 // ── SERVICE VIEW (floor plan en vivo) ─────────────────────────
 // Sin requireAdmin: la operación del servicio es tarea del staff.
 
@@ -326,16 +383,19 @@ export async function getServiceState(req: NextRequest) {
   const { ctx } = r as any
   const { date } = tenantNow(ctx.settings.timezone)
 
-  const [{ data: tables }, { data: reservations }] = await Promise.all([
+  const [{ data: tables }, { data: reservations }, { data: combos }] = await Promise.all([
     supabaseAdmin.from('restaurant_tables').select('*')
       .eq('tenant_id', ctx.tenant.id).eq('is_active', true).order('created_at'),
     supabaseAdmin.from('reservations')
       .select('id, time, party_size, status, occasion, notes, seated_at, finished_at, source, seating_area_id, shift_id, guest:guests(name, phone), table_assignments(table_id), shift:shifts(duration_minutes)')
       .eq('tenant_id', ctx.tenant.id).eq('date', date).eq('status', 'confirmed')
       .order('time'),
+    supabaseAdmin.from('table_combinations')
+      .select('*, table_combination_members(table_id)')
+      .eq('tenant_id', ctx.tenant.id).eq('is_active', true),
   ])
 
-  return NextResponse.json({ date, tables: tables || [], reservations: reservations || [] })
+  return NextResponse.json({ date, tables: tables || [], reservations: reservations || [], combos: combos || [] })
 }
 
 export async function seatReservation(req: NextRequest) {
@@ -419,13 +479,16 @@ export async function createWalkIn(req: NextRequest) {
 export async function assignTable(req: NextRequest) {
   const r = await getCtxAndUser(req); if (r.error) return r.error
   const { ctx } = r as any
-  const { reservation_id, table_id } = await req.json()
-  if (!reservation_id || !table_id) return NextResponse.json({ error: 'reservation_id and table_id required' }, { status: 400 })
+  const body = await req.json()
+  const { reservation_id } = body
+  // Acepta table_id (una) o table_ids (combo)
+  const tableIds: string[] = Array.isArray(body.table_ids) ? body.table_ids : body.table_id ? [body.table_id] : []
+  if (!reservation_id || tableIds.length === 0) return NextResponse.json({ error: 'reservation_id and table_id(s) required' }, { status: 400 })
 
-  const { data, error } = await supabaseAdmin.rpc('assign_reservation_table', {
+  const { data, error } = await supabaseAdmin.rpc('assign_reservation_tables', {
     p_tenant_id: ctx.tenant.id,
     p_reservation_id: reservation_id,
-    p_table_id: table_id,
+    p_table_ids: tableIds,
   })
   if (error) {
     if (error.message?.includes('table_occupied'))  return NextResponse.json({ error: 'That table is occupied during this reservation' }, { status: 409 })
