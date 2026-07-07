@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { RestaurantTable, TableShape, SeatingArea, TableCombination } from '@/lib/types'
-import { Circle, Square, RectangleHorizontal, RotateCw, Trash2, Plus, Play, Pencil, Link2, X } from 'lucide-react'
+import { Circle, Square, RectangleHorizontal, RotateCw, Trash2, Plus, Play, Pencil, Link2, X, Armchair } from 'lucide-react'
 import { FloorService } from '@/components/admin/FloorService'
 
 async function getToken() {
@@ -349,7 +349,7 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
         {/* ── Canvas ── */}
         <div className="flex-1 w-full min-w-0">
           {/* Add table toolbar */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
             <span className="text-xs text-offwhite/30 mr-1 flex items-center gap-1.5">
               <Plus size={12} /> Add table
             </span>
@@ -362,6 +362,12 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
                 {label}
               </button>
             ))}
+            <Link href={`/restaurant/${slug}/areas`}
+              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-offwhite/50 hover:text-offwhite transition-colors"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <Armchair size={13} strokeWidth={1.6} />
+              Manage areas
+            </Link>
           </div>
 
           <div
