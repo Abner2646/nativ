@@ -188,9 +188,14 @@ export interface Reservation {
   stripe_payment_intent: string | null
   deposit_refunded: boolean | null
   created_at: string
+  duration_minutes?: number | null
+  seated_at?: string | null
+  finished_at?: string | null
+  source?: 'online' | 'walk_in' | 'manual'
   guest?: Guest
   seating_area?: SeatingArea
   shift?: Shift
+  table_assignments?: { table?: { name: string } | null }[]
 }
 
 export interface BirthdayCampaignConfig {

@@ -14,7 +14,7 @@ export default async function ReservationsPage({ params }: { params: Promise<{ s
 
   const { data: reservations } = await supabaseAdmin
     .from('reservations')
-    .select('*, guest:guests(*), seating_area:seating_areas(*), shift:shifts(*)')
+    .select('*, guest:guests(*), seating_area:seating_areas(*), shift:shifts(*), table_assignments(table:restaurant_tables(name))')
     .eq('tenant_id', tenant.id)
     .eq('date', today)
     .order('time')

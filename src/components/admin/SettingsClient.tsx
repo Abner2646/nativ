@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { TenantSettings } from '@/lib/types'
 
@@ -57,6 +57,92 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 const inputCls = 'w-full bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/25 placeholder:text-offwhite/20'
+
+interface TurnRule { max_party: number; duration_minutes: number }
+
+// Duración de mesa por tamaño de party. Sin reglas, se usa la duración
+// configurada en cada shift para todos los parties.
+function TurnTimesEditor({ slug }: { slug: string }) {
+  const [rules, setRules]   = useState<TurnRule[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved]   = useState(false)
+
+  useEffect(() => {
+    (async () => {
+      const token = await getToken()
+      const res = await fetch(`/api/admin?resource=turn-times&tenant=${slug}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const d = await res.json()
+        setRules((d.rules || []).map((r: any) => ({ max_party: r.max_party, duration_minutes: r.duration_minutes })))
+      }
+      setLoaded(true)
+    })()
+  }, [slug])
+
+  const setRule = (i: number, patch: Partial<TurnRule>) =>
+    setRules(prev => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r))
+
+  const save = async () => {
+    setSaving(true); setSaved(false)
+    try {
+      const token = await getToken()
+      const res = await fetch(`/api/admin?resource=turn-times&tenant=${slug}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ rules }),
+      })
+      if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500) }
+    } finally { setSaving(false) }
+  }
+
+  if (!loaded) return null
+
+  return (
+    <div>
+      <Label>Turn times by party size</Label>
+      <p className="text-xs text-offwhite/25 mb-3 -mt-1">
+        How long a table is held per party size. Parties above the last rule use the shift duration.
+      </p>
+      <div className="space-y-2">
+        {rules.map((r, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="text-xs text-offwhite/40 shrink-0">Up to</span>
+            <input type="number" min={1} max={30} value={r.max_party}
+              onChange={e => setRule(i, { max_party: parseInt(e.target.value) || 1 })}
+              className="w-16 bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-3 py-2 text-sm text-center focus:outline-none focus:border-white/25" />
+            <span className="text-xs text-offwhite/40 shrink-0">people →</span>
+            <input type="number" min={15} max={480} step={15} value={r.duration_minutes}
+              onChange={e => setRule(i, { duration_minutes: parseInt(e.target.value) || 90 })}
+              className="w-20 bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-3 py-2 text-sm text-center focus:outline-none focus:border-white/25" />
+            <span className="text-xs text-offwhite/40 shrink-0">min</span>
+            <button onClick={() => setRules(prev => prev.filter((_, idx) => idx !== i))}
+              className="ml-auto text-xs text-offwhite/25 hover:text-red-400 transition-colors px-2">
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-3 mt-3">
+        <button onClick={() => setRules(prev => {
+          const lastMax = prev.length > 0 ? prev[prev.length - 1].max_party : 0
+          return [...prev, { max_party: lastMax + 2, duration_minutes: 90 }]
+        })}
+          className="text-xs text-offwhite/50 hover:text-offwhite px-3 py-1.5 rounded-lg transition-colors"
+          style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+          + Add rule
+        </button>
+        <button onClick={save} disabled={saving}
+          className="text-xs font-semibold bg-offwhite text-midnight px-3 py-1.5 rounded-lg hover:bg-offwhite/90 transition-colors disabled:opacity-40">
+          {saving ? 'Saving…' : 'Save turn times'}
+        </button>
+        {saved && <span className="text-xs text-sage">Saved ✓</span>}
+      </div>
+    </div>
+  )
+}
 
 interface Props { settings: TenantSettings; slug: string }
 
@@ -145,6 +231,7 @@ export function SettingsClient({ settings: initial, slug }: Props) {
           <input type="email" value={form.notification_email || ''} placeholder="owner@restaurant.com"
             onChange={e => set('notification_email', e.target.value)} className={inputCls} />
         </div>
+        <TurnTimesEditor slug={slug} />
       </div>
 
       {/* ── Social links ── */}

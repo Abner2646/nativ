@@ -9,6 +9,9 @@ import {
   getServiceState, seatReservation, finishReservation,
   createWalkIn, assignTable, unassignTable,
   getCombos, createCombo, deleteCombo,
+  getTurnTimes, saveTurnTimes,
+  getWaitlist, addWaitlistEntry, removeWaitlistEntry,
+  unseatReservation, unfinishReservation,
   getBlockedDates, createBlockedDate, deleteBlockedDate,
   getSpecialEvents, createSpecialEvent, deleteSpecialEvent,
   getSettings, updateSettings, getStats,
@@ -30,6 +33,8 @@ export async function GET(req: NextRequest) {
     case 'tables':          return getTables(req)
     case 'service':         return getServiceState(req)
     case 'combos':          return getCombos(req)
+    case 'turn-times':      return getTurnTimes(req)
+    case 'waitlist':        return getWaitlist(req)
     case 'blocked-dates':   return getBlockedDates(req)
     case 'events':          return getSpecialEvents(req)
     case 'settings':        return getSettings(req)
@@ -55,6 +60,10 @@ export async function POST(req: NextRequest) {
     case 'walk-in':       return createWalkIn(req)
     case 'assign-table':  return assignTable(req)
     case 'combos':        return createCombo(req)
+    case 'turn-times':    return saveTurnTimes(req)
+    case 'waitlist':      return addWaitlistEntry(req)
+    case 'unseat':        return unseatReservation(req)
+    case 'unfinish':      return unfinishReservation(req)
     case 'blocked-dates': return createBlockedDate(req)
     case 'events':        return createSpecialEvent(req)
     case 'employees':     return inviteEmployee(req)
@@ -88,6 +97,7 @@ export async function DELETE(req: NextRequest) {
     case 'tables':        return deleteTable(req)
     case 'assign-table':  return unassignTable(req)
     case 'combos':        return deleteCombo(req)
+    case 'waitlist':      return removeWaitlistEntry(req)
     case 'blocked-dates': return deleteBlockedDate(req)
     case 'events':        return deleteSpecialEvent(req)
     case 'employees':     return removeEmployee(req)

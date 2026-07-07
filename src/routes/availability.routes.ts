@@ -63,7 +63,7 @@ export async function getAvailability(req: NextRequest) {
       .eq('tenant_id', tenant.id).eq('is_active', true),
     supabaseAdmin
       .from('table_assignments')
-      .select('table_id, reservations!inner(time, status, date, shift_id)')
+      .select('table_id, reservations!inner(time, status, date, shift_id, duration_minutes)')
       .eq('tenant_id', tenant.id)
       .eq('reservations.date', date)
       .eq('reservations.status', 'confirmed'),
@@ -72,6 +72,12 @@ export async function getAvailability(req: NextRequest) {
       .select('id, seating_area_id, min_covers, max_covers, table_combination_members(table_id)')
       .eq('tenant_id', tenant.id).eq('is_active', true),
   ])
+
+  const { data: turnRules } = await supabaseAdmin
+    .from('turn_time_rules').select('max_party, duration_minutes').eq('tenant_id', tenant.id)
+  const sortedRules = (turnRules || []).sort((a, b) => a.max_party - b.max_party)
+  const durationFor = (party: number, shiftDur: number) =>
+    sortedRules.find(r => r.max_party >= party)?.duration_minutes ?? shiftDur
 
   // Áreas con mesas dibujadas usan disponibilidad por mesa;
   // áreas sin mesas siguen con covers (modo híbrido de migración).
@@ -85,12 +91,13 @@ export async function getAvailability(req: NextRequest) {
   const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
   const shiftDuration = new Map((shifts || []).map(s => [s.id, s.duration_minutes]))
 
-  // Ventanas ocupadas por mesa (en minutos del día)
+  // Ventanas ocupadas por mesa (en minutos del día), respetando la
+  // duración propia de cada reserva si la tiene
   const busyByTable = new Map<string, { start: number; end: number }[]>()
   for (const a of (dayAssignments || []) as any[]) {
     const r = a.reservations
     const start = toMinutes(r.time)
-    const dur = shiftDuration.get(r.shift_id) ?? 90
+    const dur = r.duration_minutes ?? shiftDuration.get(r.shift_id) ?? 90
     const list = busyByTable.get(a.table_id) || []
     list.push({ start, end: start + dur })
     busyByTable.set(a.table_id, list)
@@ -147,9 +154,11 @@ export async function getAvailability(req: NextRequest) {
         const areaTables = tablesByArea.get(sa.seating_area_id)
 
         if (areaTables && areaTables.length > 0) {
-          // ── Modo mesas: mesa individual libre o combo completo libre
-          if (hasFreeTable(sa.seating_area_id, cur, cur + shift.duration_minutes)) {
-            const slotEnd = cur + shift.duration_minutes
+          // ── Modo mesas: mesa individual libre o combo completo libre.
+          // La ventana usa la duración del party solicitado (turn times).
+          const requestedDur = durationFor(partySize, shift.duration_minutes)
+          if (hasFreeTable(sa.seating_area_id, cur, cur + requestedDur)) {
+            const slotEnd = cur + requestedDur
             const singles = areaTables.filter(t =>
               t.min_covers <= partySize && t.max_covers >= partySize && tableIsFree(t.id, cur, slotEnd)
             ).length

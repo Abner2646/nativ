@@ -5,6 +5,7 @@ import { resolveTenantFromRequest } from '@/lib/tenant'
 import { sendConfirmationEmail, sendOwnerNotification, sendCancellationEmail } from '@/lib/email'
 import { sendConfirmationSMS } from '@/lib/sms'
 import { reservationLimiter, checkRateLimit } from '@/lib/ratelimit'
+import { resolveDuration } from '@/routes/admin.routes'
 
 export async function createReservation(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
@@ -79,6 +80,11 @@ export async function createReservation(req: NextRequest) {
 
   const useTableBooking = !!targetAreaId && tableAreaIds.has(targetAreaId)
 
+  // Duración según turn time rules del tenant (fallback: duración del shift)
+  const { data: turnRules } = await supabaseAdmin
+    .from('turn_time_rules').select('max_party, duration_minutes').eq('tenant_id', tenant.id)
+  const resolvedDuration = resolveDuration(turnRules, party_size, shift.duration_minutes)
+
   // Check deposit rules
   const { data: depositRules } = await supabaseAdmin
     .from('deposit_rules').select('*').eq('tenant_id', tenant.id)
@@ -132,7 +138,7 @@ export async function createReservation(req: NextRequest) {
       p_area_id: targetAreaId,
       p_date: date,
       p_time: time,
-      p_duration_minutes: shift.duration_minutes,
+      p_duration_minutes: resolvedDuration,
       p_party_size: party_size,
       p_occasion: occasion || null,
       p_notes: notes || null,
@@ -159,6 +165,7 @@ export async function createReservation(req: NextRequest) {
       .insert({
         tenant_id: tenant.id, shift_id, guest_id: guest.id, seating_area_id: targetAreaId,
         date, time, party_size, occasion: occasion || null, notes: notes || null, status: 'confirmed', source,
+        duration_minutes: resolvedDuration,
         ...(applicableRule ? { deposit_amount: applicableRule.amount_cents / 100, stripe_payment_intent: stripe_payment_intent_id } : {}),
       })
       .select('*, guest:guests(*), seating_area:seating_areas(*), shift:shifts(*)')

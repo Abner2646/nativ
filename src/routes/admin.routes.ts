@@ -46,7 +46,7 @@ export async function getReservations(req: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1')
   const limit = 50
   let q = supabaseAdmin.from('reservations')
-    .select('*, guest:guests(*), seating_area:seating_areas(*), shift:shifts(*)', { count: 'exact' })
+    .select('*, guest:guests(*), seating_area:seating_areas(*), shift:shifts(*), table_assignments(table:restaurant_tables(name))', { count: 'exact' })
     .eq('tenant_id', ctx.tenant.id)
     .order('date').order('time')
     .range((page - 1) * limit, page * limit - 1)
@@ -70,6 +70,8 @@ export async function updateReservation(req: NextRequest) {
   if (!res) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   const update: any = { status }
   if (status === 'cancelled') update.cancelled_at = new Date().toISOString()
+  if (status === 'completed') update.finished_at = new Date().toISOString()
+  if (status === 'confirmed') update.finished_at = null
   const { data, error } = await supabaseAdmin.from('reservations').update(update).eq('id', id).select().single()
   if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
   if (status === 'cancelled') {
@@ -89,7 +91,10 @@ export async function getGuests(req: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1')
   const limit = 50
   let q = supabaseAdmin.from('guests').select('*, guest_tags(tag)', { count: 'exact' })
-    .eq('tenant_id', ctx.tenant.id).order('visit_count', { ascending: false })
+    .eq('tenant_id', ctx.tenant.id)
+    // Excluir guests placeholder de walk-ins y waitlist
+    .not('email', 'like', '%@nativ.local')
+    .order('visit_count', { ascending: false })
     .range((page - 1) * limit, page * limit - 1)
   if (search) q = q.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`)
   const { data, error, count } = await q
@@ -367,6 +372,91 @@ export async function deleteCombo(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+// ── TURN TIME RULES ───────────────────────────────────────────
+
+export async function getTurnTimes(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { data, error } = await supabaseAdmin
+    .from('turn_time_rules').select('*')
+    .eq('tenant_id', ctx.tenant.id).order('max_party')
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ rules: data })
+}
+
+export async function saveTurnTimes(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx, role } = r as any
+  const adminErr = requireAdmin(role); if (adminErr) return adminErr
+  const { rules } = await req.json()
+  if (!Array.isArray(rules)) return NextResponse.json({ error: 'rules array required' }, { status: 400 })
+  const clean = rules
+    .filter((x: any) => x.max_party >= 1 && x.duration_minutes >= 15 && x.duration_minutes <= 480)
+    .map((x: any) => ({ tenant_id: ctx.tenant.id, max_party: x.max_party, duration_minutes: x.duration_minutes }))
+  // Reemplazo total: es una lista chica editada como un todo
+  await supabaseAdmin.from('turn_time_rules').delete().eq('tenant_id', ctx.tenant.id)
+  if (clean.length > 0) {
+    const { error } = await supabaseAdmin.from('turn_time_rules').insert(clean)
+    if (error) return NextResponse.json({ error: 'Failed to save rules' }, { status: 500 })
+  }
+  return NextResponse.json({ success: true })
+}
+
+// Duración resuelta para un party: primera regla cuyo max_party lo cubre,
+// fallback a la duración del shift.
+export function resolveDuration(
+  rules: { max_party: number; duration_minutes: number }[] | null | undefined,
+  partySize: number,
+  shiftDuration: number
+): number {
+  const sorted = [...(rules || [])].sort((a, b) => a.max_party - b.max_party)
+  const match = sorted.find(r => r.max_party >= partySize)
+  return match?.duration_minutes ?? shiftDuration
+}
+
+// ── WAITLIST ──────────────────────────────────────────────────
+// Staff-accessible, como todo el servicio.
+
+export async function getWaitlist(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { data, error } = await supabaseAdmin
+    .from('waitlist_entries').select('*')
+    .eq('tenant_id', ctx.tenant.id).eq('status', 'waiting')
+    .order('created_at')
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ waitlist: data })
+}
+
+export async function addWaitlistEntry(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { name, phone, party_size, quoted_minutes } = await req.json()
+  if (!name?.trim() || !party_size) return NextResponse.json({ error: 'name and party_size required' }, { status: 400 })
+  const { data, error } = await supabaseAdmin
+    .from('waitlist_entries')
+    .insert({
+      tenant_id: ctx.tenant.id, name: name.trim(), phone: phone || null,
+      party_size, quoted_minutes: quoted_minutes || null,
+    })
+    .select().single()
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ entry: data }, { status: 201 })
+}
+
+export async function removeWaitlistEntry(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const { error } = await supabaseAdmin
+    .from('waitlist_entries')
+    .update({ status: 'removed' })
+    .eq('id', id).eq('tenant_id', ctx.tenant.id)
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
 // ── SERVICE VIEW (floor plan en vivo) ─────────────────────────
 // Sin requireAdmin: la operación del servicio es tarea del staff.
 
@@ -381,21 +471,65 @@ function tenantNow(timezone: string) {
 export async function getServiceState(req: NextRequest) {
   const r = await getCtxAndUser(req); if (r.error) return r.error
   const { ctx } = r as any
-  const { date } = tenantNow(ctx.settings.timezone)
+  const { date, time } = tenantNow(ctx.settings.timezone)
 
-  const [{ data: tables }, { data: reservations }, { data: combos }] = await Promise.all([
+  // Confirmed + completed: el plano usa confirmed; el timeline muestra ambas
+  const [{ data: tables }, { data: reservations }, { data: combos }, { data: waitlist }] = await Promise.all([
     supabaseAdmin.from('restaurant_tables').select('*')
       .eq('tenant_id', ctx.tenant.id).eq('is_active', true).order('created_at'),
     supabaseAdmin.from('reservations')
-      .select('id, time, party_size, status, occasion, notes, seated_at, finished_at, source, seating_area_id, shift_id, guest:guests(name, phone), table_assignments(table_id), shift:shifts(duration_minutes)')
-      .eq('tenant_id', ctx.tenant.id).eq('date', date).eq('status', 'confirmed')
+      .select('id, time, party_size, status, occasion, notes, seated_at, finished_at, source, seating_area_id, shift_id, duration_minutes, guest:guests(name, phone), table_assignments(table_id), shift:shifts(duration_minutes)')
+      .eq('tenant_id', ctx.tenant.id).eq('date', date).in('status', ['confirmed', 'completed'])
       .order('time'),
     supabaseAdmin.from('table_combinations')
       .select('*, table_combination_members(table_id)')
       .eq('tenant_id', ctx.tenant.id).eq('is_active', true),
+    supabaseAdmin.from('waitlist_entries').select('*')
+      .eq('tenant_id', ctx.tenant.id).eq('status', 'waiting')
+      .order('created_at'),
   ])
 
-  return NextResponse.json({ date, tables: tables || [], reservations: reservations || [], combos: combos || [] })
+  return NextResponse.json({
+    date,
+    now: time, // hora actual en el timezone del restaurante — el cliente no debe usar la del dispositivo
+    tables: tables || [],
+    reservations: reservations || [],
+    combos: combos || [],
+    waitlist: waitlist || [],
+  })
+}
+
+export async function unseatReservation(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { reservation_id } = await req.json()
+  if (!reservation_id) return NextResponse.json({ error: 'reservation_id required' }, { status: 400 })
+  const { data, error } = await supabaseAdmin
+    .from('reservations')
+    .update({ seated_at: null })
+    .eq('id', reservation_id).eq('tenant_id', ctx.tenant.id).eq('status', 'confirmed')
+    .select('id').maybeSingle()
+  if (error || !data) return NextResponse.json({ error: 'Failed to unseat' }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
+export async function unfinishReservation(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { reservation_id } = await req.json()
+  if (!reservation_id) return NextResponse.json({ error: 'reservation_id required' }, { status: 400 })
+  const { data: res, error } = await supabaseAdmin
+    .from('reservations')
+    .update({ status: 'confirmed', finished_at: null })
+    .eq('id', reservation_id).eq('tenant_id', ctx.tenant.id).eq('status', 'completed')
+    .select('id, guest_id').maybeSingle()
+  if (error || !res) return NextResponse.json({ error: 'Failed to undo' }, { status: 500 })
+  // Revertir la visita que sumó el trigger al completar
+  const { data: guest } = await supabaseAdmin.from('guests').select('visit_count').eq('id', res.guest_id).single()
+  if (guest && guest.visit_count > 0) {
+    await supabaseAdmin.from('guests').update({ visit_count: guest.visit_count - 1 }).eq('id', res.guest_id)
+  }
+  return NextResponse.json({ success: true })
 }
 
 export async function seatReservation(req: NextRequest) {
@@ -430,7 +564,7 @@ export async function finishReservation(req: NextRequest) {
 export async function createWalkIn(req: NextRequest) {
   const r = await getCtxAndUser(req); if (r.error) return r.error
   const { ctx } = r as any
-  const { table_id, party_size } = await req.json()
+  const { table_id, party_size, guest_name, waitlist_entry_id } = await req.json()
   if (!table_id || !party_size) return NextResponse.json({ error: 'table_id and party_size required' }, { status: 400 })
 
   const { date, time } = tenantNow(ctx.settings.timezone)
@@ -450,10 +584,19 @@ export async function createWalkIn(req: NextRequest) {
     shifts.find(s => hhmm(s.start_time) > time) ||
     shifts[shifts.length - 1]
 
-  // Guest placeholder compartido por todos los walk-ins del tenant
+  const { data: turnRules } = await supabaseAdmin
+    .from('turn_time_rules').select('max_party, duration_minutes').eq('tenant_id', ctx.tenant.id)
+  const duration = resolveDuration(turnRules, party_size, shift.duration_minutes)
+
+  // Guest: con nombre (waitlist) usa un placeholder por nombre; sin nombre, el genérico.
+  // Ambos con dominio @nativ.local, excluido de la página Guests.
+  const name = guest_name?.trim() || 'Walk-in'
+  const email = guest_name?.trim()
+    ? `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.waitlist@nativ.local`
+    : 'walk-in@nativ.local'
   const { data: guest } = await supabaseAdmin
     .from('guests')
-    .upsert({ tenant_id: ctx.tenant.id, email: 'walk-in@nativ.local', name: 'Walk-in' }, { onConflict: 'tenant_id,email' })
+    .upsert({ tenant_id: ctx.tenant.id, email, name }, { onConflict: 'tenant_id,email' })
     .select('id').single()
   if (!guest) return NextResponse.json({ error: 'Failed to create walk-in guest' }, { status: 500 })
 
@@ -464,7 +607,7 @@ export async function createWalkIn(req: NextRequest) {
     p_shift_id: shift.id,
     p_date: date,
     p_time: time,
-    p_duration_minutes: shift.duration_minutes,
+    p_duration_minutes: duration,
     p_party_size: party_size,
   })
   if (error) {
@@ -473,6 +616,13 @@ export async function createWalkIn(req: NextRequest) {
     console.error('seat_walk_in error:', error)
     return NextResponse.json({ error: 'Failed to seat walk-in' }, { status: 500 })
   }
+
+  if (waitlist_entry_id) {
+    await supabaseAdmin.from('waitlist_entries')
+      .update({ status: 'seated', seated_at: new Date().toISOString() })
+      .eq('id', waitlist_entry_id).eq('tenant_id', ctx.tenant.id)
+  }
+
   return NextResponse.json({ success: true, ...( data as object) }, { status: 201 })
 }
 

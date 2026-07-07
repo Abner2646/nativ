@@ -15,6 +15,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ slug: s
     .from('guests')
     .select('*, guest_tags(id, tag)', { count: 'exact' })
     .eq('tenant_id', tenant.id)
+    .not('email', 'like', '%@nativ.local')
     .order('visit_count', { ascending: false })
     .limit(50)
 
