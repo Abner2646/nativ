@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, CalendarDays, Users, Menu } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, Users, Menu, Table2 } from 'lucide-react'
 
 interface Props { slug: string; todayCount?: number; role?: 'admin' | 'employee' }
 
@@ -12,6 +12,7 @@ export function BottomNav({ slug, todayCount = 0, role = 'admin' }: Props) {
   const items = [
     { href: `/restaurant/${slug}`,              label: 'Home',         icon: LayoutDashboard, exact: true },
     { href: `/restaurant/${slug}/reservations`, label: 'Reservations', icon: CalendarDays },
+    { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor',        icon: Table2 },
     { href: `/restaurant/${slug}/guests`,       label: 'Guests',       icon: Users },
     ...(isAdmin ? [{ href: `/restaurant/${slug}/more`, label: 'More', icon: Menu, exact: false }] : []),
   ]

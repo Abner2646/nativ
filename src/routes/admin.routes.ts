@@ -310,6 +310,145 @@ export async function deleteTable(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+// ── SERVICE VIEW (floor plan en vivo) ─────────────────────────
+// Sin requireAdmin: la operación del servicio es tarea del staff.
+
+// Fecha y hora actuales en el timezone del restaurante
+function tenantNow(timezone: string) {
+  const now = new Date()
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(now)              // YYYY-MM-DD
+  const time = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: false }).format(now) // HH:MM
+  return { date, time }
+}
+
+export async function getServiceState(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { date } = tenantNow(ctx.settings.timezone)
+
+  const [{ data: tables }, { data: reservations }] = await Promise.all([
+    supabaseAdmin.from('restaurant_tables').select('*')
+      .eq('tenant_id', ctx.tenant.id).eq('is_active', true).order('created_at'),
+    supabaseAdmin.from('reservations')
+      .select('id, time, party_size, status, occasion, notes, seated_at, finished_at, source, seating_area_id, shift_id, guest:guests(name, phone), table_assignments(table_id), shift:shifts(duration_minutes)')
+      .eq('tenant_id', ctx.tenant.id).eq('date', date).eq('status', 'confirmed')
+      .order('time'),
+  ])
+
+  return NextResponse.json({ date, tables: tables || [], reservations: reservations || [] })
+}
+
+export async function seatReservation(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { reservation_id } = await req.json()
+  if (!reservation_id) return NextResponse.json({ error: 'reservation_id required' }, { status: 400 })
+  const { data, error } = await supabaseAdmin
+    .from('reservations')
+    .update({ seated_at: new Date().toISOString() })
+    .eq('id', reservation_id).eq('tenant_id', ctx.tenant.id).eq('status', 'confirmed')
+    .select('id').maybeSingle()
+  if (error || !data) return NextResponse.json({ error: 'Failed to seat' }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
+export async function finishReservation(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { reservation_id } = await req.json()
+  if (!reservation_id) return NextResponse.json({ error: 'reservation_id required' }, { status: 400 })
+  // status completed dispara el trigger de visit_count del guest
+  const { data, error } = await supabaseAdmin
+    .from('reservations')
+    .update({ finished_at: new Date().toISOString(), status: 'completed' })
+    .eq('id', reservation_id).eq('tenant_id', ctx.tenant.id).eq('status', 'confirmed')
+    .select('id').maybeSingle()
+  if (error || !data) return NextResponse.json({ error: 'Failed to finish' }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
+export async function createWalkIn(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { table_id, party_size } = await req.json()
+  if (!table_id || !party_size) return NextResponse.json({ error: 'table_id and party_size required' }, { status: 400 })
+
+  const { date, time } = tenantNow(ctx.settings.timezone)
+  const dayOfWeek = new Date(date).getUTCDay()
+
+  // Shift que cubre la hora actual; si no hay, el próximo de hoy; si no, el último
+  const { data: shifts } = await supabaseAdmin
+    .from('shifts').select('id, start_time, end_time, duration_minutes')
+    .eq('tenant_id', ctx.tenant.id).eq('day_of_week', dayOfWeek).eq('is_active', true)
+    .order('start_time')
+  if (!shifts || shifts.length === 0) {
+    return NextResponse.json({ error: 'No shifts configured for today' }, { status: 400 })
+  }
+  const hhmm = (t: string) => t.slice(0, 5)
+  const shift =
+    shifts.find(s => hhmm(s.start_time) <= time && time < hhmm(s.end_time)) ||
+    shifts.find(s => hhmm(s.start_time) > time) ||
+    shifts[shifts.length - 1]
+
+  // Guest placeholder compartido por todos los walk-ins del tenant
+  const { data: guest } = await supabaseAdmin
+    .from('guests')
+    .upsert({ tenant_id: ctx.tenant.id, email: 'walk-in@nativ.local', name: 'Walk-in' }, { onConflict: 'tenant_id,email' })
+    .select('id').single()
+  if (!guest) return NextResponse.json({ error: 'Failed to create walk-in guest' }, { status: 500 })
+
+  const { data, error } = await supabaseAdmin.rpc('seat_walk_in', {
+    p_tenant_id: ctx.tenant.id,
+    p_table_id: table_id,
+    p_guest_id: guest.id,
+    p_shift_id: shift.id,
+    p_date: date,
+    p_time: time,
+    p_duration_minutes: shift.duration_minutes,
+    p_party_size: party_size,
+  })
+  if (error) {
+    if (error.message?.includes('table_occupied'))  return NextResponse.json({ error: 'That table is already occupied' }, { status: 409 })
+    if (error.message?.includes('party_too_large')) return NextResponse.json({ error: 'Party is too large for that table' }, { status: 409 })
+    console.error('seat_walk_in error:', error)
+    return NextResponse.json({ error: 'Failed to seat walk-in' }, { status: 500 })
+  }
+  return NextResponse.json({ success: true, ...( data as object) }, { status: 201 })
+}
+
+export async function assignTable(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { reservation_id, table_id } = await req.json()
+  if (!reservation_id || !table_id) return NextResponse.json({ error: 'reservation_id and table_id required' }, { status: 400 })
+
+  const { data, error } = await supabaseAdmin.rpc('assign_reservation_table', {
+    p_tenant_id: ctx.tenant.id,
+    p_reservation_id: reservation_id,
+    p_table_id: table_id,
+  })
+  if (error) {
+    if (error.message?.includes('table_occupied'))  return NextResponse.json({ error: 'That table is occupied during this reservation' }, { status: 409 })
+    if (error.message?.includes('party_too_large')) return NextResponse.json({ error: 'Party is too large for that table' }, { status: 409 })
+    console.error('assign_reservation_table error:', error)
+    return NextResponse.json({ error: 'Failed to assign table' }, { status: 500 })
+  }
+  return NextResponse.json({ success: true, ...(data as object) })
+}
+
+export async function unassignTable(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const reservationId = new URL(req.url).searchParams.get('reservation_id')
+  if (!reservationId) return NextResponse.json({ error: 'reservation_id required' }, { status: 400 })
+  const { error } = await supabaseAdmin
+    .from('table_assignments')
+    .delete()
+    .eq('reservation_id', reservationId).eq('tenant_id', ctx.tenant.id)
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
 // ── BLOCKED DATES ─────────────────────────────────────────────
 
 export async function getBlockedDates(req: NextRequest) {
