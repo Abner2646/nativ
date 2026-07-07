@@ -99,6 +99,33 @@ export interface ShiftArea {
   seating_areas?: SeatingArea
 }
 
+export type TableShape = 'round' | 'square' | 'rect'
+
+export interface RestaurantTable {
+  id: string
+  tenant_id: string
+  seating_area_id: string
+  name: string
+  shape: TableShape
+  min_covers: number
+  max_covers: number
+  x: number
+  y: number
+  width: number
+  height: number
+  rotation: number
+  is_active: boolean
+  created_at: string
+}
+
+export interface TableAssignment {
+  id: string
+  tenant_id: string
+  reservation_id: string
+  table_id: string
+  created_at: string
+}
+
 export interface BlockedDate {
   id: string
   tenant_id: string

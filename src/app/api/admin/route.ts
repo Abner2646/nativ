@@ -5,6 +5,7 @@ import {
   getGuests, updateGuest, addGuestTag, removeGuestTag,
   getShifts, createShift, updateShift, deleteShift,
   getAreas, createArea, updateArea, deleteArea,
+  getTables, createTable, updateTable, deleteTable,
   getBlockedDates, createBlockedDate, deleteBlockedDate,
   getSpecialEvents, createSpecialEvent, deleteSpecialEvent,
   getSettings, updateSettings, getStats,
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
     case 'guests':          return getGuests(req)
     case 'shifts':          return getShifts(req)
     case 'areas':           return getAreas(req)
+    case 'tables':          return getTables(req)
     case 'blocked-dates':   return getBlockedDates(req)
     case 'events':          return getSpecialEvents(req)
     case 'settings':        return getSettings(req)
@@ -42,6 +44,7 @@ export async function POST(req: NextRequest) {
   switch (r) {
     case 'shifts':        return createShift(req)
     case 'areas':         return createArea(req)
+    case 'tables':        return createTable(req)
     case 'blocked-dates': return createBlockedDate(req)
     case 'events':        return createSpecialEvent(req)
     case 'employees':     return inviteEmployee(req)
@@ -59,6 +62,7 @@ export async function PATCH(req: NextRequest) {
     case 'guests':          return updateGuest(req)
     case 'shifts':          return updateShift(req)
     case 'areas':           return updateArea(req)
+    case 'tables':          return updateTable(req)
     case 'settings':        return updateSettings(req)
     case 'campaigns':       return updateCampaign(req)
     case 'birthday-config': return updateBirthdayConfig(req)
@@ -71,6 +75,7 @@ export async function DELETE(req: NextRequest) {
   switch (r) {
     case 'shifts':        return deleteShift(req)
     case 'areas':         return deleteArea(req)
+    case 'tables':        return deleteTable(req)
     case 'blocked-dates': return deleteBlockedDate(req)
     case 'events':        return deleteSpecialEvent(req)
     case 'employees':     return removeEmployee(req)

@@ -226,6 +226,90 @@ export async function deleteArea(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+// ── RESTAURANT TABLES (floor plan) ────────────────────────────
+
+export async function getTables(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { data, error } = await supabaseAdmin
+    .from('restaurant_tables')
+    .select('*')
+    .eq('tenant_id', ctx.tenant.id)
+    .order('created_at')
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ tables: data })
+}
+
+export async function createTable(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx, role } = r as any
+  const adminErr = requireAdmin(role); if (adminErr) return adminErr
+  const { seating_area_id, name, shape, min_covers, max_covers, x, y, width, height, rotation } = await req.json()
+  if (!seating_area_id || !name?.trim()) return NextResponse.json({ error: 'seating_area_id and name required' }, { status: 400 })
+  const { data, error } = await supabaseAdmin
+    .from('restaurant_tables')
+    .insert({
+      tenant_id: ctx.tenant.id, seating_area_id, name: name.trim(),
+      shape: shape || 'square',
+      min_covers: min_covers ?? 1, max_covers: max_covers ?? 4,
+      x: x ?? 40, y: y ?? 40, width: width ?? 10, height: height ?? 10,
+      rotation: rotation ?? 0,
+    })
+    .select().single()
+  if (error) {
+    if (error.code === '23505') return NextResponse.json({ error: 'A table with that name already exists in this area' }, { status: 409 })
+    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  }
+  return NextResponse.json({ table: data }, { status: 201 })
+}
+
+export async function updateTable(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx, role } = r as any
+  const adminErr = requireAdmin(role); if (adminErr) return adminErr
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const body = await req.json()
+  const allowed = ['name', 'shape', 'min_covers', 'max_covers', 'x', 'y', 'width', 'height', 'rotation', 'is_active', 'seating_area_id']
+  const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)))
+  const { data, error } = await supabaseAdmin
+    .from('restaurant_tables')
+    .update(patch)
+    .eq('id', id).eq('tenant_id', ctx.tenant.id)
+    .select().single()
+  if (error) {
+    if (error.code === '23505') return NextResponse.json({ error: 'A table with that name already exists in this area' }, { status: 409 })
+    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  }
+  return NextResponse.json({ table: data })
+}
+
+export async function deleteTable(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx, role } = r as any
+  const adminErr = requireAdmin(role); if (adminErr) return adminErr
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  // Bloquear si hay reservas futuras asignadas a esta mesa
+  const today = new Date().toISOString().split('T')[0]
+  const { data: future } = await supabaseAdmin
+    .from('table_assignments')
+    .select('id, reservations!inner(date, status)')
+    .eq('table_id', id)
+    .eq('reservations.status', 'confirmed')
+    .gte('reservations.date', today)
+    .limit(1)
+  if (future && future.length > 0) {
+    return NextResponse.json({ error: 'This table has upcoming reservations assigned. Reassign them first.' }, { status: 409 })
+  }
+  const { error } = await supabaseAdmin
+    .from('restaurant_tables')
+    .delete()
+    .eq('id', id).eq('tenant_id', ctx.tenant.id)
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
 // ── BLOCKED DATES ─────────────────────────────────────────────
 
 export async function getBlockedDates(req: NextRequest) {
