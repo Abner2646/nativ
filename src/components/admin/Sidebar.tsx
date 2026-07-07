@@ -4,9 +4,9 @@ import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { getTenantDomain, getTenantBaseUrl } from '@/lib/domain'
 import {
-  LayoutDashboard, CalendarDays, Users, Sparkles, Clock, Armchair,
+  LayoutDashboard, CalendarDays, Users, Sparkles, Clock,
   CalendarRange, CreditCard, UserCog, Image, Code2, Settings,
-  Receipt, ExternalLink, Search, Table2, PanelLeftClose, PanelLeftOpen,
+  Receipt, ExternalLink, Table2, PanelLeftClose, PanelLeftOpen,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -26,7 +26,7 @@ const NAV = (slug: string): NavItem[] => [
   { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',   icon: Sparkles,      comingSoon: true, adminOnly: true },
   '---',
   { href: `/restaurant/${slug}/shifts`,       label: 'Shifts',         icon: Clock,         adminOnly: true },
-  { href: `/restaurant/${slug}/areas`,        label: 'Seating areas',  icon: Armchair,      adminOnly: true },
+  // Seating areas se administra desde Floor plan (link en Edit layout)
   { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor plan',     icon: Table2 },
   { href: `/restaurant/${slug}/events`,       label: 'Special events', icon: CalendarRange, adminOnly: true },
   { href: `/restaurant/${slug}/deposits`,     label: 'Deposits',       icon: CreditCard,    adminOnly: true },
@@ -110,19 +110,59 @@ export function Sidebar({
   const border = '1px solid rgba(255,255,255,0.06)'
 
   return (
-    // md: slim (60px), lg: full (240px)
+    <>
+    {/* ── Account — fijo arriba a la derecha, estilo Supabase ── */}
+    <div className="fixed top-3 right-4 z-40" ref={menuRef}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-offwhite/70 transition-colors select-none shadow-lg"
+        style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.14)' }}
+        aria-label="Account menu"
+      >
+        {initial}
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-2 w-52 rounded-xl shadow-2xl overflow-hidden z-50"
+          style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <div className="px-3 py-2.5" style={{ borderBottom: border }}>
+            <p className="text-xs text-offwhite/35 truncate">{userEmail}</p>
+            <span className={`mt-1 inline-block text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded-full ${
+              isAdmin ? 'bg-gold/12 text-gold border border-gold/25' : 'bg-white/[0.06] text-offwhite/40 border border-white/[0.08]'
+            }`}>{role}</span>
+          </div>
+          <Link href="/account" onClick={() => setOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-offwhite/60 hover:text-offwhite hover:bg-white/[0.04] transition-colors">
+            My account
+          </Link>
+          <Link href="/dashboard" onClick={() => setOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-offwhite/60 hover:text-offwhite hover:bg-white/[0.04] transition-colors">
+            All restaurants
+          </Link>
+          <div style={{ borderTop: border }}>
+            <form action="/api/auth/logout" method="POST">
+              <button className="w-full text-left px-3 py-2 text-sm text-red-400/80 hover:text-red-400 hover:bg-white/[0.04] transition-colors">
+                Sign out
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* md: slim (60px), lg: full (240px) */}
     <aside
       className={`hidden md:flex md:w-[60px] ${collapsed ? '' : 'lg:w-60'} flex-col fixed h-screen bg-midnight z-10 transition-[width]`}
       style={{ borderRight: border }}
     >
 
-      {/* ── Header ── */}
+      {/* ── Header: nombre + toggle de colapso (solo desktop) ── */}
       <div
-        className={`flex items-center justify-center ${collapsed ? '' : 'lg:justify-between lg:px-4'} px-2 pt-3 pb-3.5 gap-2`}
+        className={`hidden lg:flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} pt-3 pb-3.5 gap-2`}
         style={{ borderBottom: border }}
       >
-        {/* Restaurant name + back link — hidden on slim */}
-        <div className={collapsed ? 'hidden' : 'hidden lg:block min-w-0'}>
+        <div className={collapsed ? 'hidden' : 'min-w-0'}>
           <Link
             href="/dashboard"
             className="text-[10px] text-offwhite/30 hover:text-offwhite/60 transition-colors flex items-center gap-1 mb-1.5 w-fit"
@@ -132,60 +172,14 @@ export function Sidebar({
           <p className="font-satoshi font-bold text-offwhite truncate text-sm leading-tight">{name}</p>
           <p className="text-[10px] text-offwhite/25 mt-0.5 truncate">{getTenantDomain(slug)}</p>
         </div>
-
-        {/* Avatar — always shown */}
-        <div className="relative shrink-0" ref={menuRef}>
-          <button
-            onClick={() => setOpen(v => !v)}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-offwhite/60 transition-colors select-none"
-            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
-            aria-label="Account menu"
-          >
-            {initial}
-          </button>
-          {open && (
-            <div
-              className="absolute left-0 lg:right-0 lg:left-auto top-full mt-2 w-52 rounded-xl shadow-2xl overflow-hidden z-50"
-              style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.08)' }}
-            >
-              <div className="px-3 py-2.5" style={{ borderBottom: border }}>
-                <p className="text-xs text-offwhite/35 truncate">{userEmail}</p>
-                <span className={`mt-1 inline-block text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded-full ${
-                  isAdmin ? 'bg-gold/12 text-gold border border-gold/25' : 'bg-white/[0.06] text-offwhite/40 border border-white/[0.08]'
-                }`}>{role}</span>
-              </div>
-              <Link href="/account" onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-offwhite/60 hover:text-offwhite hover:bg-white/[0.04] transition-colors">
-                My account
-              </Link>
-              <Link href="/dashboard" onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-offwhite/60 hover:text-offwhite hover:bg-white/[0.04] transition-colors">
-                All restaurants
-              </Link>
-              <div style={{ borderTop: border }}>
-                <form action="/api/auth/logout" method="POST">
-                  <button className="w-full text-left px-3 py-2 text-sm text-red-400/80 hover:text-red-400 hover:bg-white/[0.04] transition-colors">
-                    Sign out
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="p-1.5 rounded-lg text-offwhite/30 hover:text-offwhite/60 transition-colors shrink-0"
+        >
+          {collapsed ? <PanelLeftOpen size={15} strokeWidth={1.6} /> : <PanelLeftClose size={15} strokeWidth={1.6} />}
+        </button>
       </div>
-
-      {/* ── Search shortcut — hidden on slim ── */}
-      <button
-        onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
-        className={`${collapsed ? 'hidden' : 'hidden lg:flex'} mx-3 mt-2.5 items-center gap-2 px-3 py-2 rounded-lg text-xs text-offwhite/30 hover:text-offwhite/50 transition-colors`}
-        style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-      >
-        <Search size={12} />
-        <span className="flex-1 text-left">Search guests…</span>
-        <kbd className="text-[9px] px-1 py-0.5 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)' }}>
-          ⌘K
-        </kbd>
-      </button>
 
       {/* ── Nav ── */}
       <nav className="flex-1 overflow-y-auto py-2 mt-1">
@@ -241,16 +235,6 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* ── Collapse toggle (solo desktop; en tablet siempre es rail) ── */}
-      <button
-        onClick={toggleCollapsed}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className={`hidden lg:flex items-center gap-2 mx-1.5 px-1.5 py-2 md:justify-center ${collapsed ? '' : 'lg:justify-start lg:mx-2 lg:px-3'} rounded-lg text-xs text-offwhite/30 hover:text-offwhite/60 transition-colors`}
-      >
-        {collapsed ? <PanelLeftOpen size={15} strokeWidth={1.6} /> : <PanelLeftClose size={15} strokeWidth={1.6} />}
-        <span className={collapsed ? 'hidden' : 'hidden lg:block'}>Collapse</span>
-      </button>
-
       {/* ── Footer ── */}
       <div className={`p-2 ${collapsed ? '' : 'lg:p-3'}`} style={{ borderTop: border }}>
         {isAdmin ? (
@@ -292,5 +276,6 @@ export function Sidebar({
         )}
       </div>
     </aside>
+    </>
   )
 }
