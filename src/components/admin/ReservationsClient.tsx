@@ -22,6 +22,12 @@ const secondaryBtn = 'px-4 py-2.5 border border-white/[0.12] text-offwhite/50 ro
 
 function fmtTime(t: string) { return t.slice(0, 5) }
 
+// "T1" o "T1+T2" si la reserva tiene mesa(s) asignada(s)
+function tableLabel(r: Reservation): string | null {
+  const names = (r.table_assignments || []).map(a => a.table?.name).filter(Boolean)
+  return names.length > 0 ? names.join('+') : null
+}
+
 const card = { backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }
 
 interface Props {
@@ -77,6 +83,9 @@ function CompactRow({
           <p className="text-xs text-offwhite/35 mt-0.5 flex items-center gap-1.5">
             {r.occasion && <OccasionIcon occasion={r.occasion} size={11} />}
             <span>{r.party_size} {r.party_size === 1 ? 'person' : 'people'}</span>
+            {tableLabel(r) && (
+              <span className="font-mono text-offwhite/50">· {tableLabel(r)}</span>
+            )}
             {r.deposit_amount && (
               <span className="font-semibold" style={{ color: '#C9A96E' }}>· ${r.deposit_amount.toFixed(0)}</span>
             )}
@@ -147,6 +156,12 @@ function DetailPanel({
             <div>
               <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1">Area</p>
               <p className="text-sm text-offwhite/70">{r.seating_area.name}</p>
+            </div>
+          )}
+          {tableLabel(r) && (
+            <div>
+              <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1">Table</p>
+              <p className="text-sm font-mono text-offwhite/70">{tableLabel(r)}</p>
             </div>
           )}
           {r.occasion && (
@@ -352,6 +367,10 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                     {r.seating_area?.name && (
                       <><span className="text-offwhite/15 text-[11px]">·</span>
                       <span className="text-[11px] text-offwhite/30">{r.seating_area.name}</span></>
+                    )}
+                    {tableLabel(r) && (
+                      <><span className="text-offwhite/15 text-[11px]">·</span>
+                      <span className="text-[11px] font-mono text-offwhite/45">{tableLabel(r)}</span></>
                     )}
                     {r.occasion && (
                       <><span className="text-offwhite/15 text-[11px]">·</span>
