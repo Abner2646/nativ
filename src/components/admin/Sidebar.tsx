@@ -26,7 +26,7 @@ const NAV = (slug: string): NavItem[] => [
   '---',
   { href: `/restaurant/${slug}/shifts`,       label: 'Shifts',         icon: Clock,         adminOnly: true },
   { href: `/restaurant/${slug}/areas`,        label: 'Seating areas',  icon: Armchair,      adminOnly: true },
-  { href: `/restaurant/${slug}/tables`,       label: 'Tables',         icon: Table2,        comingSoon: true, adminOnly: true },
+  { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor plan',     icon: Table2,        adminOnly: true },
   { href: `/restaurant/${slug}/events`,       label: 'Special events', icon: CalendarRange, adminOnly: true },
   { href: `/restaurant/${slug}/deposits`,     label: 'Deposits',       icon: CreditCard,    adminOnly: true },
   '---',

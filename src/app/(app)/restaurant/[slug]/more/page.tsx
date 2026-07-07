@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Clock, Armchair, CalendarRange, CreditCard,
   Settings, Image, Code2, Sparkles,
-  UserCog, Receipt, Gift, ExternalLink,
+  UserCog, Receipt, Gift, ExternalLink, Table2,
 } from 'lucide-react'
 
 const SECTIONS = (slug: string) => [
@@ -14,6 +14,7 @@ const SECTIONS = (slug: string) => [
     items: [
       { href: `/restaurant/${slug}/shifts`,   icon: Clock,          label: 'Shifts',         desc: 'Service hours and slot capacity',    comingSoon: false },
       { href: `/restaurant/${slug}/areas`,    icon: Armchair,       label: 'Seating areas',  desc: 'Configure your areas and zones',     comingSoon: false },
+      { href: `/restaurant/${slug}/floor-plan`, icon: Table2,       label: 'Floor plan',     desc: 'Draw your dining room and tables',   comingSoon: false },
       { href: `/restaurant/${slug}/events`,   icon: CalendarRange,  label: 'Special events', desc: 'Events and blocked dates',           comingSoon: false },
       { href: `/restaurant/${slug}/deposits`, icon: CreditCard,     label: 'Deposits',       desc: 'Deposit rules and Stripe Connect',   comingSoon: false },
     ],
