@@ -1,11 +1,11 @@
 'use client'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
-import { RestaurantTable, TableShape, SeatingArea } from '@/lib/types'
-import { Circle, Square, RectangleHorizontal, RotateCw, Trash2, Plus, Play, Pencil } from 'lucide-react'
+import { RestaurantTable, TableShape, SeatingArea, TableCombination } from '@/lib/types'
+import { Circle, Square, RectangleHorizontal, RotateCw, Trash2, Plus, Play, Pencil, Link2, X } from 'lucide-react'
 import { FloorService } from '@/components/admin/FloorService'
 
 async function getToken() {
@@ -66,6 +66,11 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
   const [pendingDelete, setPendingDelete] = useState<RestaurantTable | null>(null)
   const [deleting, setDeleting]     = useState(false)
 
+  const [combos, setCombos]                 = useState<TableCombination[]>([])
+  const [comboMode, setComboMode]           = useState(false)
+  const [comboSelection, setComboSelection] = useState<string[]>([])
+  const [comboMax, setComboMax]             = useState(0)
+
   const canvasRef = useRef<HTMLDivElement>(null)
   // Drag state fuera de React para no re-renderizar en cada pointermove
   const dragRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
@@ -77,6 +82,15 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...options?.headers },
     })
   }
+
+  // Cargar combos existentes
+  useEffect(() => {
+    (async () => {
+      const res = await adminFetch('resource=combos')
+      if (res.ok) { const d = await res.json(); setCombos(d.combos || []) }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug])
 
   const patchTable = useCallback(async (id: string, patch: Partial<RestaurantTable>) => {
     setSaving(true)
@@ -151,7 +165,19 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
     const drag = dragRef.current
     dragRef.current = null
     if (!drag) return
-    if (!drag.moved) { setSelectedId(t.id); return }
+    if (!drag.moved) {
+      if (comboMode) {
+        setComboSelection(prev => {
+          const next = prev.includes(t.id) ? prev.filter(x => x !== t.id) : [...prev, t.id]
+          // Sugerir capacidad = suma de máximos de las mesas elegidas
+          setComboMax(tables.filter(tb => next.includes(tb.id)).reduce((s, tb) => s + tb.max_covers, 0))
+          return next
+        })
+        return
+      }
+      setSelectedId(t.id)
+      return
+    }
     // Snap y persistir
     setTables(prev => prev.map(tb => {
       if (tb.id !== drag.id) return tb
@@ -195,6 +221,8 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
     setDeleting(false)
     if (res.ok) {
       setTables(prev => prev.filter(t => t.id !== pendingDelete.id))
+      // El trigger del server borra combos que quedan con <2 mesas; reflejarlo acá
+      setCombos(prev => prev.filter(c => !c.table_combination_members?.some(m => m.table_id === pendingDelete.id)))
       if (selectedId === pendingDelete.id) setSelectedId(null)
       toast.success('Table deleted')
     } else {
@@ -202,6 +230,42 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
       toast.error(data.error || 'Failed to delete')
     }
     setPendingDelete(null)
+  }
+
+  // ── Combos ──────────────────────────────────────────────────
+  const startComboMode = () => { setComboMode(true); setComboSelection([]); setComboMax(0); setSelectedId(null) }
+  const cancelComboMode = () => { setComboMode(false); setComboSelection([]) }
+
+  const createCombo = async () => {
+    if (!activeAreaId || comboSelection.length < 2) return
+    const memberTables = tables.filter(t => comboSelection.includes(t.id))
+    const name = memberTables.map(t => t.name).join('+')
+    const res = await adminFetch('resource=combos', {
+      method: 'POST',
+      body: JSON.stringify({
+        seating_area_id: activeAreaId, name, table_ids: comboSelection,
+        min_covers: 1, max_covers: comboMax,
+      }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setCombos(prev => [...prev, data.combo])
+      toast.success(`Combination ${name} created`)
+      cancelComboMode()
+    } else {
+      const data = await res.json()
+      toast.error(data.error || 'Failed to create combination')
+    }
+  }
+
+  const removeCombo = async (id: string) => {
+    const res = await adminFetch(`resource=combos&id=${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setCombos(prev => prev.filter(c => c.id !== id))
+      toast.success('Combination deleted')
+    } else {
+      toast.error('Failed to delete combination')
+    }
   }
 
   // ── Sin áreas ───────────────────────────────────────────────
@@ -319,7 +383,8 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
             )}
 
             {areaTables.map(t => {
-              const isSelected = t.id === selectedId
+              const isSelected = !comboMode && t.id === selectedId
+              const inCombo    = comboMode && comboSelection.includes(t.id)
               return (
                 <div
                   key={t.id}
@@ -334,10 +399,10 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
                     height: `${hUnits(t)}%`,
                     transform: `translate(-50%, -50%) rotate(${t.rotation}deg)`,
                     borderRadius: t.shape === 'round' ? '50%' : '14%',
-                    backgroundColor: isSelected ? 'rgba(201,169,110,0.20)' : 'rgba(255,255,255,0.07)',
-                    border: isSelected ? '2px solid #C9A96E' : '1.5px solid rgba(255,255,255,0.18)',
+                    backgroundColor: isSelected || inCombo ? 'rgba(201,169,110,0.20)' : 'rgba(255,255,255,0.07)',
+                    border: inCombo ? '2px dashed #C9A96E' : isSelected ? '2px solid #C9A96E' : '1.5px solid rgba(255,255,255,0.18)',
                     transition: dragRef.current?.id === t.id ? 'none' : 'border-color 0.15s ease, background-color 0.15s ease',
-                    zIndex: isSelected ? 2 : 1,
+                    zIndex: isSelected || inCombo ? 2 : 1,
                   }}
                 >
                   <span
@@ -366,10 +431,82 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
 
         {/* ── Edit panel ── */}
         <div className="w-full lg:w-72 shrink-0 rounded-2xl p-5" style={card}>
-          {!selected ? (
-            <p className="text-sm text-offwhite/30 text-center py-8">
-              Select a table to edit it,<br />or add one from the toolbar.
-            </p>
+          {comboMode ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-satoshi font-bold text-[15px] text-offwhite">New combination</h3>
+                <button onClick={cancelComboMode} className="p-1 text-offwhite/30 hover:text-offwhite transition-colors">
+                  <X size={15} />
+                </button>
+              </div>
+              <p className="text-xs text-offwhite/40">
+                Tap 2 or more tables on the plan to join them for large parties.
+              </p>
+              <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+                {comboSelection.length === 0
+                  ? <span className="text-xs text-offwhite/25">No tables selected yet</span>
+                  : comboSelection.map(id => {
+                      const t = tables.find(tb => tb.id === id)
+                      return t ? (
+                        <span key={id} className="text-xs px-2 py-1 rounded-lg font-semibold"
+                          style={{ backgroundColor: 'rgba(201,169,110,0.15)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.30)' }}>
+                          {t.name}
+                        </span>
+                      ) : null
+                    })}
+              </div>
+              {comboSelection.length >= 2 && (
+                <div>
+                  <label className={labelCls}>Max covers together</label>
+                  <input type="number" min={1} max={60} value={comboMax}
+                    onChange={e => setComboMax(parseInt(e.target.value) || 0)}
+                    className={inputCls} />
+                  <p className="text-[11px] text-offwhite/25 mt-1">
+                    Often less than the sum — joined tables lose a seat or two.
+                  </p>
+                </div>
+              )}
+              <button onClick={createCombo} disabled={comboSelection.length < 2 || comboMax < 1}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold bg-offwhite text-midnight hover:bg-offwhite/90 transition-colors disabled:opacity-40">
+                Create combination
+              </button>
+            </div>
+          ) : !selected ? (
+            <div>
+              <p className="text-sm text-offwhite/30 text-center py-6">
+                Select a table to edit it,<br />or add one from the toolbar.
+              </p>
+              <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className={labelCls} style={{ marginBottom: 0 }}>Combinations</p>
+                  <button onClick={startComboMode}
+                    className="flex items-center gap-1.5 text-xs text-offwhite/50 hover:text-offwhite px-2.5 py-1.5 rounded-lg transition-colors"
+                    style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+                    <Link2 size={12} /> New
+                  </button>
+                </div>
+                {combos.filter(c => c.seating_area_id === activeAreaId).length === 0 ? (
+                  <p className="text-xs text-offwhite/25 mt-2">
+                    None yet. Combine tables so bigger parties can book online.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 mt-2">
+                    {combos.filter(c => c.seating_area_id === activeAreaId).map(c => (
+                      <div key={c.id} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <Link2 size={12} className="text-offwhite/30 shrink-0" />
+                        <span className="flex-1 text-sm text-offwhite/70 truncate">{c.name}</span>
+                        <span className="text-xs text-offwhite/30">up to {c.max_covers}</span>
+                        <button onClick={() => removeCombo(c.id)}
+                          className="p-1 text-offwhite/20 hover:text-red-400 transition-colors">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
