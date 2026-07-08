@@ -39,7 +39,7 @@ export default async function RestaurantLayout({
       {/* min-w-0: sin esto, el min-content de contenido ancho (timeline, tablas)
           se propaga y main desborda el viewport en vez de dejar scrollear adentro.
           .sidebar-collapsed en <body> la setea el toggle del Sidebar. */}
-      <main className="flex-1 min-w-0 min-h-screen md:ml-[60px] lg:ml-60 [.sidebar-collapsed_&]:lg:!ml-[60px] transition-[margin] pb-16 md:pb-0">
+      <main className="flex-1 min-w-0 min-h-screen md:ml-[60px] lg:ml-60 [.sidebar-collapsed_&]:lg:!ml-[60px] transition-[margin] duration-200 ease-out motion-reduce:transition-none pb-16 md:pb-0">
         {children}
       </main>
       <BottomNav slug={slug} todayCount={todayCount ?? 0} role={access.role} />
