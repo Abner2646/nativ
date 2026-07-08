@@ -22,12 +22,12 @@ type NavItem = {
 const NAV = (slug: string): NavItem[] => [
   { href: `/restaurant/${slug}`,              label: 'Dashboard',      icon: LayoutDashboard, exact: true, adminOnly: true },
   { href: `/restaurant/${slug}/reservations`, label: 'Reservations',   icon: CalendarDays },
+  // Seating areas se administra desde Floor plan (link en Edit layout)
+  { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor plan',     icon: Table2 },
   { href: `/restaurant/${slug}/guests`,       label: 'Guests',         icon: Users },
   { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',   icon: Sparkles,      comingSoon: true, adminOnly: true },
   '---',
   { href: `/restaurant/${slug}/shifts`,       label: 'Shifts',         icon: Clock,         adminOnly: true },
-  // Seating areas se administra desde Floor plan (link en Edit layout)
-  { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor plan',     icon: Table2 },
   { href: `/restaurant/${slug}/events`,       label: 'Special events', icon: CalendarRange, adminOnly: true },
   { href: `/restaurant/${slug}/deposits`,     label: 'Deposits',       icon: CreditCard,    adminOnly: true },
   '---',
@@ -64,24 +64,39 @@ export function Sidebar({
 
   const canHover = () => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
 
+  const PEEK_ENTER_MS = 300
+  const PEEK_LEAVE_MS = 500
+
   const onSidebarEnter = () => {
     if (!collapsed || !canHover()) return
     if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null }
     if (!peek && !enterTimer.current) {
-      enterTimer.current = setTimeout(() => { setPeek(true); enterTimer.current = null }, 250)
+      enterTimer.current = setTimeout(() => { setPeek(true); enterTimer.current = null }, PEEK_ENTER_MS)
     }
   }
   const onSidebarLeave = () => {
     if (enterTimer.current) { clearTimeout(enterTimer.current); enterTimer.current = null }
     if (peek && !leaveTimer.current) {
       // Salida más lenta que la entrada: perdona el overshoot del mouse
-      leaveTimer.current = setTimeout(() => { setPeek(false); leaveTimer.current = null }, 350)
+      leaveTimer.current = setTimeout(() => { setPeek(false); leaveTimer.current = null }, PEEK_LEAVE_MS)
     }
   }
-  // Teclado: foco dentro del sidebar expande igual que el hover
-  const onSidebarFocus = () => { if (collapsed) { if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null }; setPeek(true) } }
+  // Solo TECLADO expande por foco (:focus-visible). Un click del mouse
+  // también enfoca — sin este guard, clickear un ícono del rail abría
+  // el sidebar al instante, salteándose los delays del hover.
+  const onSidebarFocus = (e: React.FocusEvent) => {
+    if (!collapsed) return
+    const el = e.target as HTMLElement
+    if (!el.matches?.(':focus-visible')) return
+    if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null }
+    setPeek(true)
+  }
   const onSidebarBlur = (e: React.FocusEvent) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) setPeek(false)
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return
+    // Mismo delay de salida que el mouse — nada colapsa de golpe
+    if (peek && !leaveTimer.current) {
+      leaveTimer.current = setTimeout(() => { setPeek(false); leaveTimer.current = null }, PEEK_LEAVE_MS)
+    }
   }
 
   // Colapso persistente por dispositivo. La clase en <body> coordina
