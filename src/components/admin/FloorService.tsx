@@ -91,11 +91,13 @@ interface Props {
   areas: SeatingArea[]
   slug: string
   tenantId: string
+  // Estado inicial del server: evita el segundo loading tras el skeleton
+  initialService?: ServiceState | null
 }
 
-export function FloorService({ areas, slug, tenantId }: Props) {
-  const [state, setState]               = useState<ServiceState | null>(null)
-  const [fetchedAt, setFetchedAt]       = useState(0)
+export function FloorService({ areas, slug, tenantId, initialService }: Props) {
+  const [state, setState]               = useState<ServiceState | null>(initialService ?? null)
+  const [fetchedAt, setFetchedAt]       = useState(() => (initialService ? Date.now() : 0))
   const [view, setView]                 = useState<'floor' | 'timeline'>('floor')
   const [zoom, setZoom]                 = useState(1)
   const [activeAreaId, setActiveAreaId] = useState<string | null>(areas[0]?.id ?? null)
@@ -125,7 +127,11 @@ export function FloorService({ areas, slug, tenantId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
-  useEffect(() => { refetch() }, [refetch])
+  // Solo fetch inicial si no vino estado del server (p.ej. al volver del editor)
+  useEffect(() => {
+    if (!initialService) refetch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refetch])
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 30_000)
     const onVisible = () => { if (!document.hidden) refetch() }
