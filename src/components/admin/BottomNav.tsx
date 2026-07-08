@@ -9,13 +9,20 @@ export function BottomNav({ slug, todayCount = 0, role = 'admin' }: Props) {
   const pathname = usePathname()
   const isAdmin = role === 'admin'
 
-  const items = [
-    { href: `/restaurant/${slug}`,              label: 'Home',         icon: LayoutDashboard, exact: true },
-    { href: `/restaurant/${slug}/reservations`, label: 'Reservations', icon: CalendarDays },
-    { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor',        icon: Table2 },
-    { href: `/restaurant/${slug}/guests`,       label: 'Guests',       icon: Users },
-    ...(isAdmin ? [{ href: `/restaurant/${slug}/more`, label: 'More', icon: Menu, exact: false }] : []),
-  ]
+  // Empleados: el Floor plan ES su home (el dashboard redirige ahí)
+  const items = isAdmin
+    ? [
+        { href: `/restaurant/${slug}`,              label: 'Home',         icon: LayoutDashboard, exact: true },
+        { href: `/restaurant/${slug}/reservations`, label: 'Reservations', icon: CalendarDays },
+        { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor',        icon: Table2 },
+        { href: `/restaurant/${slug}/guests`,       label: 'Guests',       icon: Users },
+        { href: `/restaurant/${slug}/more`,         label: 'More',         icon: Menu },
+      ]
+    : [
+        { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor',        icon: Table2 },
+        { href: `/restaurant/${slug}/reservations`, label: 'Reservations', icon: CalendarDays },
+        { href: `/restaurant/${slug}/guests`,       label: 'Guests',       icon: Users },
+      ]
 
   return (
     <nav
