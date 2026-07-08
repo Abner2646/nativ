@@ -2,13 +2,10 @@
 import twilio from 'twilio'
 import { Reservation, TenantSettings } from '@/lib/types'
 
+import { e164 } from '@/lib/phone'
+
 const client = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!)
 const FROM = process.env.TWILIO_PHONE_NUMBER!
-
-function e164(phone: string) {
-  const digits = phone.replace(/\D/g, '')
-  return digits.startsWith('1') ? `+${digits}` : `+1${digits}`
-}
 
 export async function sendConfirmationSMS(r: Reservation, settings: TenantSettings) {
   const guest = r.guest!

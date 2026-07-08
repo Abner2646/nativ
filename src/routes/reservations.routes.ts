@@ -5,7 +5,7 @@ import { resolveTenantFromRequest } from '@/lib/tenant'
 import { sendConfirmationEmail, sendOwnerNotification, sendCancellationEmail } from '@/lib/email'
 import { sendConfirmationSMS } from '@/lib/sms'
 import { reservationLimiter, checkRateLimit } from '@/lib/ratelimit'
-import { resolveDuration } from '@/routes/admin.routes'
+import { resolveDuration } from '@/lib/turn-times'
 
 export async function createReservation(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
