@@ -590,10 +590,11 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                   ...(unassigned.length > 0 ? [{ key: '__none__', label: '—', resList: unassigned }] : []),
                 ].map(row => (
                   <div key={row.key} className="flex items-center" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                    <span className="w-[72px] shrink-0 text-xs font-mono text-offwhite/45 py-3 pr-2 truncate">
+                    <span className="w-[72px] shrink-0 text-xs font-mono text-offwhite/45 py-2 pr-2 truncate">
                       {row.key === '__none__' ? 'No table' : row.label}
                     </span>
-                    <div className="relative flex-1 h-10">
+                    {/* Filas densas estilo OpenTable: salones grandes = grillas largas */}
+                    <div className="relative flex-1 h-8">
                       {/* Hour gridlines */}
                       {timeline.hours.map(h => (
                         <span key={h} className="absolute top-0 bottom-0 pointer-events-none"
@@ -612,7 +613,7 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                           <button
                             key={r.id}
                             onClick={() => setTimelineSelId(prev => prev === r.id ? null : r.id)}
-                            className="absolute top-1.5 bottom-1.5 rounded-lg px-1.5 overflow-hidden text-left transition-opacity hover:opacity-80"
+                            className="absolute top-1 bottom-1 rounded-md px-1.5 overflow-hidden text-left transition-opacity hover:opacity-80"
                             style={{
                               left: `${((start - timeline.rangeStart) / timeline.len) * 100}%`,
                               width: `${(resDuration(r) / timeline.len) * 100}%`,
@@ -621,11 +622,9 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                               minWidth: '32px',
                             }}
                           >
-                            <span className="text-[10px] font-medium block truncate leading-tight mt-0.5" style={{ color: c.text }}>
+                            <span className="text-[10px] font-medium block truncate leading-6" style={{ color: c.text }}>
                               {r.guest?.name?.split(' ')[0] || '—'}
-                            </span>
-                            <span className="text-[9px] block truncate" style={{ color: 'rgba(242,239,233,0.30)' }}>
-                              {r.party_size}p
+                              <span style={{ color: 'rgba(242,239,233,0.35)' }}> · {r.party_size}p</span>
                             </span>
                           </button>
                         )

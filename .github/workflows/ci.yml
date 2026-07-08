@@ -1,0 +1,22 @@
+# CI: typecheck + tests unitarios en cada push/PR.
+# El gate real de deploy es el buildCommand de Vercel (test && build);
+# esto da visibilidad temprana y checks en PRs.
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run test

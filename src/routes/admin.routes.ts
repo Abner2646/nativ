@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { resolveTenantFromRequest } from '@/lib/tenant'
 import { sendEmployeeInvite, sendCampaignEmail } from '@/lib/email'
 import { ReservationStatus } from '@/lib/types'
+import { resolveDuration } from '@/lib/turn-times'
 import { randomUUID } from 'crypto'
 
 // Helper: resolver tenant + verificar sesión del usuario
@@ -402,17 +403,7 @@ export async function saveTurnTimes(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
-// Duración resuelta para un party: primera regla cuyo max_party lo cubre,
-// fallback a la duración del shift.
-export function resolveDuration(
-  rules: { max_party: number; duration_minutes: number }[] | null | undefined,
-  partySize: number,
-  shiftDuration: number
-): number {
-  const sorted = [...(rules || [])].sort((a, b) => a.max_party - b.max_party)
-  const match = sorted.find(r => r.max_party >= partySize)
-  return match?.duration_minutes ?? shiftDuration
-}
+// resolveDuration vive en @/lib/turn-times (pura, testeable)
 
 // ── WAITLIST ──────────────────────────────────────────────────
 // Staff-accessible, como todo el servicio.
