@@ -10,6 +10,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
+    // El build de Vercel corre con NODE_ENV=production, y React en modo
+    // producción no soporta act() (lo usa Testing Library). Los tests
+    // siempre corren con el build de desarrollo de React.
+    env: { NODE_ENV: 'test' },
   },
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
 })
