@@ -55,10 +55,14 @@ interface Props {
   slug: string
   role: 'admin' | 'employee'
   tenantId: string
+  initialService?: React.ComponentProps<typeof FloorService>['initialService']
 }
 
-export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: Props) {
+export function FloorPlanClient({ initialTables, areas, slug, role, tenantId, initialService }: Props) {
   const [mode, setMode] = useState<'service' | 'edit'>('service')
+  // El seed del server vale solo para el primer montaje: al pasar por el
+  // editor puede quedar viejo (mesas cambiadas) → el remount refetchea.
+  const [serviceSeed, setServiceSeed] = useState(initialService)
   const [tables, setTables]         = useState<RestaurantTable[]>(initialTables)
   const [activeAreaId, setActiveAreaId] = useState<string | null>(areas[0]?.id ?? null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -300,7 +304,7 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
             { value: 'service', label: 'Service', icon: Play },
             { value: 'edit',    label: 'Edit layout', icon: Pencil },
           ] as const).map(({ value, label, icon: Icon }) => (
-            <button key={value} onClick={() => setMode(value)}
+            <button key={value} onClick={() => { setMode(value); if (value === 'edit') setServiceSeed(undefined) }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                 mode === value ? 'text-midnight' : 'text-offwhite/40 hover:text-offwhite/70'
               }`}
@@ -316,7 +320,7 @@ export function FloorPlanClient({ initialTables, areas, slug, role, tenantId }: 
       )}
 
       {mode === 'service' ? (
-        <FloorService areas={areas} slug={slug} tenantId={tenantId} />
+        <FloorService areas={areas} slug={slug} tenantId={tenantId} initialService={serviceSeed} />
       ) : (
       <div>
       {/* ── Area tabs + add buttons ── */}
