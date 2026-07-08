@@ -20,7 +20,7 @@ type NavItem = {
 } | '---'
 
 const NAV = (slug: string): NavItem[] => [
-  { href: `/restaurant/${slug}`,              label: 'Dashboard',      icon: LayoutDashboard, exact: true },
+  { href: `/restaurant/${slug}`,              label: 'Dashboard',      icon: LayoutDashboard, exact: true, adminOnly: true },
   { href: `/restaurant/${slug}/reservations`, label: 'Reservations',   icon: CalendarDays },
   { href: `/restaurant/${slug}/guests`,       label: 'Guests',         icon: Users },
   { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',   icon: Sparkles,      comingSoon: true, adminOnly: true },
