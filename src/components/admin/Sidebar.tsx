@@ -87,9 +87,7 @@ export function Sidebar({
   // Colapso persistente por dispositivo. La clase en <body> coordina
   // el margen del <main> (ver layout) sin levantar estado al server.
   useEffect(() => {
-    const stored = localStorage.getItem('nativ:sidebar-collapsed') === '1'
-    setCollapsed(stored)
-    document.body.classList.toggle('sidebar-collapsed', stored)
+    setCollapsed(localStorage.getItem('nativ:sidebar-collapsed') === '1')
   }, [])
 
   const toggleCollapsed = () => {
@@ -99,13 +97,18 @@ export function Sidebar({
     setCollapsed(prev => {
       const next = !prev
       localStorage.setItem('nativ:sidebar-collapsed', next ? '1' : '0')
-      document.body.classList.toggle('sidebar-collapsed', next)
       return next
     })
   }
 
   // Expandido visualmente = pineado abierto o peek activo
   const expanded = !collapsed || peek
+
+  // El peek también comprime el contenido (no overlay): la clase del body
+  // controla el margen del main, así que refleja "colapsado Y sin peek".
+  useEffect(() => {
+    document.body.classList.toggle('sidebar-collapsed', collapsed && !peek)
+  }, [collapsed, peek])
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -189,7 +192,7 @@ export function Sidebar({
       onMouseLeave={onSidebarLeave}
       onFocusCapture={onSidebarFocus}
       onBlurCapture={onSidebarBlur}
-      className={`hidden md:flex md:w-[60px] ${expanded ? 'lg:w-60' : ''} flex-col fixed h-screen bg-midnight transition-[width] duration-200 ease-out motion-reduce:transition-none overflow-x-hidden ${peek ? 'z-30 shadow-2xl' : 'z-10'}`}
+      className={`hidden md:flex md:w-[60px] ${expanded ? 'lg:w-60' : ''} flex-col fixed h-screen bg-midnight transition-[width] duration-200 ease-out motion-reduce:transition-none overflow-x-hidden z-10`}
       style={{ borderRight: border }}
     >
 
