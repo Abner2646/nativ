@@ -16,7 +16,7 @@ export async function sendConfirmationSMS(r: Reservation, settings: TenantSettin
   await client.messages.create({
     from: FROM,
     to: e164(guest.phone),
-    body: `${settings.name}: Reservation confirmed for ${r.date} at ${r.time} (${r.party_size} guests).`
+    body: `${settings.name}: Reservation confirmed for ${r.date} at ${r.time} (${r.party_size} guests). Reply STOP to opt out.`
   })
 }
 
@@ -26,6 +26,6 @@ export async function sendReminderSMS(r: Reservation, settings: TenantSettings) 
   await client.messages.create({
     from: FROM,
     to: e164(guest.phone),
-    body: `${settings.name}: Reminder — your table is tomorrow, ${r.date} at ${r.time}. See you soon!`
+    body: `${settings.name}: Reminder — your table is tomorrow, ${r.date} at ${r.time}. See you soon! Reply STOP to opt out.`
   })
 }

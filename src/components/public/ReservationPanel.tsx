@@ -643,6 +643,15 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
                 value={f.value} onChange={e => f.set(e.target.value)}
                 style={inputStyle}
               />
+              {/* Opt-in SMS: requerido por verificación toll-free (Twilio 30513) */}
+              {f.key === 'guestPhone' && (
+                <p style={{ fontSize: '0.6875rem', color: theme.faint, marginTop: '0.375rem', lineHeight: 1.5 }}>
+                  By providing your phone number, you agree to receive reservation
+                  confirmation and reminder text messages from this restaurant.
+                  Msg &amp; data rates may apply. Msg frequency varies. Reply STOP
+                  to opt out, HELP for help.
+                </p>
+              )}
             </div>
           ))}
 
