@@ -500,6 +500,15 @@ export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize =
                   <label style={labelStyle}>{f.label}</label>
                   <input required={f.req} type={f.type} value={f.value}
                     onChange={e => f.set(e.target.value)} style={inputStyle} />
+                  {/* Opt-in SMS: requerido por verificación toll-free (Twilio 30513) */}
+                  {f.type === 'tel' && (
+                    <p style={{ fontSize: '0.6875rem', opacity: 0.5, marginTop: '0.375rem', lineHeight: 1.5 }}>
+                      By providing your phone number, you agree to receive reservation
+                      confirmation and reminder text messages from this restaurant.
+                      Msg &amp; data rates may apply. Msg frequency varies. Reply STOP
+                      to opt out, HELP for help.
+                    </p>
+                  )}
                 </div>
               ))}
               <div>

@@ -80,11 +80,20 @@ export default function PrivacyPage() {
             We use only essential session cookies required for authentication. We do not use tracking or advertising cookies.
           </Section>
 
-          <Section title="9. Changes to this policy">
+          <Section title="9. SMS / text messaging">
+            <p>If you provide your phone number when making a reservation, you consent to receive transactional text messages (reservation confirmations and reminders) from the restaurant you booked with, sent through our platform. Message frequency varies based on your reservation activity. Message and data rates may apply.</p>
+            <ul>
+              <li>Reply <strong>STOP</strong> at any time to opt out of text messages.</li>
+              <li>Reply <strong>HELP</strong> for assistance.</li>
+            </ul>
+            <p><strong>No mobile information will be shared with third parties or affiliates for marketing or promotional purposes.</strong> All the above categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties.</p>
+          </Section>
+
+          <Section title="10. Changes to this policy">
             We may update this Privacy Policy from time to time. Continued use of the platform after changes are posted constitutes acceptance of the updated policy.
           </Section>
 
-          <Section title="10. Contact">
+          <Section title="11. Contact">
             For privacy-related questions, contact us at <strong>privacy@nativ.business</strong>.
           </Section>
         </div>
