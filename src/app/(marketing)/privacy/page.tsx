@@ -94,7 +94,8 @@ export default function PrivacyPage() {
           </Section>
 
           <Section title="11. Contact">
-            For privacy-related questions, contact us at <strong>privacy@nativ.business</strong>.
+            <p>Nativ is a service operated by <strong>Abner Grgurich</strong> (sole proprietor).</p>
+            <p>For privacy-related questions, contact us at <strong>privacy@nativ.business</strong>.</p>
           </Section>
         </div>
       </div>
