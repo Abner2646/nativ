@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { getBrowserSupabase } from '@/lib/supabase-browser'
 
 interface TenantRow { id: string; slug: string; referral_code: string | null }
 interface Referral {
@@ -22,8 +24,48 @@ export function AccountClient({ userEmail, tenants, referrals, appUrl }: Props) 
   return (
     <div className="space-y-12">
       <ProfileSection userEmail={userEmail} />
+      <SecuritySection />
       <ReferralsSection tenants={tenants} referrals={referrals} appUrl={appUrl} />
     </div>
+  )
+}
+
+function SecuritySection() {
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const inputCls = 'w-full bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/25 placeholder:text-offwhite/20'
+
+  const changePassword = async () => {
+    if (password.length < 6) { toast.error('Password must be at least 6 characters'); return }
+    if (password !== confirm) { toast.error('Passwords don\'t match'); return }
+    setSaving(true)
+    const { error } = await getBrowserSupabase().auth.updateUser({ password })
+    setSaving(false)
+    if (error) { toast.error(error.message); return }
+    setPassword(''); setConfirm('')
+    toast.success('Password updated')
+  }
+
+  return (
+    <section>
+      <SectionHeader title="Security" />
+      <div className="px-5 py-5 rounded-2xl max-w-md space-y-3"
+        style={{ backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <p className="text-sm font-medium text-offwhite mb-1">Change password</p>
+        <input type="password" placeholder="New password" value={password}
+          onChange={e => setPassword(e.target.value)} className={inputCls} />
+        <input type="password" placeholder="Confirm new password" value={confirm}
+          onChange={e => setConfirm(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && changePassword()}
+          className={inputCls} />
+        <button onClick={changePassword} disabled={saving || !password || !confirm}
+          className="bg-offwhite text-midnight font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-offwhite/90 transition-colors disabled:opacity-40">
+          {saving ? 'Saving…' : 'Update password'}
+        </button>
+      </div>
+    </section>
   )
 }
 

@@ -71,6 +71,12 @@ export default function LoginPage() {
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gray-400" />
 
+          <div className="text-right">
+            <a href="/forgot-password" className="text-sm text-gray-500 hover:text-white transition">
+              Forgot password?
+            </a>
+          </div>
+
           {error && <p className="text-red-400 text-sm">{error}</p>}
 
           <button onClick={handleLogin} disabled={loading || !email || !password}
