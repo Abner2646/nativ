@@ -278,6 +278,7 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
   const [guestName, setGuestName]   = useState('')
   const [guestEmail, setGuestEmail] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
+  const [smsConsent, setSmsConsent] = useState(false)
   const [occasion, setOccasion]     = useState('')
   const [notes, setNotes]           = useState('')
   const [submitting, setSubmitting]   = useState(false)
@@ -392,6 +393,11 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedSlot) return
+    // Consentimiento SMS activo (TCPA/CTIA): teléfono solo con checkbox marcado
+    if (guestPhone.trim() && !smsConsent) {
+      setSubmitError('To receive text messages, please check the SMS consent box — or remove your phone number.')
+      return
+    }
     if (availability?.deposit_rule) {
       setSubmitting(true)
       setSubmitError('')
@@ -643,14 +649,26 @@ export function ReservationPanel({ slug, theme, availableDaysOfWeek, blockedDate
                 value={f.value} onChange={e => f.set(e.target.value)}
                 style={inputStyle}
               />
-              {/* Opt-in SMS: requerido por verificación toll-free (Twilio 30513) */}
+              {/* Opt-in SMS activo: checkbox sin pre-marcar + links (checklist Web Form de Twilio) */}
               {f.key === 'guestPhone' && (
-                <p style={{ fontSize: '0.6875rem', color: theme.faint, marginTop: '0.375rem', lineHeight: 1.5 }}>
-                  By providing your phone number, you agree to receive reservation
-                  confirmation and reminder text messages from this restaurant.
-                  Msg &amp; data rates may apply. Msg frequency varies. Reply STOP
-                  to opt out, HELP for help.
-                </p>
+                <label style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', cursor: 'pointer', alignItems: 'flex-start' }}>
+                  <input
+                    type="checkbox"
+                    checked={smsConsent}
+                    onChange={e => setSmsConsent(e.target.checked)}
+                    style={{ marginTop: '0.15rem', flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: '0.6875rem', color: theme.faint, lineHeight: 1.5 }}>
+                    I agree to receive reservation confirmation and reminder text
+                    messages from this restaurant. Msg &amp; data rates may apply.
+                    Msg frequency varies. Reply STOP to opt out, HELP for help.{' '}
+                    <a href="https://nativ.business/terms" target="_blank" rel="noopener noreferrer"
+                      style={{ color: theme.faint, textDecoration: 'underline' }}>Terms</a>
+                    {' · '}
+                    <a href="https://nativ.business/privacy" target="_blank" rel="noopener noreferrer"
+                      style={{ color: theme.faint, textDecoration: 'underline' }}>Privacy</a>
+                  </span>
+                </label>
               )}
             </div>
           ))}
