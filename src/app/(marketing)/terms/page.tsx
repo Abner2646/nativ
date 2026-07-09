@@ -78,7 +78,8 @@ export default function TermsPage() {
           </Section>
 
           <Section title="13. Contact">
-            For questions about these terms, contact us at <strong>hello@nativ.business</strong>.
+            <p>Nativ is a service operated by <strong>Abner Grgurich</strong> (sole proprietor).</p>
+            <p>For questions about these terms, contact us at <strong>hello@nativ.business</strong>.</p>
           </Section>
         </div>
       </div>
