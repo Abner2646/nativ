@@ -758,6 +758,8 @@ function NativLanding() {
                 className="hover:text-white/50 transition-colors">Privacy Policy</a>
               <a href="/terms" style={{ color: 'rgba(250,250,248,0.25)', fontSize: '0.8125rem', textDecoration: 'none' }}
                 className="hover:text-white/50 transition-colors">Terms of Service</a>
+              <a href="mailto:hello@nativ.business" style={{ color: 'rgba(250,250,248,0.25)', fontSize: '0.8125rem', textDecoration: 'none' }}
+                className="hover:text-white/50 transition-colors">hello@nativ.business</a>
             </div>
             <div className="flex items-center gap-2">
               <span style={{ color: 'rgba(250,250,248,0.18)', fontSize: '0.75rem' }}>Developed by</span>
