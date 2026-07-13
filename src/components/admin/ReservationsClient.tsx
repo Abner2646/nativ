@@ -101,8 +101,8 @@ function CompactRow({
 
 // ── Detail panel (right side on tablet/desktop) ──────────────────────────────
 function DetailPanel({
-  r, updating, onStatusChange,
-}: { r: Reservation; updating: string | null; onStatusChange: (id: string, s: ReservationStatus) => void }) {
+  r, updating, onStatusChange, onEdit,
+}: { r: Reservation; updating: string | null; onStatusChange: (id: string, s: ReservationStatus) => void; onEdit: () => void }) {
   const divider = { borderTop: '1px solid rgba(255,255,255,0.06)' }
 
   return (
@@ -115,9 +115,17 @@ function DetailPanel({
             {r.party_size} {r.party_size === 1 ? 'person' : 'people'}
           </p>
         </div>
-        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border mt-1 ${STATUS_BADGE[r.status] || ''}`}>
-          {r.status}
-        </span>
+        <div className="flex flex-col items-end gap-2 mt-1">
+          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${STATUS_BADGE[r.status] || ''}`}>
+            {r.status}
+          </span>
+          {r.status === 'confirmed' && (
+            <button onClick={onEdit}
+              className="text-xs text-offwhite/35 hover:text-offwhite transition-colors underline underline-offset-2">
+              Edit
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Deposit banner — shown prominently so staff can discount at the table */}
@@ -223,6 +231,7 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
   )
 
   const [showModal, setShowModal]       = useState(false)
+  const [editingRes, setEditingRes]     = useState<Reservation | null>(null)
   const [modalStep, setModalStep]       = useState<'slot' | 'guest'>('slot')
   const [slots, setSlots]               = useState<AvailabilitySlot[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
@@ -265,7 +274,19 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
   }
 
   const openModal = () => {
+    setEditingRes(null)
     setForm(f => ({ ...f, date, shift_id: '', time: '', area_id: '', guest_name: '', guest_email: '', guest_phone: '', occasion: '', notes: '' }))
+    setSlots([]); setSlotError(''); setSubmitError(''); setModalStep('slot'); setShowModal(true)
+  }
+
+  // Editar: mismo modal, prellenado — el motor re-asigna mesa al guardar
+  const openEdit = (r: Reservation) => {
+    setEditingRes(r)
+    setForm({
+      date: r.date, party_size: r.party_size, shift_id: '', time: '', area_id: '',
+      guest_name: r.guest?.name || '', guest_email: r.guest?.email || '', guest_phone: r.guest?.phone || '',
+      occasion: r.occasion || '', notes: r.notes || '',
+    })
     setSlots([]); setSlotError(''); setSubmitError(''); setModalStep('slot'); setShowModal(true)
   }
 
@@ -292,6 +313,25 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
   const submitReservation = async () => {
     setSubmitting(true); setSubmitError('')
     try {
+      if (editingRes) {
+        const token = await getToken()
+        const res = await fetch(`/api/admin?resource=reschedule&tenant=${slug}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            reservation_id: editingRes.id,
+            shift_id: form.shift_id, date: form.date, time: form.time, party_size: form.party_size,
+            seating_area_id: form.area_id || null, occasion: form.occasion || null, notes: form.notes || null,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) { setSubmitError(data.error || 'Failed to reschedule.'); return }
+        setShowModal(false)
+        // Si se movió a otro día, seguirla ahí
+        if (form.date !== date) { setDate(form.date); fetchReservations(form.date) }
+        else fetchReservations(date)
+        return
+      }
       const res = await fetch(`/api/reservations?tenant=${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -391,16 +431,23 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                   </div>
                 )}
                 {r.notes && <p className="text-[11px] text-offwhite/25 mt-1.5 italic">"{r.notes}"</p>}
-                <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="mt-3 pt-3 flex gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                   <select
                     value={r.status} disabled={updating === r.id}
                     onChange={e => updateStatus(r.id, e.target.value as ReservationStatus)}
-                    className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none disabled:opacity-40 text-offwhite"
+                    className="flex-1 rounded-xl px-3 py-2.5 text-sm focus:outline-none disabled:opacity-40 text-offwhite"
                     style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <option value="confirmed">confirmed</option>
                     <option value="completed">completed</option>
                     <option value="cancelled">cancelled</option>
                   </select>
+                  {r.status === 'confirmed' && (
+                    <button onClick={() => openEdit(r)}
+                      className="px-4 py-2.5 rounded-xl text-sm text-offwhite/45 hover:text-offwhite transition-colors"
+                      style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+                      Edit
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -423,7 +470,7 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
             {/* Right: detail panel — sticky so it stays visible while list scrolls */}
             <div className="flex-1 sticky top-4 rounded-2xl min-h-[180px]" style={card}>
               {selectedRes ? (
-                <DetailPanel r={selectedRes} updating={updating} onStatusChange={updateStatus} />
+                <DetailPanel r={selectedRes} updating={updating} onStatusChange={updateStatus} onEdit={() => openEdit(selectedRes)} />
               ) : (
                 <div className="p-10 text-center">
                   <p className="text-sm text-offwhite/30">Select a reservation to view details</p>
@@ -446,7 +493,9 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
           >
             <div className="flex items-center justify-between px-6 pt-6 pb-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <h2 className="font-satoshi font-bold text-[17px] text-offwhite">New reservation</h2>
+              <h2 className="font-satoshi font-bold text-[17px] text-offwhite">
+                {editingRes ? `Edit — ${editingRes.guest?.name}` : 'New reservation'}
+              </h2>
               <button onClick={() => setShowModal(false)} className="text-offwhite/30 hover:text-offwhite transition-colors text-xl leading-none">×</button>
             </div>
 
@@ -539,7 +588,15 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                     <span>{form.party_size} covers</span>
                   </div>
                   <div className="space-y-4">
-                    {[
+                    {editingRes ? (
+                      // Al editar, el guest no cambia — solo se muestra
+                      <div className="px-4 py-3 rounded-xl"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <p className="text-sm font-medium text-offwhite">{editingRes.guest?.name}</p>
+                        <p className="text-xs text-offwhite/40 mt-0.5">{editingRes.guest?.email}</p>
+                      </div>
+                    ) : (
+                    [
                       { label: 'Name *',  type: 'text',  key: 'guest_name',  ph: 'Full name' },
                       { label: 'Email *', type: 'email', key: 'guest_email', ph: 'guest@email.com' },
                       { label: 'Phone',   type: 'tel',   key: 'guest_phone', ph: '+1 555 000 0000' },
@@ -551,7 +608,7 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                           onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                           className={`w-full ${inputCls}`} />
                       </div>
-                    ))}
+                    )))}
                     <div>
                       <label className={labelCls}>Occasion</label>
                       <select value={form.occasion} onChange={e => setForm(f => ({ ...f, occasion: e.target.value }))} className={`w-full ${inputCls}`}>
@@ -569,7 +626,7 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                   <div className="flex gap-3">
                     <button onClick={() => setModalStep('slot')} className={secondaryBtn}>← Back</button>
                     <button onClick={submitReservation} disabled={submitting || !canSubmit} className={`flex-1 ${primaryBtn}`}>
-                      {submitting ? 'Creating…' : 'Create reservation'}
+                      {submitting ? 'Saving…' : editingRes ? 'Save changes' : 'Create reservation'}
                     </button>
                   </div>
                 </>

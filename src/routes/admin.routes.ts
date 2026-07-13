@@ -373,6 +373,76 @@ export async function deleteCombo(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+// ── RESCHEDULE ────────────────────────────────────────────────
+// Mover fecha/hora/party de una reserva. Staff-accessible: atender
+// el teléfono y correr una reserva es tarea del host.
+
+export async function rescheduleReservation(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const { reservation_id, shift_id, date, time, party_size, seating_area_id, occasion, notes } = await req.json()
+  if (!reservation_id || !shift_id || !date || !time || !party_size) {
+    return NextResponse.json({ error: 'reservation_id, shift_id, date, time and party_size required' }, { status: 400 })
+  }
+
+  const { data: shift } = await supabaseAdmin
+    .from('shifts').select('id, duration_minutes, shift_areas(seating_area_id, capacity)')
+    .eq('id', shift_id).eq('tenant_id', ctx.tenant.id).eq('is_active', true).maybeSingle()
+  if (!shift) return NextResponse.json({ error: 'Invalid shift' }, { status: 400 })
+
+  const targetArea = seating_area_id || null
+  if (targetArea && !shift.shift_areas?.some((a: any) => a.seating_area_id === targetArea)) {
+    return NextResponse.json({ error: 'Invalid seating area for that shift' }, { status: 400 })
+  }
+
+  const { data: turnRules } = await supabaseAdmin
+    .from('turn_time_rules').select('max_party, duration_minutes').eq('tenant_id', ctx.tenant.id)
+  const duration = resolveDuration(turnRules, party_size, shift.duration_minutes)
+
+  // Área con mesas → el RPC re-asigna; área covers → mueve sin assignment
+  const { count: tableCount } = await supabaseAdmin
+    .from('restaurant_tables').select('id', { count: 'exact', head: true })
+    .eq('tenant_id', ctx.tenant.id).eq('seating_area_id', targetArea ?? '00000000-0000-0000-0000-000000000000')
+    .eq('is_active', true)
+  const useTables = !!targetArea && (tableCount ?? 0) > 0
+
+  const { data, error } = await supabaseAdmin.rpc('reschedule_reservation', {
+    p_tenant_id: ctx.tenant.id,
+    p_reservation_id: reservation_id,
+    p_shift_id: shift_id,
+    p_area_id: targetArea,
+    p_date: date,
+    p_time: time,
+    p_duration_minutes: duration,
+    p_party_size: party_size,
+    p_occasion: occasion || null,
+    p_notes: notes || null,
+    p_use_tables: useTables,
+  })
+  if (error) {
+    if (error.message?.includes('no_table_available')) {
+      return NextResponse.json({ error: 'No table available for that slot. Pick another time.' }, { status: 409 })
+    }
+    if (error.message?.includes('reservation_not_confirmed')) {
+      return NextResponse.json({ error: 'Only confirmed reservations can be moved' }, { status: 409 })
+    }
+    console.error('reschedule_reservation error:', error)
+    return NextResponse.json({ error: 'Failed to reschedule' }, { status: 500 })
+  }
+
+  // Avisar al guest con los datos nuevos
+  const { data: full } = await supabaseAdmin
+    .from('reservations')
+    .select('*, guest:guests(*), seating_area:seating_areas(*), shift:shifts(*), table_assignments(table:restaurant_tables(name))')
+    .eq('id', reservation_id).single()
+  if (full) {
+    const { sendUpdateEmail } = await import('@/lib/email')
+    sendUpdateEmail(full, ctx.settings, ctx.tenant.slug).catch(console.error)
+  }
+
+  return NextResponse.json({ success: true, reservation: full, ...(data as object) })
+}
+
 // ── TURN TIME RULES ───────────────────────────────────────────
 
 export async function getTurnTimes(req: NextRequest) {

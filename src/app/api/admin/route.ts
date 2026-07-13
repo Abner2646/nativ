@@ -10,6 +10,7 @@ import {
   createWalkIn, assignTable, unassignTable,
   getCombos, createCombo, deleteCombo,
   getTurnTimes, saveTurnTimes,
+  rescheduleReservation,
   getWaitlist, addWaitlistEntry, removeWaitlistEntry,
   unseatReservation, unfinishReservation,
   getBlockedDates, createBlockedDate, deleteBlockedDate,
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
     case 'turn-times':    return saveTurnTimes(req)
     case 'waitlist':      return addWaitlistEntry(req)
     case 'unseat':        return unseatReservation(req)
+    case 'reschedule':    return rescheduleReservation(req)
     case 'unfinish':      return unfinishReservation(req)
     case 'blocked-dates': return createBlockedDate(req)
     case 'events':        return createSpecialEvent(req)
