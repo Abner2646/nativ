@@ -77,6 +77,44 @@ export async function sendConfirmationEmail(
   })
 }
 
+export async function sendUpdateEmail(r: Reservation, settings: TenantSettings, slug: string) {
+  const cancelUrl = `${getTenantUrl(slug)}/cancel?token=${r.cancellation_token}`
+  const guest = r.guest!
+  await resend.emails.send({
+    from: getFrom(settings),
+    to: guest.email,
+    subject: `Reservation updated at ${settings.name}`,
+    text: [
+      `Hi ${guest.name},`,
+      ``,
+      `Your reservation at ${settings.name} has been updated. New details:`,
+      ``,
+      `Date: ${r.date}`,
+      `Time: ${r.time}`,
+      `Guests: ${r.party_size}`,
+      ``,
+      `If you need to cancel, visit: ${cancelUrl}`,
+      ``,
+      `We look forward to seeing you.`,
+      `${settings.name}`,
+    ].join('\n'),
+    html: `
+      <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;color:#222;line-height:1.5">
+        <p style="font-size:20px;font-weight:bold;margin-bottom:4px">Reservation updated</p>
+        <p style="color:#555;margin-top:0">Hi ${guest.name}, your reservation at <strong>${settings.name}</strong> was updated. New details:</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0">
+          <tr><td style="color:#777;font-size:12px;text-transform:uppercase;padding:5px 0;padding-right:24px">Date</td><td style="padding:5px 0">${r.date}</td></tr>
+          <tr><td style="color:#777;font-size:12px;text-transform:uppercase;padding:5px 0;padding-right:24px">Time</td><td style="padding:5px 0">${r.time}</td></tr>
+          <tr><td style="color:#777;font-size:12px;text-transform:uppercase;padding:5px 0;padding-right:24px">Guests</td><td style="padding:5px 0">${r.party_size}</td></tr>
+        </table>
+        <p style="font-size:13px;color:#666;margin-top:20px">
+          Need to cancel? Visit the link below:<br>
+          <a href="${cancelUrl}" style="color:#444;word-break:break-all">${cancelUrl}</a>
+        </p>
+      </div>`,
+  })
+}
+
 export async function sendCancellationEmail(r: Reservation, settings: TenantSettings, refunded?: boolean) {
   const guest = r.guest!
   const refundText = r.deposit_amount
