@@ -1,11 +1,14 @@
-import { requireUser, getUserTenants } from '@/lib/auth'
+import { requireUser, getUserTenants, getProfile } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getTenantDomain } from '@/lib/domain'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
   const user = await requireUser()
-  const members = await getUserTenants(user.id)
+  const [members, profile] = await Promise.all([
+    getUserTenants(user.id),
+    getProfile(user.id),
+  ])
 
   // Fetch first photo for each tenant (one query, all IDs)
   const tenantIds = members.map((m: any) => m.tenants?.id).filter(Boolean)
@@ -30,6 +33,11 @@ export default async function DashboardPage() {
       <header className="px-8 py-4 flex items-center justify-between border-b border-white/[0.06]">
         <span className="font-satoshi font-bold text-xl tracking-tight text-offwhite">Nativ</span>
         <div className="flex items-center gap-5">
+          {profile?.is_superadmin && (
+            <Link href="/superadmin" className="text-xs font-semibold px-2.5 py-1 rounded-full bg-sage/15 text-sage border border-sage/30 hover:bg-sage/25 transition-colors">
+              Superadmin
+            </Link>
+          )}
           <Link href="/account" className="text-sm text-offwhite/40 hover:text-offwhite/80 transition-colors">
             {user.email}
           </Link>
