@@ -1,6 +1,6 @@
 # CONTEXT.md — Nativ
-*Última actualización: 2026-06-26 — actualizar esta fecha cada vez que se modifique este archivo*
-*Auth loop resuelto. DB migrada. Listo para continuar con las páginas del panel.*
+*Última actualización: 2026-07-21 — actualizar esta fecha cada vez que se modifique este archivo*
+*Todas las páginas del panel completadas. Floor plan en 5 fases. Billing + depósitos implementados. Cron de reminders configurado. Pendiente: superadmin, birthday cron, AI campaigns auto-gen, deploy a producción.*
 
 ---
 
@@ -9,7 +9,7 @@
 Nativ es un SaaS de reservas para restaurantes independientes. El diferenciador central es la **invisibilidad**: el widget vive dentro de la web del restaurante, sin branding de Nativ, sin marketplace donde el cliente vea competencia.
 
 **Modelo de negocio:** $49/mes por restaurante, 14 días de trial gratis, sin per-cover fees.
-**Estado:** MVP en desarrollo. Sin clientes pagando todavía. Primer cliente objetivo: Off The Hook Raw Bar & Grill, Astoria NY.
+**Estado:** MVP completo en desarrollo. Sin clientes pagando todavía. Primer cliente objetivo: Off The Hook Raw Bar & Grill, Astoria NY.
 
 ---
 
@@ -21,14 +21,14 @@ Nativ es un SaaS de reservas para restaurantes independientes. El diferenciador 
 | TypeScript | Lenguaje | ✅ Configurado |
 | Tailwind CSS | Estilos | ✅ Configurado |
 | Supabase Auth | Autenticación | ✅ Funcional (PKCE + cookies) |
-| Supabase PostgreSQL | Base de datos | ✅ Schema aplicado |
+| Supabase PostgreSQL | Base de datos | ✅ 13 migraciones aplicadas |
 | Resend | Emails | ✅ Configurado (modo dev con onboarding@resend.dev) |
-| Twilio | SMS | ⚙️ Configurado, sin testear |
-| Stripe Connect | Señas de reservas | ⚙️ Configurado, sin testear |
-| Stripe Billing | Suscripciones SaaS | ⏳ Pendiente |
-| Cloudinary | Imágenes | ⚙️ Configurado, sin testear |
-| Vercel | Deploy | ⏳ Pendiente conectar |
-| Vitest | Tests | ✅ Configurado |
+| Twilio | SMS | ✅ Implementado — Toll-Free Verification TFV-30484 en proceso |
+| Stripe Connect | Señas de reservas | ✅ Implementado — sin testear en producción |
+| Stripe Billing | Suscripciones SaaS | ✅ Implementado — sin testear en producción |
+| Cloudinary | Imágenes | ✅ Implementado — usado en fotos del mini-sitio |
+| Vercel | Deploy | ⏳ Pendiente conectar a producción |
+| Vitest | Tests | ✅ Tests unitarios gating deploys en Vercel |
 
 ---
 
@@ -49,6 +49,7 @@ Nativ es un SaaS de reservas para restaurantes independientes. El diferenciador 
 - Windows convierte LF a CRLF — el .gitignore y .gitattributes lo manejan
 - Si el puerto 3000 está ocupado, Next.js usa 3001
 - `node_modules` se metió en git una vez y hubo que hacer `git rm -r --cached node_modules` para sacarlo
+- `tsconfig.tsbuildinfo` se ignora via `.gitignore` (artefacto de build incremental)
 
 ---
 
@@ -68,14 +69,16 @@ feat: nueva funcionalidad
 fix: corrección de bug
 chore: configuración, dependencias
 refactor: cambio de código sin cambio de comportamiento
+perf: mejora de performance sin cambio de comportamiento
 docs: solo documentación
 test: agregar o modificar tests
 ```
 
-**Branches activos actualmente:**
-- `main` — estado inicial del proyecto
-- `develop` — igual que main por ahora
-- `feature/auth-fix` — fix del auth loop (listo para mergear a develop)
+**Branches locales activos (sin commits nuevos respecto a main):**
+- `feat/admin-new-reservation`, `feat/embed-script`, `feat/embed-share`
+- `feat/sidebar-isotipo-redirect`, `fix/public-page-visibility`
+- `fix/register-empty-error`, `fix/remove-hardcoded-domain`
+- Todos ya mergeados → candidatos a borrar
 
 ---
 
@@ -85,96 +88,178 @@ test: agregar o modificar tests
 **En producción:** wildcard DNS `*.nativ.com` → Vercel → middleware resuelve tenant
 
 ```
-nativ.com              → landing + login + register
-localhost:3000/dashboard    → panel (dev)
-localhost:3000/restaurant/[slug]  → panel del restaurante (dev)
-localhost:3000?tenant=slug  → mini-sitio público + widget (dev)
+nativ.com                          → landing + login + register
+localhost:3000/dashboard           → lista de restaurantes del usuario
+localhost:3000/restaurant/[slug]   → dashboard del restaurante
+localhost:3000/reserve?tenant=slug → widget de reservas público
+localhost:3000/floor-plan/[slug]   → vista de servicio (empleados)
 ```
 
 **El middleware** (`src/middleware.ts`) maneja:
 1. Refresh de sesión de Supabase en cada request
 2. Protección de rutas (redirige a /login si no hay sesión)
-3. Detección del tenant desde el subdominio o ?tenant= param
+3. Detección del tenant desde el subdominio real o `?tenant=` param (solo dev)
+4. Solo extrae tenant de subdominios reales de nativ.com — no de cualquier subdominio
 
 ---
 
 ## Estado de cada archivo/módulo
 
-### ✅ Completo y funcional
+### ✅ Infraestructura y auth
 
-**`src/lib/types.ts`** — Todos los tipos TypeScript. No tocar salvo que cambie el schema.
+**`src/lib/supabase.ts`** — Cuatro clientes: `supabaseAdmin`, `createServerSupabase()`, `createRouteHandlerSupabase(req, res)`, `createMiddlewareSupabase(req, res)`.
 
-**`src/lib/supabase.ts`** — Cuatro clientes:
-- `supabaseAdmin` → service role, solo server-side
-- `createServerSupabase()` → con cookies de sesión, para server components
-- `createRouteHandlerSupabase(req, res)` → para route handlers (escribe cookies en el response)
-- `createMiddlewareSupabase(req, res)` → para el middleware
+**`src/lib/supabase-browser.ts`** — `getBrowserSupabase()` usando `createBrowserClient` de `@supabase/ssr`. Cookies (no localStorage) para que el server lea la sesión.
 
-**`src/lib/supabase-browser.ts`** — `getBrowserSupabase()` usando `createBrowserClient` de `@supabase/ssr`. Guarda sesión en cookies (no localStorage) para que el server la pueda leer.
+**`src/lib/auth.ts`** — `requireUser()` redirige a /login. `requireAdminForSlug()` valida pertenencia al tenant y rol. `getTenantBySlug()` para empleados (no requiere admin).
 
-**`src/lib/tenant.ts`** — Resolver de tenant para el widget público. Usa `?tenant=` en dev.
+**`src/lib/types.ts`** — Todos los tipos TypeScript. Incluye `DepositRule`, `RestaurantTable`, `TableCombination`, `WaitlistEntry` y más.
 
-**`src/lib/email.ts`** — Todos los emails via Resend. En dev usa `onboarding@resend.dev` como FROM.
+**`src/middleware.ts`** — Funcional. Protege rutas, refresca sesión, resuelve tenant.
 
-**`src/lib/sms.ts`** — SMS via Twilio. Sin testear en producción todavía.
+**`src/lib/domain.ts`** — Helper para construir URLs sin hardcodear el dominio. Usa `NEXT_PUBLIC_APP_URL`.
 
-**`src/lib/stripe.ts`** — Helpers de Stripe Connect y Billing. Sin testear.
+**`src/lib/ratelimit.ts`** — Rate limiting en memoria para endpoints públicos.
 
-**`src/lib/cloudinary.ts`** — Upload y delete de imágenes. Sin testear.
+### ✅ Servicios externos
 
-**`src/routes/availability.routes.ts`** — Lógica de disponibilidad con áreas configurables. Testeada.
+**`src/lib/email.ts`** — Emails via Resend. En dev usa `onboarding@resend.dev` como FROM. Templates: confirmación de reserva, cancelación, reminder, cumpleaños, invitación de empleado.
 
-**`src/routes/reservations.routes.ts`** — Crear y cancelar reservas con upsert de guest. Testeada.
+**`src/lib/sms.ts`** — SMS via Twilio. `sendReminderSMS()` implementado.
 
-**`src/routes/admin.routes.ts`** — Todos los endpoints admin. Auth via Bearer token de Supabase. Testeada parcialmente.
+**`src/lib/stripe.ts`** — Helpers de Stripe Connect (cuentas de restaurantes) y Billing (suscripciones). `addCouponToSubscription()` para referidos.
 
-**`src/app/api/*/route.ts`** — Wrappers de Next.js. Solo despachan a los routes files.
+**`src/lib/cloudinary.ts`** — Upload y delete de imágenes. Usado en `/photos`.
 
-**`src/app/(marketing)/page.tsx`** — Landing minimalista. Completa.
+**`src/lib/phone.ts`** — Formateo de números de teléfono.
 
-**`src/app/(app)/dashboard/page.tsx`** — Lista de restaurantes del usuario. Completa.
+**`src/lib/theme.ts`** — Construye el objeto de tema del widget público desde `tenant_settings` (colores, fuente).
 
-**`src/app/(app)/restaurant/[slug]/page.tsx`** — Dashboard del restaurante con stats. Completa.
+**`src/lib/turn-times.ts`** — Lógica de turn times para el floor plan. Testeada con unit tests.
 
-**`supabase/migrations/001_schema.sql`** — Schema completo aplicado en Supabase dev.
+### ✅ API endpoints
 
-**`supabase/seed.sql`** — Seed aplicado. Tenant `offthehook` con shifts, áreas y blocked dates.
+**Públicos (sin auth):**
+```
+GET  /api/availability?date=YYYY-MM-DD&party_size=N&tenant=slug
+POST /api/reservations?tenant=slug
+POST /api/reservations?action=cancel&tenant=slug
+GET  /api/deposit?reservation_id=xxx        ← seña pendiente
+```
 
-**`tests/api.test.ts`** — Tests de todos los endpoints. Los autenticados requieren `ACCESS_TOKEN` env var.
+**Auth (Bearer token de Supabase):**
+```
+GET/POST/PATCH/DELETE /api/admin?resource=RESOURCE&tenant=slug
+POST /api/invite        ← acepta invitación de empleado
+POST /api/referral/apply
+POST /api/upload        ← Cloudinary upload
+```
 
-### ✅ Resuelto en esta sesión
+**Billing:**
+```
+POST /api/billing/checkout   ← crea sesión de Stripe Checkout
+POST /api/billing/portal     ← crea sesión del Customer Portal
+POST /api/billing/webhook    ← webhook de Stripe (firma verificada)
+```
 
-**`src/app/api/auth/callback/route.ts`** — Usa `createRouteHandlerSupabase` para escribir las cookies de sesión directamente en el redirect response. Flujo PKCE correcto.
+**Cron (protegido por CRON_SECRET):**
+```
+GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario (vercel.json)
+```
 
-**`src/app/api/auth/logout/route.ts`** — Actualizado al mismo patrón.
+**Resources admin disponibles:**
+- GET: `reservations`, `guests`, `shifts`, `areas`, `blocked-dates`, `events`, `settings`, `stats`, `employees`, `campaigns`, `birthday-config`, `referrals`, `tables`, `waitlist`
+- POST: `shifts`, `areas`, `blocked-dates`, `events`, `employees`, `guest-tag`, `tables`, `waitlist`
+- PATCH: `reservations`, `guests`, `shifts`, `areas`, `settings`, `campaigns`, `birthday-config`, `tables`
+- DELETE: `shifts`, `areas`, `blocked-dates`, `events`, `employees`, `guest-tag`, `tables`, `waitlist`
 
-**`src/middleware.ts`** — Funciona correctamente. Protege rutas y refresca sesión.
+### ✅ Páginas de marketing
 
-**`src/lib/auth.ts`** — Funcional. `requireUser()` redirige a /login si no hay sesión.
+**`src/app/(marketing)/page.tsx`** — Landing completa siguiendo Brand OS. Métricas strip, demo en vivo de reserva, mission statement.
 
-**`src/app/(marketing)/login/page.tsx`** — Migrado a `getBrowserSupabase()`. Incluye `onAuthStateChange` para manejar tokens en el hash (flujo implícito).
+**`src/app/(marketing)/login/page.tsx`** — Con `getBrowserSupabase()` y `onAuthStateChange`.
 
-**`src/app/(marketing)/register/page.tsx`** — Migrado a `getBrowserSupabase()`.
+**`src/app/(marketing)/register/page.tsx`** — Con `getBrowserSupabase()`.
 
-**`src/app/(app)/onboarding/page.tsx`** — Migrado a `getBrowserSupabase()`.
+**`src/app/(marketing)/forgot-password/page.tsx`** — Solicita reset por email.
 
-### ⏳ Pendiente (stub vacío o inexistente)
+**`src/app/(marketing)/reset-password/page.tsx`** — Formulario de nueva contraseña con token de Supabase.
 
-- `src/app/(public)/page.tsx` — Mini-sitio público del restaurante
-- `src/app/(public)/reserve/page.tsx` — Widget de reservas
-- `src/app/(app)/restaurant/[slug]/reservations/page.tsx`
-- `src/app/(app)/restaurant/[slug]/guests/page.tsx`
-- `src/app/(app)/restaurant/[slug]/shifts/page.tsx`
-- `src/app/(app)/restaurant/[slug]/areas/page.tsx`
-- `src/app/(app)/restaurant/[slug]/events/page.tsx`
-- `src/app/(app)/restaurant/[slug]/campaigns/page.tsx`
-- `src/app/(app)/restaurant/[slug]/employees/page.tsx`
-- `src/app/(app)/restaurant/[slug]/referrals/page.tsx`
-- `src/app/(app)/restaurant/[slug]/settings/page.tsx`
-- `/invite?token=xxx` — Aceptar invitación de empleado
-- Stripe Billing (suscripciones automáticas)
-- Cron jobs (AI campaigns, birthday emails, SMS reminders 24hs antes)
-- Superadmin panel
+**`src/app/(marketing)/privacy/page.tsx`** — Política de privacidad. Menciona nombre legal del operador (requerido por Twilio TFV).
+
+**`src/app/(marketing)/terms/page.tsx`** — Términos y condiciones con SMS opt-in. Cumple checklist Twilio Web Form.
+
+### ✅ Páginas del panel (app)
+
+**`src/app/(app)/dashboard/page.tsx`** — "Business Pulse": lista de restaurantes con stats rápidas (reservas hoy, esta semana). Redesigned.
+
+**`src/app/(app)/onboarding/page.tsx`** — Crea el tenant inicial. Migrado a `getBrowserSupabase()`. Tiene botón de salida.
+
+**`src/app/(app)/account/page.tsx`** — Perfil del usuario, cambio de contraseña.
+
+**`src/app/(app)/restaurant/[slug]/page.tsx`** — Dashboard del restaurante con stats.
+
+**`src/app/(app)/restaurant/[slug]/reservations/page.tsx`** — Lista con filtros de fecha y estado. Acciones de cancelar/completar. Cards en mobile, tabla en desktop. Modal para crear nueva reserva. Editar/reagendar implementado.
+
+**`src/app/(app)/restaurant/[slug]/guests/page.tsx`** — Lista de guests con tags. Split view en tablet/desktop. Cards en mobile.
+
+**`src/app/(app)/restaurant/[slug]/floor-plan/page.tsx`** — Vista completa: editor drag & drop de mesas (admin), vista de servicio en tiempo real (empleados), timeline, turn times, combinación de mesas, waitlist, mobile bottom sheet. Hidrata con data del server para evitar loading doble.
+
+**`src/app/(app)/restaurant/[slug]/shifts/page.tsx`** — CRUD de turnos por día de semana.
+
+**`src/app/(app)/restaurant/[slug]/areas/page.tsx`** — CRUD de áreas de asientos configurables.
+
+**`src/app/(app)/restaurant/[slug]/events/page.tsx`** — Fechas especiales con seña obligatoria.
+
+**`src/app/(app)/restaurant/[slug]/campaigns/page.tsx`** — Campañas de IA (listado + aprobación/rechazo) + config de email de cumpleaños.
+
+**`src/app/(app)/restaurant/[slug]/employees/page.tsx`** — Invitar empleados, listar miembros, desactivar. Aterrizan en `/floor-plan` por defecto.
+
+**`src/app/(app)/restaurant/[slug]/referrals/page.tsx`** — Código de referido, estado de los referidos generados.
+
+**`src/app/(app)/restaurant/[slug]/billing/page.tsx`** — Plan actual, estado de trial, botón de upgrade (Stripe Checkout) y portal de billing. Sin testear en producción.
+
+**`src/app/(app)/restaurant/[slug]/deposits/page.tsx`** — Reglas de depósito/seña. Requiere Stripe Connect activo.
+
+**`src/app/(app)/restaurant/[slug]/photos/page.tsx`** — Galería del mini-sitio. Upload via Cloudinary.
+
+**`src/app/(app)/restaurant/[slug]/embed/page.tsx`** — Instrucciones y script de embed del widget.
+
+**`src/app/(app)/restaurant/[slug]/settings/page.tsx`** — Branding, info del restaurante, config operativa.
+
+**`src/app/(app)/restaurant/[slug]/more/page.tsx`** — Hub de navegación en mobile para páginas secundarias.
+
+### ✅ Páginas públicas
+
+**`src/app/reserve/page.tsx`** — Widget de reservas con tema custom del tenant. Hidrata con data del server.
+
+**`src/app/invite/page.tsx`** — Acepta invitación de empleado por token.
+
+**`src/app/cancel/page.tsx`** — Cancela reserva via `cancellation_token` (sin auth requerida).
+
+### ✅ Embed
+
+**Self-injecting JS widget** — `feat/embed-script` mergeado. El script se inyecta en la web del restaurante sin iframe. Página `/embed` con instrucciones en el panel.
+
+### ✅ Tests
+
+**`tests/api.test.ts`** — Tests de endpoints de API. Autenticados requieren `ACCESS_TOKEN` env var.
+
+**`src/components/admin/__tests__/`** — Tests unitarios de componentes.
+
+**`src/lib/__tests__/phone.test.ts`** — Tests de formateo de teléfono.
+
+**`src/lib/__tests__/turn-times.test.ts`** — Tests de lógica de turn times.
+
+**`vercel.json`** — `buildCommand: "npm run test && next build"` → los tests unitarios gatan deploys.
+
+### ⏳ Pendiente
+
+- **Superadmin panel** — Sin implementar. No hay `/admin` ni `/superadmin` page.
+- **Birthday email cron** — La config existe en DB y la UI en `/campaigns`, pero no hay endpoint `/api/cron/birthdays` ni está en `vercel.json`.
+- **AI campaigns auto-generación** — Las campañas existen en DB y se muestran en el panel, pero no hay generación automática via IA. Actualmente solo se aprueban/rechazan las que se creen manualmente.
+- **Vercel + nativ-prod** — Producción no conectada. Supabase `nativ-prod` no creado todavía.
+- **Stripe producción** — Billing y depósitos implementados pero nunca testeados end-to-end en producción.
 
 ---
 
@@ -186,27 +271,34 @@ localhost:3000?tenant=slug  → mini-sitio público + widget (dev)
 
 ## Schema de base de datos
 
-**Tablas y su propósito:**
+**Migraciones aplicadas:** 13 (`001` → `013`)
+
+**Tablas principales:**
 
 | Tabla | Propósito |
 |---|---|
-| `profiles` | Extiende auth.users. Tiene `is_superadmin`. Se crea automáticamente con trigger. |
-| `tenants` | Restaurantes. Tiene `slug`, `status` (trial/active/inactive), `trial_ends_at`. |
-| `tenant_members` | Relación user ↔ tenant con rol (admin/employee). Un user puede tener múltiples tenants. |
-| `tenant_settings` | Branding (colores, fuente, logo), info del restaurante, config operativa. Una fila por tenant. |
-| `tenant_photos` | Galería de fotos del mini-sitio. URL de Cloudinary + position. |
-| `seating_areas` | Áreas configurables (reemplaza inside/outside hardcodeado). Nombre libre. |
-| `shifts` | Turnos por día de semana (0=Dom, 6=Sáb). Nombre libre, horarios, duración. |
-| `shift_areas` | Capacidad de cada área por shift. Join table entre shifts y seating_areas. |
-| `blocked_dates` | Fechas en que el restaurante no acepta reservas. |
-| `special_events` | Fechas con seña obligatoria (ej: San Valentín). Monto y política de reembolso. |
-| `guests` | Clientes. Upsert por email dentro del tenant. `visit_count` se actualiza con trigger cuando una reserva pasa a `completed`. |
-| `guest_tags` | Tags personalizados por cliente (ej: "VIP"). Asociados al guest, aplican a todas sus reservas. |
-| `reservations` | Reservas. Tiene `cancellation_token` UUID para cancelar sin auth. |
-| `birthday_campaign_config` | Config del email de cumpleaños por tenant. Cuerpo editable con variables. |
-| `ai_campaigns` | Campañas sugeridas por IA. El admin las aprueba/rechaza antes de enviar. |
+| `profiles` | Extiende auth.users. Tiene `is_superadmin`. Trigger automático. |
+| `tenants` | Restaurantes. `slug`, `status` (trial/active/inactive), `trial_ends_at`, `stripe_customer_id`, `stripe_subscription_id`. |
+| `tenant_members` | user ↔ tenant con rol (admin/employee). |
+| `tenant_settings` | Branding, info, config operativa, `stripe_account_id`, `timezone`. |
+| `tenant_photos` | Galería del mini-sitio (Cloudinary). |
+| `seating_areas` | Áreas configurables (`is_active`, `position`). |
+| `shifts` | Turnos por día de semana. |
+| `shift_areas` | Capacidad por área por shift. |
+| `blocked_dates` | Fechas sin reservas. |
+| `special_events` | Señas obligatorias (ej: San Valentín). |
+| `restaurant_tables` | Mesas físicas para el floor plan (número, capacidad, posición x/y, shape). |
+| `table_assignments` | Qué mesa tiene cada reserva. |
+| `table_combinations` | Combinación de mesas. |
+| `guests` | Clientes. Upsert por email. `visit_count` via trigger. |
+| `guest_tags` | Tags por cliente. |
+| `reservations` | Reservas. `cancellation_token`, `reschedule_count`, `source`. |
+| `deposit_rules` | Reglas de seña por tipo/evento. |
+| `waitlist` | Lista de espera por fecha/turno. |
+| `birthday_campaign_config` | Config de email de cumpleaños por tenant. |
+| `ai_campaigns` | Campañas sugeridas por IA. Aprobación manual antes de enviar. |
 | `referrals` | Sistema de referidos. 3 meses al 50% para ambas partes. |
-| `employee_invites` | Invitaciones pendientes de empleados. Token de 7 días. |
+| `employee_invites` | Invitaciones pendientes. Token de 7 días. |
 
 **Seed de desarrollo:**
 - Tenant: `offthehook` (Off The Hook Raw Bar & Grill)
@@ -216,39 +308,19 @@ localhost:3000?tenant=slug  → mini-sitio público + widget (dev)
 
 ---
 
-## API
-
-**Endpoints públicos (sin auth):**
-```
-GET  /api/availability?date=YYYY-MM-DD&party_size=N&tenant=slug
-POST /api/reservations?tenant=slug
-POST /api/reservations?action=cancel&tenant=slug
-```
-
-**Endpoints admin (requieren Bearer token):**
-```
-GET/POST/PATCH/DELETE /api/admin?resource=RESOURCE&tenant=slug
-```
-
-Resources disponibles:
-- GET: `reservations`, `guests`, `shifts`, `areas`, `blocked-dates`, `events`, `settings`, `stats`, `employees`, `campaigns`, `birthday-config`, `referrals`
-- POST: `shifts`, `areas`, `blocked-dates`, `events`, `employees` (invite), `guest-tag`
-- PATCH: `reservations`, `guests`, `shifts`, `areas`, `settings`, `campaigns`, `birthday-config`
-- DELETE: `shifts`, `areas`, `blocked-dates`, `events`, `employees`, `guest-tag`
-
-**Cómo obtener el Bearer token para tests:**
-DevTools → Application → Local Storage → `sb-[project-ref]-auth-token` → copiar `access_token`
-
----
-
-## Decisiones de diseño (y por qué)
+## Decisiones de diseño
 
 | Decisión | Alternativa descartada | Razón |
 |---|---|---|
-| Supabase Auth en vez de magic links propios | Magic links propios (se usó en OTH) | Un SaaS necesita auth estándar, Google OAuth, recovery de contraseña |
-| Un solo plan ($49/mes) | Múltiples planes | Simplifica el MVP, se agrega después con data de clientes reales |
+| Supabase Auth | Magic links propios | Un SaaS necesita auth estándar, Google OAuth, recovery |
+| Un solo plan ($49/mes) | Múltiples planes | Simplifica el MVP |
 | `tenant_members` many-to-many | user pertenece a un solo tenant | Un usuario puede tener múltiples restaurantes |
-| Áreas configurables en vez de inside/outside | inside/outside hardcodeado | Restaurantes con pisos, sectores, bar no encajan en solo dos áreas |
-| Panel en `app.nativ.com` en vez de `slug.nativ.com/admin` | Subdominio del restaurante | Cookies de sesión de Supabase no cruzan subdominios fácilmente |
-| Stripe Connect para señas | Procesar pagos y transferir | El dinero va directo al restaurante, Nativ no toca la plata |
-| Bearer token en API admin | x-auth-token custom | Reusar el token de Supabase Auth, menos complejidad |
+| Áreas configurables | inside/outside hardcodeado | Restaurantes con pisos, sectores, bar |
+| Panel en `app.nativ.com` | `slug.nativ.com/admin` | Cookies de sesión no cruzan subdominios |
+| Stripe Connect para señas | Procesar y transferir | El dinero va directo al restaurante |
+| Bearer token en API admin | x-auth-token custom | Reusar el token de Supabase Auth |
+| JS embed script | iframe | Más flexible, sin restricciones de iframe, se integra con el DOM del restaurante |
+| Empleados aterrizan en floor-plan | Dashboard de stats | Los empleados usan el floor plan en servicio, no ven stats de negocio |
+| Tests unitarios gatan deploys | Tests opcionales | Un test fallido en Vercel bloqueó un deploy — se formalizó como requisito |
+| Self-hosted turn times | Configuración por turno | La lógica de turn times es compleja; `src/lib/turn-times.ts` centraliza y testea |
+| `NEXT_PUBLIC_APP_URL` para dominios | Hardcoded string | TFV de Twilio requería consistencia — `domain.ts` centraliza la construcción de URLs |
