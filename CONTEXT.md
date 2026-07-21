@@ -1,6 +1,6 @@
 # CONTEXT.md — Nativ
 *Última actualización: 2026-07-21 — actualizar esta fecha cada vez que se modifique este archivo*
-*Todas las páginas del panel completadas. Floor plan en 5 fases. Billing + depósitos implementados. Cron de reminders configurado. Pendiente: superadmin, birthday cron, AI campaigns auto-gen, deploy a producción.*
+*Superadmin panel completo. Pendiente: birthday cron, AI campaigns auto-gen, deploy a producción.*
 
 ---
 
@@ -253,9 +253,28 @@ GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario 
 
 **`vercel.json`** — `buildCommand: "npm run test && next build"` → los tests unitarios gatan deploys.
 
+### ✅ Superadmin panel (`/superadmin`)
+
+**`src/app/superadmin/layout.tsx`** — Layout con nav (Overview / Tenants / Users). Gateado por `requireSuperadmin()` — redirige a `/dashboard` si no es superadmin. Middleware también protege la ruta.
+
+**`src/app/superadmin/page.tsx`** — Dashboard con MRR, conteos por estado, trials expirando en 7 días, y signups de últimos 30 días.
+
+**`src/app/superadmin/tenants/page.tsx`** — Tabla de todos los tenants con filtro por estado, búsqueda por nombre/slug, y countdown coloreado del trial.
+
+**`src/app/superadmin/tenants/[id]/page.tsx`** — Detalle del tenant: settings, miembros, stats de reservas/guests, acciones.
+
+**`src/app/superadmin/tenants/[id]/TenantActionsClient.tsx`** — Acciones inline: activate, deactivate, start trial, extend trial +14d.
+
+**`src/app/superadmin/users/page.tsx`** — Todos los usuarios con toggle de superadmin.
+
+**`src/app/api/superadmin/tenant/route.ts`** — `POST /api/superadmin/tenant?id=&action=` — acciones: `activate`, `deactivate`, `start_trial`, `extend_trial`. Verifica `is_superadmin` server-side.
+
+**`src/app/api/superadmin/user/route.ts`** — `POST /api/superadmin/user?id=&action=toggle_superadmin`. Impide auto-revocación.
+
+**Dashboard** — Muestra badge "Superadmin" → `/superadmin` solo a usuarios con `is_superadmin: true`.
+
 ### ⏳ Pendiente
 
-- **Superadmin panel** — Sin implementar. No hay `/admin` ni `/superadmin` page.
 - **Birthday email cron** — La config existe en DB y la UI en `/campaigns`, pero no hay endpoint `/api/cron/birthdays` ni está en `vercel.json`.
 - **AI campaigns auto-generación** — Las campañas existen en DB y se muestran en el panel, pero no hay generación automática via IA. Actualmente solo se aprueban/rechazan las que se creen manualmente.
 - **Vercel + nativ-prod** — Producción no conectada. Supabase `nativ-prod` no creado todavía.
