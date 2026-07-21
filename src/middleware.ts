@@ -23,7 +23,8 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/onboarding') ||
     pathname.startsWith('/restaurant') ||
-    pathname.startsWith('/account')
+    pathname.startsWith('/account') ||
+    pathname.startsWith('/superadmin')
 
   if (isAppRoute && !user) {
     const loginUrl = new URL('/login', req.url)

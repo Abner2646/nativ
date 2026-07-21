@@ -91,6 +91,14 @@ export async function getUserTenants(userId: string) {
   return data
 }
 
+// Verificar que el usuario es superadmin (redirect si no)
+export async function requireSuperadmin(): Promise<AuthUser> {
+  const user = await requireUser()
+  const profile = await getProfile(user.id)
+  if (!profile?.is_superadmin) redirect('/dashboard')
+  return user
+}
+
 // Verificar que el usuario es admin de un tenant por slug (redirect si no)
 export async function requireAdminForSlug(slug: string, userId: string) {
   const access = await getTenantBySlug(slug, userId)
