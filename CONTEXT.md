@@ -1,6 +1,6 @@
 # CONTEXT.md — Nativ
-*Última actualización: 2026-07-21 — actualizar esta fecha cada vez que se modifique este archivo*
-*Superadmin panel completo. Pendiente: birthday cron, AI campaigns auto-gen, deploy a producción.*
+*Última actualización: 2026-07-22 — actualizar esta fecha cada vez que se modifique este archivo*
+*Superadmin panel completo. Birthday cron implementado. Pendiente: AI campaigns auto-gen.*
 
 ---
 
@@ -27,7 +27,7 @@ Nativ es un SaaS de reservas para restaurantes independientes. El diferenciador 
 | Stripe Connect | Señas de reservas | ✅ Implementado — sin testear en producción |
 | Stripe Billing | Suscripciones SaaS | ✅ Implementado — sin testear en producción |
 | Cloudinary | Imágenes | ✅ Implementado — usado en fotos del mini-sitio |
-| Vercel | Deploy | ⏳ Pendiente conectar a producción |
+| Vercel | Deploy | ✅ En producción |
 | Vitest | Tests | ✅ Tests unitarios gating deploys en Vercel |
 
 ---
@@ -36,9 +36,9 @@ Nativ es un SaaS de reservas para restaurantes independientes. El diferenciador 
 
 | Entorno | URL | Supabase | Branch de Git |
 |---|---|---|---|
-| Local | http://localhost:3000 | nativ-dev project | feature/* o develop |
-| Preview | vercel.app/... (auto) | nativ-dev project | develop |
-| Producción | nativ.com (pendiente) | nativ-prod project (pendiente crear) | main |
+| Local | http://localhost:3000 | mismo proyecto que prod | feature/* o develop |
+| Preview | vercel.app/... (auto) | mismo proyecto que prod | develop |
+| Producción | nativ.com | proyecto único de Supabase (prod y dev comparten DB) | main |
 
 **Variables de entorno:**
 - `.env.local` → local (NUNCA subir a Git, está en .gitignore)
@@ -229,6 +229,10 @@ GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario 
 
 **`src/app/(app)/restaurant/[slug]/more/page.tsx`** — Hub de navegación en mobile para páginas secundarias.
 
+### ✅ Cron — birthdays
+
+**`src/app/api/cron/birthdays/route.ts`** — Corre diario a las 10:00 UTC. Protegido por `CRON_SECRET`. Para cada tenant con `birthday_campaign_config.is_enabled = true`, busca guests cuyo cumpleaños sea en exactamente `days_before` días. **Guarda de "nuevo en el sistema"**: solo envía a guests cuyo `created_at` sea anterior a la apertura de la ventana (`days_before` días atrás) — evita mandar emails de cumpleaños a alguien que acaba de reservar y cuyo cumpleaños coincide con el window.
+
 ### ✅ Páginas públicas
 
 **`src/app/reserve/page.tsx`** — Widget de reservas con tema custom del tenant. Hidrata con data del server.
@@ -275,9 +279,7 @@ GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario 
 
 ### ⏳ Pendiente
 
-- **Birthday email cron** — La config existe en DB y la UI en `/campaigns`, pero no hay endpoint `/api/cron/birthdays` ni está en `vercel.json`.
 - **AI campaigns auto-generación** — Las campañas existen en DB y se muestran en el panel, pero no hay generación automática via IA. Actualmente solo se aprueban/rechazan las que se creen manualmente.
-- **Vercel + nativ-prod** — Producción no conectada. Supabase `nativ-prod` no creado todavía.
 - **Stripe producción** — Billing y depósitos implementados pero nunca testeados end-to-end en producción.
 
 ---
