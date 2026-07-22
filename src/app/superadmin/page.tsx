@@ -1,6 +1,7 @@
 import { requireSuperadmin } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import Link from 'next/link'
+import { BackupButton } from '@/app/superadmin/BackupButton'
 
 const PLAN_PRICE = 49
 
@@ -42,9 +43,12 @@ export default async function SuperadminOverviewPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-satoshi font-bold text-2xl text-offwhite">Overview</h1>
-        <p className="text-sm text-offwhite/35 mt-1">Platform health at a glance.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-satoshi font-bold text-2xl text-offwhite">Overview</h1>
+          <p className="text-sm text-offwhite/35 mt-1">Platform health at a glance.</p>
+        </div>
+        <BackupButton />
       </div>
 
       {/* ── Stat cards ── */}
