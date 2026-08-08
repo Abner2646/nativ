@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUser, getProfile } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logAuditEvent } from '@/lib/audit'
 
 // Todos los endpoints de superadmin verifican is_superadmin en el servidor.
 // No hay forma de bypassear esto desde el cliente.
@@ -27,11 +28,13 @@ export async function POST(req: NextRequest) {
 
   const { data: tenant } = await supabaseAdmin
     .from('tenants')
-    .select('id, status, trial_ends_at')
+    .select('id, slug, status, trial_ends_at, tenant_settings(name)')
     .eq('id', tenantId)
     .maybeSingle()
 
   if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
+
+  const tenantName = (tenant as any).tenant_settings?.[0]?.name || tenant.slug
 
   switch (action) {
     case 'activate': {
@@ -40,6 +43,7 @@ export async function POST(req: NextRequest) {
         .update({ status: 'active' })
         .eq('id', tenantId)
       if (error) return NextResponse.json({ error: 'DB error' }, { status: 500 })
+      logAuditEvent({ adminId: admin.id, adminEmail: admin.email!, action: 'activate', targetType: 'tenant', targetId: tenantId, targetName: tenantName })
       return NextResponse.json({ status: 'active' })
     }
 
@@ -49,6 +53,7 @@ export async function POST(req: NextRequest) {
         .update({ status: 'inactive' })
         .eq('id', tenantId)
       if (error) return NextResponse.json({ error: 'DB error' }, { status: 500 })
+      logAuditEvent({ adminId: admin.id, adminEmail: admin.email!, action: 'deactivate', targetType: 'tenant', targetId: tenantId, targetName: tenantName })
       return NextResponse.json({ status: 'inactive' })
     }
 
@@ -59,6 +64,7 @@ export async function POST(req: NextRequest) {
         .update({ status: 'trial', trial_ends_at: trialEndsAt })
         .eq('id', tenantId)
       if (error) return NextResponse.json({ error: 'DB error' }, { status: 500 })
+      logAuditEvent({ adminId: admin.id, adminEmail: admin.email!, action: 'start_trial', targetType: 'tenant', targetId: tenantId, targetName: tenantName })
       return NextResponse.json({ status: 'trial', trial_ends_at: trialEndsAt })
     }
 
@@ -79,6 +85,7 @@ export async function POST(req: NextRequest) {
         .update({ status: 'trial', trial_ends_at: trialEndsAt })
         .eq('id', tenantId)
       if (error) return NextResponse.json({ error: 'DB error' }, { status: 500 })
+      logAuditEvent({ adminId: admin.id, adminEmail: admin.email!, action: 'extend_trial', targetType: 'tenant', targetId: tenantId, targetName: tenantName, metadata: { days } })
       return NextResponse.json({ status: 'trial', trial_ends_at: trialEndsAt })
     }
 

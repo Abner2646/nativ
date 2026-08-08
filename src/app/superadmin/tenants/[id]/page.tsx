@@ -3,6 +3,9 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { StatusBadge } from '../../page'
 import { TenantActionsClient } from './TenantActionsClient'
+import { TenantNotesClient } from './TenantNotesClient'
+import { FeatureFlagsClient } from './FeatureFlagsClient'
+import { ImpersonateButton } from './ImpersonateButton'
 import Link from 'next/link'
 
 export default async function SuperadminTenantDetailPage({
@@ -21,6 +24,8 @@ export default async function SuperadminTenantDetailPage({
     { count: reservations30d },
     { count: guestCount },
     { count: reservationsTotal },
+    { count: shiftsCount },
+    { count: areasCount },
   ] = await Promise.all([
     supabaseAdmin
       .from('tenants')
@@ -45,6 +50,16 @@ export default async function SuperadminTenantDetailPage({
       .from('reservations')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', id),
+    supabaseAdmin
+      .from('shifts')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', id)
+      .eq('is_active', true),
+    supabaseAdmin
+      .from('seating_areas')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', id)
+      .eq('is_active', true),
   ])
 
   if (!tenant) return notFound()
@@ -53,6 +68,17 @@ export default async function SuperadminTenantDetailPage({
   const name = settings?.name || tenant.slug
   const trialEnd = tenant.trial_ends_at ? new Date(tenant.trial_ends_at) : null
   const daysLeft = trialEnd ? Math.ceil((trialEnd.getTime() - Date.now()) / 86400000) : null
+  const featureFlags = (settings?.feature_flags ?? {}) as Record<string, boolean>
+  const internalNotes = settings?.internal_notes ?? null
+
+  // Onboarding checklist
+  const onboarding = [
+    { label: 'Seating areas configured', done: (areasCount ?? 0) > 0 },
+    { label: 'Shifts configured',        done: (shiftsCount ?? 0) > 0 },
+    { label: 'First reservation received', done: (reservationsTotal ?? 0) > 0 },
+    { label: 'Stripe subscription',      done: Boolean(tenant.stripe_subscription_id) },
+  ]
+  const onboardingScore = onboarding.filter(s => s.done).length
 
   return (
     <div className="space-y-8">
@@ -76,12 +102,14 @@ export default async function SuperadminTenantDetailPage({
           </div>
         </div>
 
-        {/* Actions */}
-        <TenantActionsClient
-          tenantId={tenant.id}
-          currentStatus={tenant.status}
-          trialEndsAt={tenant.trial_ends_at}
-        />
+        <div className="flex flex-col items-start sm:items-end gap-3">
+          <TenantActionsClient
+            tenantId={tenant.id}
+            currentStatus={tenant.status}
+            trialEndsAt={tenant.trial_ends_at}
+          />
+          <ImpersonateButton tenantId={tenant.id} tenantName={name} />
+        </div>
       </div>
 
       {/* Stats */}
@@ -92,7 +120,23 @@ export default async function SuperadminTenantDetailPage({
         <InfoCard label="Members" value={(members ?? []).length} />
       </div>
 
-      {/* Tenant info */}
+      {/* Onboarding checklist */}
+      <Section title={`Onboarding — ${onboardingScore}/${onboarding.length} complete`}>
+        <div className="grid grid-cols-2 gap-3">
+          {onboarding.map(step => (
+            <div key={step.label} className="flex items-center gap-2 text-sm">
+              <span className={step.done ? 'text-sage' : 'text-offwhite/25'}>
+                {step.done ? '✓' : '○'}
+              </span>
+              <span className={step.done ? 'text-offwhite/70' : 'text-offwhite/30'}>
+                {step.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Tenant info + Settings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Section title="Account">
           <Row label="ID" value={<span className="font-mono text-xs text-offwhite/50">{tenant.id}</span>} />
@@ -126,6 +170,25 @@ export default async function SuperadminTenantDetailPage({
           ) : (
             <p className="text-sm text-offwhite/30">No settings found.</p>
           )}
+        </Section>
+      </div>
+
+      {/* Feature flags + Internal notes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Section title="Feature flags">
+          <FeatureFlagsClient
+            tenantId={tenant.id}
+            tenantName={name}
+            initialFlags={featureFlags}
+          />
+        </Section>
+
+        <Section title="Internal notes">
+          <TenantNotesClient
+            tenantId={tenant.id}
+            tenantName={name}
+            initialNotes={internalNotes}
+          />
         </Section>
       </div>
 

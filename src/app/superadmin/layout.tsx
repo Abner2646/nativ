@@ -6,20 +6,27 @@ export default async function SuperadminLayout({ children }: { children: React.R
 
   return (
     <div className="min-h-screen bg-midnight text-offwhite">
-      <header className="sticky top-0 z-40 flex items-center gap-6 px-6 py-3 border-b border-white/[0.07] bg-midnight/90 backdrop-blur-sm">
-        <span className="font-satoshi font-bold text-sm text-offwhite/30 tracking-widest uppercase select-none">
-          Nativ · Superadmin
-        </span>
-        <nav className="flex items-center gap-1">
-          <NavLink href="/superadmin">Overview</NavLink>
-          <NavLink href="/superadmin/tenants">Tenants</NavLink>
-          <NavLink href="/superadmin/users">Users</NavLink>
-        </nav>
-        <div className="ml-auto flex items-center gap-4">
-          <Link href="/dashboard" className="text-xs text-offwhite/30 hover:text-offwhite/60 transition-colors">
-            ← Back to panel
-          </Link>
-          <span className="text-xs text-offwhite/20">{user.email}</span>
+      <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-midnight/90 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-6">
+          <span className="font-satoshi font-bold text-sm text-offwhite/30 tracking-widest uppercase select-none shrink-0">
+            Nativ · Superadmin
+          </span>
+          <nav className="flex items-center gap-1 flex-wrap">
+            <NavLink href="/superadmin">Overview</NavLink>
+            <NavLink href="/superadmin/tenants">Tenants</NavLink>
+            <NavLink href="/superadmin/users">Users</NavLink>
+            <NavLink href="/superadmin/billing">Billing</NavLink>
+            <NavLink href="/superadmin/health">Health</NavLink>
+            <NavLink href="/superadmin/usage">Usage</NavLink>
+            <NavLink href="/superadmin/broadcast">Broadcast</NavLink>
+            <NavLink href="/superadmin/audit">Audit</NavLink>
+          </nav>
+          <div className="ml-auto flex items-center gap-4 shrink-0">
+            <Link href="/dashboard" className="text-xs text-offwhite/30 hover:text-offwhite/60 transition-colors">
+              ← Back to panel
+            </Link>
+            <span className="text-xs text-offwhite/20">{user.email}</span>
+          </div>
         </div>
       </header>
 
