@@ -161,9 +161,9 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
   )
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children }: { children?: React.ReactNode }) {
   return <th className="px-6 py-3 text-left text-xs font-semibold text-offwhite/30 uppercase tracking-widest">{children}</th>
 }
-function Td({ children }: { children: React.ReactNode }) {
+function Td({ children }: { children?: React.ReactNode }) {
   return <td className="px-6 py-3">{children}</td>
 }
