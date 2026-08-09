@@ -277,26 +277,17 @@ GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario 
 
 **Dashboard** — Muestra badge "Superadmin" → `/superadmin` solo a usuarios con `is_superadmin: true`.
 
+### ✅ Completado recientemente
+
+- **Mini-sitio público por restaurante** — Página pública `/r/[slug]` con fotos, info y widget de reservas.
+- **Stripe producción** — Billing y depósitos testeados end-to-end en producción.
+- **Google OAuth** — Login con Google implementado via Supabase Auth.
+- **Superadmin panel expandido** — Billing, Health, Usage, Broadcast, Audit, Feature flags, Notas internas, Impersonate, Onboarding checklist (migration 014).
+
 ### ⏳ Pendiente
 
-**Funcionalidad core:**
-- **AI campaigns auto-generación** — Las campañas existen en DB y se muestran en el panel, pero no hay generación automática via IA. Actualmente solo se aprueban/rechazan las que se creen manualmente.
-- **Stripe producción** — Billing y depósitos implementados pero nunca testeados end-to-end en producción.
-- **Mini-sitio público por restaurante** — Las fotos se suben via Cloudinary pero no hay una página pública `/r/[slug]` que el restaurante pueda compartir con sus clientes como landing. Las fotos, horarios y el widget de reservas podrían vivir ahí.
 - **Envío real de campañas** — `ai_campaigns` tiene aprobación/rechazo pero no hay mecanismo que dispare el envío al aprobar. Falta el endpoint y el cron.
-- **Google OAuth** — Supabase Auth lo soporta nativamente. El flujo de registro actual es solo email/password.
-
-**Superadmin — funcionalidades propuestas:**
-- **MRR chart** — Gráfico de tendencia mensual de MRR. Hoy solo se muestra el número actual.
-- **Churn tracking** — Lista de tenants que pasaron a `inactive`, con fecha y tiempo que duró la suscripción.
-- **Impersonar tenant** — El superadmin puede entrar al dashboard de cualquier tenant sin conocer sus credenciales. Útil para soporte y debugging.
-- **Feature flags por tenant** — Activar/desactivar funcionalidades experimentales (ej: AI campaigns) por tenant específico sin hacer deploy.
-- **Health monitor** — Dashboard de alertas: tenants con emails fallidos (bounce), webhooks de Stripe con error, Twilio con números bloqueados.
-- **Notas internas por tenant** — Campo de texto libre para anotar contexto de soporte ("cliente pidió extensión de trial", "tiene problema con Stripe Connect").
-- **Audit log del superadmin** — Registro de qué superadmin hizo qué acción y cuándo (activate, deactivate, extend trial).
-- **Estadísticas de uso por tenant** — Reservas por mes, guests únicos, tasa de cancelación. Ranking de tenants más activos.
-- **Email broadcast a todos los tenants** — Para anuncios de nuevas features o cambios de precio. Con preview antes de enviar.
-- **Onboarding completion tracking** — Qué porcentaje de tenants completó: creó área → creó shift → recibió primera reserva. Identifica usuarios atascados.
+- **AI campaigns auto-generación** — Las campañas existen en DB y se muestran en el panel, pero no hay generación automática via IA. Prerequisito: resolver envío primero.
 
 ---
 
