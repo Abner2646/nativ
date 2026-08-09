@@ -276,7 +276,7 @@ export async function updateTable(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const body = await req.json()
-  const allowed = ['name', 'shape', 'min_covers', 'max_covers', 'x', 'y', 'width', 'height', 'rotation', 'is_active', 'seating_area_id']
+  const allowed = ['name', 'shape', 'min_covers', 'max_covers', 'x', 'y', 'width', 'height', 'rotation', 'is_active', 'is_blocked', 'seating_area_id']
   const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)))
   const { data, error } = await supabaseAdmin
     .from('restaurant_tables')
@@ -539,7 +539,7 @@ export async function getServiceState(req: NextRequest) {
     supabaseAdmin.from('restaurant_tables').select('*')
       .eq('tenant_id', ctx.tenant.id).eq('is_active', true).order('created_at'),
     supabaseAdmin.from('reservations')
-      .select('id, time, party_size, status, occasion, notes, seated_at, finished_at, source, seating_area_id, shift_id, duration_minutes, guest:guests(name, phone), table_assignments(table_id), shift:shifts(duration_minutes)')
+      .select('id, time, party_size, status, occasion, notes, seated_at, finished_at, source, seating_area_id, shift_id, duration_minutes, guest:guests(name, phone, guest_tags(tag)), table_assignments(table_id), shift:shifts(duration_minutes)')
       .eq('tenant_id', ctx.tenant.id).eq('date', date).in('status', ['confirmed', 'completed'])
       .order('time'),
     supabaseAdmin.from('table_combinations')
@@ -558,6 +558,22 @@ export async function getServiceState(req: NextRequest) {
     combos: combos || [],
     waitlist: waitlist || [],
   })
+}
+
+export async function toggleTableBlocked(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const { is_blocked } = await req.json()
+  if (typeof is_blocked !== 'boolean') return NextResponse.json({ error: 'is_blocked required' }, { status: 400 })
+  const { data, error } = await supabaseAdmin
+    .from('restaurant_tables')
+    .update({ is_blocked })
+    .eq('id', id).eq('tenant_id', ctx.tenant.id)
+    .select().single()
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ table: data })
 }
 
 export async function unseatReservation(req: NextRequest) {

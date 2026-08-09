@@ -115,6 +115,7 @@ export interface RestaurantTable {
   height: number
   rotation: number
   is_active: boolean
+  is_blocked: boolean
   created_at: string
 }
 

@@ -6,7 +6,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { RestaurantTable, SeatingArea } from '@/lib/types'
 import {
   Users, Clock, Check, UserPlus, X, Minus, Plus,
-  LayoutGrid, GanttChartSquare, ZoomIn, ZoomOut, ListPlus,
+  LayoutGrid, GanttChartSquare, ZoomIn, ZoomOut, ListPlus, Ban,
 } from 'lucide-react'
 
 async function getToken() {
@@ -37,7 +37,7 @@ interface ServiceRes {
   source: string
   seating_area_id: string | null
   duration_minutes: number | null
-  guest: { name: string; phone: string | null } | null
+  guest: { name: string; phone: string | null; guest_tags?: { tag: string }[] } | null
   table_assignments: { table_id: string }[]
   shift: { duration_minutes: number } | null
 }
@@ -69,13 +69,14 @@ interface ServiceState {
   waitlist: WaitlistEntry[]
 }
 
-type TableStatus = 'free' | 'reserved' | 'seated' | 'overtime'
+type TableStatus = 'free' | 'reserved' | 'seated' | 'overtime' | 'blocked'
 
 const TABLE_STYLE: Record<TableStatus, { bg: string; border: string; text: string; dot: string }> = {
-  free:     { bg: 'rgba(255,255,255,0.05)',  border: '1.5px solid rgba(255,255,255,0.15)', text: 'rgba(242,239,233,0.65)', dot: 'rgba(255,255,255,0.35)' },
-  reserved: { bg: 'rgba(201,169,110,0.14)',  border: '1.5px solid rgba(201,169,110,0.55)', text: '#C9A96E', dot: '#C9A96E' },
-  seated:   { bg: 'rgba(111,143,123,0.22)',  border: '1.5px solid rgba(111,143,123,0.70)', text: '#8fb5a0', dot: '#6F8F7B' },
-  overtime: { bg: 'rgba(224,85,85,0.16)',    border: '1.5px solid rgba(224,85,85,0.60)',   text: '#e08585', dot: '#e05555' },
+  free:     { bg: 'rgba(255,255,255,0.05)',  border: '1.5px solid rgba(255,255,255,0.15)',  text: 'rgba(242,239,233,0.65)', dot: 'rgba(255,255,255,0.35)' },
+  reserved: { bg: 'rgba(201,169,110,0.14)',  border: '1.5px solid rgba(201,169,110,0.55)',  text: '#C9A96E', dot: '#C9A96E' },
+  seated:   { bg: 'rgba(111,143,123,0.22)',  border: '1.5px solid rgba(111,143,123,0.70)',  text: '#8fb5a0', dot: '#6F8F7B' },
+  overtime: { bg: 'rgba(224,85,85,0.16)',    border: '1.5px solid rgba(224,85,85,0.60)',    text: '#e08585', dot: '#e05555' },
+  blocked:  { bg: 'rgba(255,255,255,0.015)', border: '1.5px dashed rgba(255,255,255,0.12)', text: 'rgba(242,239,233,0.20)', dot: 'rgba(255,255,255,0.12)' },
 }
 
 const LEGEND: { status: TableStatus; label: string }[] = [
@@ -83,9 +84,23 @@ const LEGEND: { status: TableStatus; label: string }[] = [
   { status: 'reserved', label: 'Reserved' },
   { status: 'seated',   label: 'Seated' },
   { status: 'overtime', label: 'Over time' },
+  { status: 'blocked',  label: 'Blocked' },
 ]
 
 function resDuration(r: ServiceRes) { return r.duration_minutes ?? r.shift?.duration_minutes ?? 90 }
+function fmtDuration(mins: number): string {
+  if (mins < 60) return `${mins}m`
+  const h = Math.floor(mins / 60), m = mins % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
+}
+function tagDotColor(tag: string): string {
+  const t = tag.toLowerCase()
+  if (t.includes('vip')) return '#C9A96E'
+  if (/birt|cumple|anniv/.test(t)) return '#e08585'
+  if (/aller|gl.ten|celiac/.test(t)) return '#f97316'
+  return 'rgba(242,239,233,0.60)'
+}
+const LARGE_PARTY = 8
 
 interface Props {
   areas: SeatingArea[]
@@ -111,6 +126,7 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
   const [now, setNow]                   = useState(() => Date.now())
   const [wlForm, setWlForm]             = useState({ name: '', party: 2, quote: '' })
   const [wlOpen, setWlOpen]             = useState(false)
+  const [showAvailableOnly, setShowAvailableOnly] = useState(false)
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   async function adminFetch(path: string, options?: RequestInit) {
@@ -168,6 +184,7 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
     const map = new Map<string, { status: TableStatus; res: ServiceRes | null; minutesSeated: number }>()
     if (!state) return map
     for (const t of state.tables) {
+      if (t.is_blocked) { map.set(t.id, { status: 'blocked', res: null, minutesSeated: 0 }); continue }
       const assigned = confirmed.filter(r =>
         r.table_assignments.some(a => a.table_id === t.id) && !r.finished_at
       )
@@ -298,6 +315,10 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
   const removeWaitlist = (id: string) =>
     act(() => adminFetch(`resource=waitlist&id=${id}`, { method: 'DELETE' }), 'Removed from waitlist')
 
+  const blockTable = (id: string, blocked: boolean) =>
+    act(() => adminFetch(`resource=toggle-blocked&id=${id}`, { method: 'PATCH', body: JSON.stringify({ is_blocked: blocked }) }),
+      blocked ? 'Table blocked' : 'Table unblocked')
+
   const onTableTap = (t: RestaurantTable) => {
     if (seatingEntry) {
       if (isSingleCandidate(t)) seatWaitlistEntry(t.id)
@@ -415,14 +436,26 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
         </div>
 
         {view === 'floor' && (
-          <div className="hidden sm:flex items-center gap-3 flex-wrap">
-            {LEGEND.map(({ status, label }) => (
-              <span key={status} className="flex items-center gap-1.5 text-[11px] text-offwhite/40">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TABLE_STYLE[status].dot }} />
-                {label}
-              </span>
-            ))}
-          </div>
+          <>
+            <button
+              onClick={() => setShowAvailableOnly(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors"
+              style={showAvailableOnly
+                ? { backgroundColor: 'rgba(111,143,123,0.18)', border: '1px solid rgba(111,143,123,0.35)', color: '#8fb5a0' }
+                : { backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(242,239,233,0.45)' }
+              }>
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TABLE_STYLE.free.dot }} />
+              {showAvailableOnly ? 'Available only' : 'All tables'}
+            </button>
+            <div className="hidden sm:flex items-center gap-3 flex-wrap">
+              {LEGEND.map(({ status, label }) => (
+                <span key={status} className="flex items-center gap-1.5 text-[11px] text-offwhite/40">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TABLE_STYLE[status].dot }} />
+                  {label}
+                </span>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
@@ -487,8 +520,14 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                       const style = TABLE_STYLE[status]
                       const candidate = (assigningResId || seatingEntry) ? isCandidate(t) : false
                       const dimmed = (assigningResId || seatingEntry) && !candidate
+                      const dimmedForFilter = showAvailableOnly && status !== 'free'
                       const isSelected = t.id === selectedTableId && !assigningResId && !seatingEntry
                       const hasLater = status === 'free' && !!info?.res
+                      const isLargeParty = (status === 'reserved' || status === 'seated' || status === 'overtime') && (info?.res?.party_size ?? 0) >= LARGE_PARTY
+                      const tags = info?.res?.guest?.guest_tags ?? []
+                      const selectedBorder = status === 'blocked'
+                        ? '2px dashed rgba(255,255,255,0.35)'
+                        : `2px solid ${style.border.split('solid ')[1]}`
                       return (
                         <button
                           key={t.id}
@@ -502,8 +541,8 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                             transform: `translate(-50%, -50%) rotate(${t.rotation}deg)`,
                             borderRadius: t.shape === 'round' ? '50%' : '14%',
                             backgroundColor: style.bg,
-                            border: candidate ? '2px dashed #C9A96E' : isSelected ? `2px solid ${style.border.split('solid ')[1]}` : style.border,
-                            opacity: dimmed ? 0.25 : 1,
+                            border: candidate ? '2px dashed #C9A96E' : isSelected ? selectedBorder : style.border,
+                            opacity: dimmed ? 0.25 : dimmedForFilter ? 0.15 : 1,
                             zIndex: isSelected || candidate ? 2 : 1,
                             cursor: 'pointer',
                           }}
@@ -513,6 +552,24 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                             <span className="absolute w-2 h-2 rounded-full pointer-events-none"
                               style={{ top: '8%', right: '10%', backgroundColor: '#C9A96E', transform: `rotate(${-t.rotation}deg)` }} />
                           )}
+                          {/* Badge de grupo grande (≥8 personas) */}
+                          {isLargeParty && (
+                            <span className="absolute pointer-events-none flex items-center justify-center rounded-full"
+                              style={{
+                                top: '6%', left: '8%', width: '26%', height: '26%', minWidth: '13px', minHeight: '13px',
+                                backgroundColor: 'rgba(224,85,85,0.88)', color: '#fff',
+                                fontSize: 'clamp(6px, 0.75vw, 9px)', fontWeight: 700,
+                                transform: `rotate(${-t.rotation}deg)`,
+                              }}>
+                              {info!.res!.party_size}
+                            </span>
+                          )}
+                          {/* X en mesas bloqueadas */}
+                          {status === 'blocked' && (
+                            <span className="pointer-events-none" style={{ fontSize: 'clamp(9px, 1.4vw, 14px)', opacity: 0.30, transform: `rotate(${-t.rotation}deg)` }}>
+                              ✕
+                            </span>
+                          )}
                           <span className="font-semibold pointer-events-none whitespace-nowrap"
                             style={{ fontSize: 'clamp(10px, 1.4vw, 14px)', color: style.text, transform: `rotate(${-t.rotation}deg)` }}>
                             {t.name}
@@ -520,12 +577,22 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                           <span className="pointer-events-none whitespace-nowrap"
                             style={{ fontSize: 'clamp(8px, 1vw, 11px)', color: 'rgba(242,239,233,0.40)', transform: `rotate(${-t.rotation}deg)` }}>
                             {status === 'seated' || status === 'overtime'
-                              // Mesas angostas: solo el timer — "2p · 58m" no entra en un round de 2
-                              ? (t.width < 10 ? `${info!.minutesSeated}m` : `${info!.res!.party_size}p · ${info!.minutesSeated}m`)
+                              ? (t.width < 10 ? fmtDuration(info!.minutesSeated) : `${info!.res!.party_size}p · ${fmtDuration(info!.minutesSeated)}`)
                               : status === 'reserved'
                               ? `${fmtTime(info!.res!.time)}`
+                              : status === 'blocked'
+                              ? 'blocked'
                               : `${t.min_covers}–${t.max_covers}`}
                           </span>
+                          {/* Tag dots del guest */}
+                          {tags.length > 0 && (
+                            <span className="absolute bottom-[8%] flex gap-[2px] pointer-events-none"
+                              style={{ transform: `rotate(${-t.rotation}deg)` }}>
+                              {tags.slice(0, 3).map((tg, i) => (
+                                <span key={i} className="rounded-full" style={{ width: '5px', height: '5px', backgroundColor: tagDotColor(tg.tag) }} />
+                              ))}
+                            </span>
+                          )}
                         </button>
                       )
                     })}
@@ -666,9 +733,19 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                   <p className="text-sm font-semibold text-offwhite">{selectedInfo.res.guest?.name}</p>
                   <p className="text-xs text-offwhite/40 mt-0.5 flex items-center gap-2">
                     <Users size={11} /> {selectedInfo.res.party_size} people
-                    <Clock size={11} className="ml-1" /> {selectedInfo.minutesSeated} min
+                    <Clock size={11} className="ml-1" /> {fmtDuration(selectedInfo.minutesSeated)}
                     {selectedInfo.res.source === 'walk_in' && <span className="text-offwhite/25">· walk-in</span>}
                   </p>
+                  {(selectedInfo.res.guest?.guest_tags?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {selectedInfo.res.guest!.guest_tags!.map((tg, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: `1px solid ${tagDotColor(tg.tag)}`, color: tagDotColor(tg.tag) }}>
+                          {tg.tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {selectedInfo.res.notes && <p className="text-xs text-offwhite/30 italic mt-1.5">"{selectedInfo.res.notes}"</p>}
                   <div className="flex gap-2 mt-4">
                     <button onClick={() => finish(selectedInfo.res!.id)} disabled={busy}
@@ -691,6 +768,16 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                     {fmtTime(selectedInfo.res.time)} · {selectedInfo.res.party_size} people
                     {selectedInfo.res.occasion && <span className="text-offwhite/30"> · {selectedInfo.res.occasion}</span>}
                   </p>
+                  {(selectedInfo.res.guest?.guest_tags?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {selectedInfo.res.guest!.guest_tags!.map((tg, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: `1px solid ${tagDotColor(tg.tag)}`, color: tagDotColor(tg.tag) }}>
+                          {tg.tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex gap-2 mt-4">
                     <button onClick={() => seat(selectedInfo.res!.id)} disabled={busy}
                       className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-offwhite text-midnight hover:bg-offwhite/90 transition-colors disabled:opacity-40">
@@ -702,6 +789,17 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                       Unassign
                     </button>
                   </div>
+                </>
+              )}
+
+              {selectedInfo.status === 'blocked' && (
+                <>
+                  <p className="text-xs text-offwhite/35 mb-4">This table is out of service and won't accept reservations or walk-ins.</p>
+                  <button onClick={() => { blockTable(selectedTable.id, false); setSelectedTableId(null) }} disabled={busy}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40"
+                    style={{ backgroundColor: 'rgba(111,143,123,0.15)', border: '1px solid rgba(111,143,123,0.30)', color: '#8fb5a0' }}>
+                    Unblock table
+                  </button>
                 </>
               )}
 
@@ -730,6 +828,11 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                   <button onClick={() => walkIn(selectedTable.id)} disabled={busy}
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-offwhite text-midnight hover:bg-offwhite/90 transition-colors disabled:opacity-40">
                     <UserPlus size={14} /> Seat walk-in
+                  </button>
+                  <button onClick={() => { blockTable(selectedTable.id, true); setSelectedTableId(null) }} disabled={busy}
+                    className="w-full mt-2 flex items-center justify-center gap-2 py-2 rounded-xl text-xs text-offwhite/30 hover:text-offwhite/55 transition-colors disabled:opacity-40"
+                    style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <Ban size={11} /> Block table
                   </button>
                 </>
               )}

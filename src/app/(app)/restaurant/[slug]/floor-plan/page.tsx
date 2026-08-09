@@ -24,7 +24,7 @@ export default async function FloorPlanPage({ params }: { params: Promise<{ slug
     supabaseAdmin.from('seating_areas').select('*').eq('tenant_id', tenant.id).eq('is_active', true).order('position'),
     supabaseAdmin.from('restaurant_tables').select('*').eq('tenant_id', tenant.id).eq('is_active', true).order('created_at'),
     supabaseAdmin.from('reservations')
-      .select('id, time, party_size, status, occasion, notes, seated_at, finished_at, source, seating_area_id, shift_id, duration_minutes, guest:guests(name, phone), table_assignments(table_id), shift:shifts(duration_minutes)')
+      .select('id, time, party_size, status, occasion, notes, seated_at, finished_at, source, seating_area_id, shift_id, duration_minutes, guest:guests(name, phone, guest_tags(tag)), table_assignments(table_id), shift:shifts(duration_minutes)')
       .eq('tenant_id', tenant.id).eq('date', date).in('status', ['confirmed', 'completed'])
       .order('time'),
     supabaseAdmin.from('table_combinations')

@@ -22,6 +22,7 @@ import {
   getReferrals,
   getDepositRules, createDepositRule, deleteDepositRule,
   getStripeConnectStatus, createStripeConnectLink,
+  toggleTableBlocked,
 } from '@/routes/admin.routes'
 
 export async function GET(req: NextRequest) {
@@ -87,6 +88,7 @@ export async function PATCH(req: NextRequest) {
     case 'settings':        return updateSettings(req)
     case 'campaigns':       return updateCampaign(req)
     case 'birthday-config': return updateBirthdayConfig(req)
+    case 'toggle-blocked':  return toggleTableBlocked(req)
     default: return Response.json({ error: 'Unknown resource' }, { status: 400 })
   }
 }
