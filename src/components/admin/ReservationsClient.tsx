@@ -1,8 +1,8 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { Reservation, ReservationStatus, AvailabilitySlot } from '@/lib/types'
-import { Cake, Heart, Briefcase, Flower2, Star, CreditCard, type LucideIcon } from 'lucide-react'
+import { Cake, Heart, Briefcase, Flower2, Star, CreditCard, Download, Check, type LucideIcon } from 'lucide-react'
 
 async function getToken() {
   const { data: { session } } = await getBrowserSupabase().auth.getSession()
@@ -26,6 +26,28 @@ function fmtTime(t: string) { return t.slice(0, 5) }
 function tableLabel(r: Reservation): string | null {
   const names = (r.table_assignments || []).map(a => a.table?.name).filter(Boolean)
   return names.length > 0 ? names.join('+') : null
+}
+
+function ordinal(n: number): string {
+  if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`
+  const s = ['th', 'st', 'nd', 'rd']
+  return `${n}${s[n % 10] || s[0]}`
+}
+
+function exportToCSV(rows: Reservation[], date: string) {
+  const headers = ['Time', 'Name', 'Email', 'Phone', 'Party', 'Status', 'Area', 'Table', 'Occasion', 'Notes', 'Visit #']
+  const csv = [
+    headers.join(','),
+    ...rows.map(r => [
+      fmtTime(r.time), r.guest?.name, r.guest?.email, r.guest?.phone,
+      r.party_size, r.status, r.seating_area?.name, tableLabel(r),
+      r.occasion, r.notes, r.guest?.visit_count ?? '',
+    ].map((v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')),
+  ].join('\n')
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  const a = document.createElement('a')
+  a.href = url; a.download = `reservations-${date}.csv`; a.click()
+  URL.revokeObjectURL(url)
 }
 
 const card = { backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0.06)' }
@@ -60,26 +82,35 @@ function OccasionIcon({ occasion, size = 11 }: { occasion: string; size?: number
 
 // ── Compact list row (left panel on tablet/desktop) ──────────────────────────
 function CompactRow({
-  r, selected, onClick,
-}: { r: Reservation; selected: boolean; onClick: () => void }) {
+  r, selected, onClick, updating, onQuickComplete,
+}: { r: Reservation; selected: boolean; onClick: () => void; updating: string | null; onQuickComplete: (id: string) => void }) {
   return (
-    <button
+    <div
       onClick={onClick}
-      className="w-full text-left px-4 py-3.5 transition-colors"
+      role="button"
+      className="w-full text-left px-4 py-3.5 transition-colors cursor-pointer select-none"
       style={{
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         borderLeft: selected ? '2px solid #C9A96E' : '2px solid transparent',
         backgroundColor: selected ? 'rgba(255,255,255,0.05)' : undefined,
       }}
-      onMouseOver={e => { if (!selected) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.025)' }}
-      onMouseOut={e  => { if (!selected) e.currentTarget.style.backgroundColor = '' }}
+      onMouseOver={e => { if (!selected) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(255,255,255,0.025)' }}
+      onMouseOut={e  => { if (!selected) (e.currentTarget as HTMLDivElement).style.backgroundColor = '' }}
     >
       <div className="flex items-center gap-3">
         <span className="font-mono text-lg font-semibold text-offwhite leading-none w-[46px] shrink-0">
           {fmtTime(r.time)}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-offwhite truncate">{r.guest?.name}</p>
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="text-sm font-medium text-offwhite truncate">{r.guest?.name}</p>
+            {r.guest && r.guest.visit_count >= 1 && (
+              <span className="text-[10px] shrink-0 font-medium"
+                style={{ color: r.guest.visit_count === 1 ? '#8fb5a0' : '#C9A96E' }}>
+                {r.guest.visit_count === 1 ? 'New' : `${ordinal(r.guest.visit_count)}×`}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-offwhite/35 mt-0.5 flex items-center gap-1.5">
             {r.occasion && <OccasionIcon occasion={r.occasion} size={11} />}
             <span>{r.party_size} {r.party_size === 1 ? 'person' : 'people'}</span>
@@ -91,11 +122,23 @@ function CompactRow({
             )}
           </p>
         </div>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border shrink-0 ${STATUS_BADGE[r.status] || ''}`}>
-          {r.status}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {r.status === 'confirmed' && (
+            <button
+              onClick={e => { e.stopPropagation(); onQuickComplete(r.id) }}
+              disabled={updating === r.id}
+              title="Mark arrived"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-offwhite/25 hover:text-sage hover:bg-sage/10 transition-colors disabled:opacity-30"
+              style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+              <Check size={12} />
+            </button>
+          )}
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${STATUS_BADGE[r.status] || ''}`}>
+            {r.status}
+          </span>
+        </div>
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -146,7 +189,18 @@ function DetailPanel({
 
       {/* Guest info */}
       <div className="pb-5 mb-5 space-y-0.5" style={divider}>
-        <p className="text-base font-semibold text-offwhite">{r.guest?.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-base font-semibold text-offwhite">{r.guest?.name}</p>
+          {r.guest && r.guest.visit_count >= 1 && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+              style={r.guest.visit_count === 1
+                ? { backgroundColor: 'rgba(111,143,123,0.12)', color: '#8fb5a0', border: '1px solid rgba(111,143,123,0.25)' }
+                : { backgroundColor: 'rgba(201,169,110,0.12)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.25)' }
+              }>
+              {r.guest.visit_count === 1 ? '1st visit' : `${ordinal(r.guest.visit_count)} visit`}
+            </span>
+          )}
+        </div>
         <p className="text-sm text-offwhite/45">{r.guest?.email}</p>
         {r.guest?.phone && <p className="text-sm text-offwhite/30">{r.guest.phone}</p>}
       </div>
@@ -229,6 +283,7 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
   const [selectedId, setSelectedId]     = useState<string | null>(
     initialReservations.length > 0 ? initialReservations[0].id : null
   )
+  const [areaFilter, setAreaFilter]     = useState('all')
 
   const [showModal, setShowModal]       = useState(false)
   const [editingRes, setEditingRes]     = useState<Reservation | null>(null)
@@ -352,14 +407,29 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
   const selectedSlot = slots.find(s => s.shift_id === form.shift_id && s.time === form.time)
   const canProceed   = !!selectedSlot
   const canSubmit    = form.guest_name.trim() && form.guest_email.trim() && canProceed
-  const filtered     = statusFilter === 'all' ? reservations : reservations.filter(r => r.status === statusFilter)
+
+  const areas = useMemo(() => {
+    const seen = new Set<string>()
+    const result: { id: string; name: string }[] = []
+    for (const r of reservations) {
+      if (r.seating_area_id && r.seating_area && !seen.has(r.seating_area_id)) {
+        seen.add(r.seating_area_id)
+        result.push({ id: r.seating_area_id, name: r.seating_area.name })
+      }
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name))
+  }, [reservations])
+
+  const filtered = reservations
+    .filter(r => statusFilter === 'all' || r.status === statusFilter)
+    .filter(r => areaFilter === 'all' || r.seating_area_id === areaFilter)
   const selectedRes  = filtered.find(r => r.id === selectedId) ?? null
 
   return (
     <div>
       {/* ── Toolbar ── */}
       <div className="flex flex-col gap-3 mb-5 md:flex-row md:items-center">
-        <div className="flex gap-3">
+        <div className="flex gap-2 flex-wrap">
           <input
             type="date" value={date} onChange={e => handleDateChange(e.target.value)}
             className={`flex-1 md:flex-none ${inputCls}`}
@@ -370,10 +440,26 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
+          {areas.length > 1 && (
+            <select value={areaFilter} onChange={e => setAreaFilter(e.target.value)} className={inputCls}>
+              <option value="all">All areas</option>
+              {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          )}
         </div>
         {loading && <span className="text-xs text-offwhite/30 self-center">Loading…</span>}
         <div className="hidden md:flex flex-1" />
-        <button onClick={openModal} className={`w-full md:w-auto ${primaryBtn}`}>+ New reservation</button>
+        <div className="flex gap-2">
+          {filtered.length > 0 && (
+            <button onClick={() => exportToCSV(filtered, date)}
+              title="Export to CSV"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm text-offwhite/45 hover:text-offwhite transition-colors"
+              style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+              <Download size={14} /> CSV
+            </button>
+          )}
+          <button onClick={openModal} className={`w-full md:w-auto ${primaryBtn}`}>+ New reservation</button>
+        </div>
       </div>
 
       {/* ── Empty state ── */}
@@ -398,7 +484,15 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                     <span className="text-xs text-offwhite/40 font-medium">{r.party_size} pax</span>
                   </div>
                 </div>
-                <p className="text-sm font-semibold text-offwhite">{r.guest?.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-offwhite">{r.guest?.name}</p>
+                  {r.guest && r.guest.visit_count >= 1 && (
+                    <span className="text-[10px] font-medium shrink-0"
+                      style={{ color: r.guest.visit_count === 1 ? '#8fb5a0' : '#C9A96E' }}>
+                      {r.guest.visit_count === 1 ? 'New' : `${ordinal(r.guest.visit_count)}×`}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-offwhite/40 mt-0.5">{r.guest?.email}</p>
                 {r.guest?.phone && <p className="text-xs text-offwhite/30 mt-0.5">{r.guest.phone}</p>}
                 {(r.shift?.name || r.seating_area?.name || r.occasion) && (
@@ -442,11 +536,19 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                     <option value="cancelled">cancelled</option>
                   </select>
                   {r.status === 'confirmed' && (
-                    <button onClick={() => openEdit(r)}
-                      className="px-4 py-2.5 rounded-xl text-sm text-offwhite/45 hover:text-offwhite transition-colors"
-                      style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
-                      Edit
-                    </button>
+                    <>
+                      <button onClick={() => updateStatus(r.id, 'completed')} disabled={updating === r.id}
+                        title="Mark arrived"
+                        className="px-3.5 py-2.5 rounded-xl flex items-center justify-center text-sage hover:bg-sage/10 transition-colors disabled:opacity-40"
+                        style={{ border: '1px solid rgba(111,143,123,0.25)' }}>
+                        <Check size={15} />
+                      </button>
+                      <button onClick={() => openEdit(r)}
+                        className="px-4 py-2.5 rounded-xl text-sm text-offwhite/45 hover:text-offwhite transition-colors"
+                        style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+                        Edit
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -463,6 +565,8 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
                   r={r}
                   selected={selectedId === r.id}
                   onClick={() => setSelectedId(r.id)}
+                  updating={updating}
+                  onQuickComplete={id => updateStatus(id, 'completed')}
                 />
               ))}
             </div>
