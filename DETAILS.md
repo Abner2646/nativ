@@ -6,54 +6,54 @@
 
 ## Floor plan
 
-**1. Indicador visual en reservas grandes (+8 personas)**
+**✅ 1. Indicador visual en reservas grandes (+8 personas)**
 Las reservas de grupo grande necesitan atención especial del host (setup de mesas, comunicación con cocina). Mostrar un badge numérico o color distinto en las cards del floor plan para party_size ≥ 8.
 
-**2. Tiempo transcurrido en mesas ocupadas**
+**✅ 2. Tiempo transcurrido en mesas ocupadas**
 En la vista de servicio, mostrar cuánto tiempo lleva sentada una mesa ("1h 20m"). Ayuda al host a gestionar el ritmo de turnos sin tener que calcular manualmente.
 
-**3. Tags del guest visibles en el floor plan**
+**✅ 3. Tags del guest visibles en el floor plan**
 Si un guest tiene tags como "VIP", "Alérgico", "Cumpleaños", mostrarlos como íconos o pills en la card de la mesa. El personal de servicio necesita verlos sin abrir el detalle.
 
-**4. Bloqueo de mesa individual**
+**✅ 4. Bloqueo de mesa individual**
 Hoy se pueden bloquear fechas enteras. Falta poder marcar una mesa específica como fuera de servicio (ej: mesa rota, reservada para evento privado) sin afectar el resto.
 
-**5. Vista de mesas disponibles ahora**
+**✅ 5. Vista de mesas disponibles ahora**
 Botón rápido en el floor plan que filtra y resalta solo las mesas libres en el turno activo. Útil para walk-ins y para el host que necesita responder rápido.
 
 ---
 
 ## Lista de reservas
 
-**6. Badge de visita en la card de reserva**
+**✅ 6. Badge de visita en la card de reserva**
 Mostrar "1ª visita", "3ª visita" etc. junto al nombre del guest en la lista de reservas. El host puede personalizar el trato sin tener que abrir el perfil del guest.
 
-**7. Mesa asignada visible en la lista**
+**✅ 7. Mesa asignada visible en la lista**
 Si la reserva tiene una mesa asignada, mostrarla directamente en la card/fila ("Mesa 4"). Hoy requiere abrir el floor plan para verlo.
 
-**8. Acción rápida de "Llegó" sin abrir modal**
+**✅ 8. Acción rápida de "Llegó" sin abrir modal**
 Un botón de check directo en la lista de reservas para marcar que el guest llegó, sin tener que abrir el modal de detalle. Ahorra 2-3 clicks en el momento de mayor tráfico.
 
-**9. Filtro de reservas por área**
+**✅ 9. Filtro de reservas por área**
 En la lista de reservas, poder filtrar por área (Main dining, Outdoor patio). Útil para restaurantes con zonas separadas atendidas por distintos hosts.
 
-**10. Export de reservas a CSV**
+**✅ 10. Export de reservas a CSV**
 Botón de export en la lista de reservas con los filtros activos. Los propietarios suelen necesitar esto para reportes o para compartir con el equipo.
 
 ---
 
 ## Widget de reservas público
 
-**11. Contador de disponibilidad limitada**
+**✅ 11. Contador de disponibilidad limitada**
 Cuando quedan pocos lugares en un horario (ej: ≤ 3 disponibles), mostrar "Últimos 3 lugares" para generar urgencia. El threshold debería ser configurable en settings.
 
-**12. Horarios llenos visualmente distintos**
+**✅ 12. Horarios llenos visualmente distintos**
 Los horarios sin disponibilidad aparecen deshabilitados pero sin una razón clara. Mostrar "Completo" en lugar de simplemente griseado mejora la comprensión del usuario.
 
-**13. Link "Agregar al calendario" en el email de confirmación**
+**✅ 13. Link "Agregar al calendario" en el email de confirmación**
 Incluir un link de Google Calendar y un archivo .ics en el email de confirmación. Reduce no-shows porque el guest tiene la reserva en su agenda.
 
-**14. Campo de cumpleaños opcional en el widget**
+**✅ 14. Campo de cumpleaños opcional en el widget**
 Recolectar el cumpleaños del guest en el momento de reservar (opcional, con explicación "para sorprenderte"). Alimenta el sistema de campañas de cumpleaños sin esfuerzo extra.
 
 ---

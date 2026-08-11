@@ -15,6 +15,7 @@ interface AvailabilityResponse {
   available: boolean
   reason?: string
   slots: AvailabilitySlot[]
+  full_slots?: { shift_id: string; shift_name: string; time: string }[]
   min?: number
   max?: number
   special_event?: { name: string } | null
@@ -75,6 +76,7 @@ function PaymentForm({ amountCents, onSuccess, onError, t }: {
   )
 }
 
+const LOW_AVAIL_THRESHOLD = 3
 const OCCASIONS = ['', 'Birthday', 'Anniversary', 'Business dinner', 'Date night', 'Family gathering', 'Other']
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const DAY_NAMES = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
@@ -215,6 +217,8 @@ export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize =
   const [confirmationRef, setConfirmationRef] = useState('')
   const [countdown, setCountdown] = useState(6)
 
+  const [guestBirthday, setGuestBirthday] = useState('')
+
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null)
   const [clientSecret, setClientSecret]   = useState('')
   const [paymentError, setPaymentError]   = useState('')
@@ -228,7 +232,7 @@ export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize =
           clearInterval(interval)
           setStep('search')
           setGuestName(''); setGuestEmail(''); setGuestPhone('')
-          setOccasion(''); setNotes(''); setSelectedSlot(null)
+          setOccasion(''); setNotes(''); setGuestBirthday(''); setSelectedSlot(null)
           setDate(tomorrow())
           return 6
         }
@@ -298,6 +302,7 @@ export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize =
           date, time: selectedSlot.time, party_size: partySize,
           guest_name: guestName, guest_email: guestEmail,
           guest_phone: guestPhone || null, occasion: occasion || null, notes: notes || null,
+          ...(guestBirthday ? { guest_birthday: guestBirthday } : {}),
           ...(piId ? { stripe_payment_intent_id: piId } : {}),
         }),
       })
@@ -345,11 +350,18 @@ export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize =
     }
   }
 
-  const slotsByShift = availability?.slots.reduce<Record<string, AvailabilitySlot[]>>((acc, s) => {
-    if (!acc[s.shift_name]) acc[s.shift_name] = []
-    acc[s.shift_name].push(s)
-    return acc
-  }, {})
+  const shiftData = (() => {
+    const result: Record<string, { available: AvailabilitySlot[]; fullTimes: string[] }> = {}
+    for (const s of (availability?.slots ?? [])) {
+      if (!result[s.shift_name]) result[s.shift_name] = { available: [], fullTimes: [] }
+      result[s.shift_name].available.push(s)
+    }
+    for (const s of (availability?.full_slots ?? [])) {
+      if (!result[s.shift_name]) result[s.shift_name] = { available: [], fullTimes: [] }
+      result[s.shift_name].fullTimes.push(s.time)
+    }
+    return result
+  })()
 
   const allPartySizes = Array.from({ length: maxPartySize - minPartySize + 1 }, (_, i) => minPartySize + i)
   const partySizeHasMore = allPartySizes.length > 8
@@ -443,7 +455,7 @@ export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize =
               </div>
             )}
 
-            {!loadingSlots && availability?.available && slotsByShift && (
+            {!loadingSlots && availability?.available && (
               <div>
                 {availability.special_event && (
                   <div style={{ backgroundColor: `${t.primary}18`, border: `1px solid ${t.primary}40`, borderRadius: t.btnRadius, padding: '0.75rem 1rem', marginBottom: '0.75rem', fontSize: '0.8125rem', color: t.primary }}>
@@ -455,24 +467,41 @@ export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize =
                     A deposit of <strong>${(availability.deposit_rule.amount_cents / 100).toFixed(2)}</strong> is required to confirm this reservation.
                   </div>
                 )}
-                {Object.entries(slotsByShift).map(([shiftName, slots]) => (
+                {Object.entries(shiftData).map(([shiftName, { available, fullTimes }]) => (
                   <div key={shiftName} style={{ marginBottom: '1.5rem' }}>
                     <p style={labelStyle}>{shiftName}</p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.375rem' }}>
-                      {slots.map(slot => (
-                        <button key={slot.time} type="button"
-                          onClick={() => { setSelectedSlot(slot); setStep('details') }}
-                          style={{
-                            backgroundColor: t.input, border: `1px solid ${t.border}`,
-                            borderRadius: t.btnRadius, padding: '0.625rem 0',
-                            fontSize: '0.875rem', fontWeight: 600, color: t.text,
-                            cursor: 'pointer', fontFamily: t.font, transition: 'background-color 0.1s',
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.backgroundColor = t.primary; e.currentTarget.style.color = t.primaryText }}
-                          onMouseLeave={e => { e.currentTarget.style.backgroundColor = t.input; e.currentTarget.style.color = t.text }}
-                        >
-                          {slot.time}
-                        </button>
+                      {available.map(slot => {
+                        const totalCap = slot.areas.reduce((s, a) => s + a.available_capacity, 0)
+                        const isLow = totalCap > 0 && totalCap <= LOW_AVAIL_THRESHOLD
+                        return (
+                          <button key={slot.time} type="button"
+                            onClick={() => { setSelectedSlot(slot); setStep('details') }}
+                            style={{
+                              backgroundColor: t.input, border: `1px solid ${t.border}`,
+                              borderRadius: t.btnRadius, padding: isLow ? '0.375rem 0' : '0.625rem 0',
+                              fontSize: '0.875rem', fontWeight: 600, color: t.text,
+                              cursor: 'pointer', fontFamily: t.font, transition: 'background-color 0.1s',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.backgroundColor = t.primary; e.currentTarget.style.color = t.primaryText }}
+                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = t.input; e.currentTarget.style.color = t.text }}
+                          >
+                            <span>{slot.time}</span>
+                            {isLow && <span style={{ fontSize: '0.5rem', fontWeight: 500, opacity: 0.7, lineHeight: 1 }}>Last {totalCap}</span>}
+                          </button>
+                        )
+                      })}
+                      {fullTimes.map(time => (
+                        <div key={time} style={{
+                          backgroundColor: t.input, border: `1px solid ${t.border}`,
+                          borderRadius: t.btnRadius, padding: '0.375rem 0',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+                          opacity: 0.4, cursor: 'not-allowed',
+                        }}>
+                          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: t.text, fontFamily: t.font }}>{time}</span>
+                          <span style={{ fontSize: '0.5rem', fontWeight: 500, color: t.muted, fontFamily: t.font, lineHeight: 1 }}>Full</span>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -535,6 +564,16 @@ export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize =
                   style={{ ...inputStyle, cursor: 'pointer' }}>
                   {OCCASIONS.map(o => <option key={o} value={o}>{o || 'None'}</option>)}
                 </select>
+              </div>
+              <div>
+                <label style={labelStyle}>
+                  Birthday <span style={{ opacity: 0.5, fontSize: '0.6rem', textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+                </label>
+                <input type="date" value={guestBirthday}
+                  onChange={e => setGuestBirthday(e.target.value)} style={inputStyle} />
+                <p style={{ fontSize: '0.6875rem', color: t.faint, marginTop: '0.375rem', lineHeight: 1.5 }}>
+                  We&apos;ll send you something special on your birthday.
+                </p>
               </div>
               <div>
                 <label style={labelStyle}>Special requests</label>
@@ -636,7 +675,7 @@ export function ReserveClient({ slug, theme: t, minPartySize = 1, maxPartySize =
               onClick={() => {
                 setStep('search')
                 setGuestName(''); setGuestEmail(''); setGuestPhone('')
-                setOccasion(''); setNotes(''); setSelectedSlot(null)
+                setOccasion(''); setNotes(''); setGuestBirthday(''); setSelectedSlot(null)
                 setDate(tomorrow())
               }}
               style={ghostBtn}

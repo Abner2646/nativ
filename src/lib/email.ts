@@ -8,6 +8,41 @@ const resend = new Resend(process.env.RESEND_API_KEY!)
 const FROM_DEV = 'onboarding@resend.dev'
 const isDev = process.env.NODE_ENV === 'development'
 
+function calFmt(date: string, time: string): string {
+  return date.replace(/-/g, '') + 'T' + time.slice(0, 5).replace(':', '') + '00'
+}
+function calEnd(date: string, time: string, durMins = 90): string {
+  const [h, m] = time.slice(0, 5).split(':').map(Number)
+  const tot = h * 60 + m + durMins
+  return date.replace(/-/g, '') + 'T' + String(Math.floor(tot / 60) % 24).padStart(2, '0') + String(tot % 60).padStart(2, '0') + '00'
+}
+function buildGcalUrl(r: Reservation, settings: TenantSettings): string {
+  const p = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `Reservation at ${settings.name}`,
+    dates: `${calFmt(r.date, r.time)}/${calEnd(r.date, r.time)}`,
+    ctz: settings.timezone,
+    details: `${settings.name} · ${r.party_size} ${r.party_size === 1 ? 'person' : 'people'}`,
+    ...(settings.address ? { location: settings.address } : {}),
+  })
+  return `https://calendar.google.com/calendar/render?${p.toString()}`
+}
+function buildIcs(r: Reservation, settings: TenantSettings): string {
+  const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Nativ//Reservations//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${r.id}@nativ`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART;TZID=${settings.timezone}:${calFmt(r.date, r.time)}`,
+    `DTEND;TZID=${settings.timezone}:${calEnd(r.date, r.time)}`,
+    `SUMMARY:Reservation at ${settings.name}`,
+    `DESCRIPTION:${settings.name} · ${r.party_size} ${r.party_size === 1 ? 'person' : 'people'}`,
+    ...(settings.address ? [`LOCATION:${settings.address}`] : []),
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n')
+}
+
 function getFrom(settings: TenantSettings) {
   if (isDev) return FROM_DEV
   return `${settings.name} <reservations@${getAppDomain()}>`
@@ -36,6 +71,9 @@ export async function sendConfirmationEmail(
     ? `<tr><td style="color:#777;font-size:12px;text-transform:uppercase;padding:5px 0;padding-right:24px">Notes</td><td style="padding:5px 0">${r.notes}</td></tr>`
     : ''
 
+  const gcalUrl = buildGcalUrl(r, settings)
+  const icsContent = buildIcs(r, settings)
+
   await resend.emails.send({
     from: getFrom(settings),
     to: guest.email,
@@ -51,6 +89,8 @@ export async function sendConfirmationEmail(
       r.occasion ? `Occasion: ${r.occasion}` : '',
       r.notes    ? `Notes: ${r.notes}`       : '',
       depositLine,
+      ``,
+      `Add to Google Calendar: ${gcalUrl}`,
       ``,
       `If you need to cancel, visit: ${cancelUrl}`,
       ``,
@@ -70,10 +110,14 @@ export async function sendConfirmationEmail(
           ${depositRow}
         </table>
         <p style="font-size:13px;color:#666;margin-top:20px">
+          <a href="${gcalUrl}" target="_blank" rel="noopener noreferrer" style="color:#444;text-decoration:none;display:inline-block;border:1px solid #ddd;border-radius:6px;padding:6px 14px;font-size:12px">📅 Add to Google Calendar</a>
+        </p>
+        <p style="font-size:13px;color:#666;margin-top:12px">
           Need to cancel? Visit the link below:<br>
           <a href="${cancelUrl}" style="color:#444;word-break:break-all">${cancelUrl}</a>
         </p>
       </div>`,
+    attachments: [{ filename: 'reservation.ics', content: Buffer.from(icsContent) }],
   })
 }
 

@@ -133,6 +133,7 @@ export async function getAvailability(req: NextRequest) {
   const now = new Date()
   const minAdvanceMs = settings.min_advance_hours * 60 * 60 * 1000
   const slots = []
+  const fullSlots: { shift_id: string; shift_name: string; time: string }[] = []
 
   for (const shift of shifts) {
     const [sh, sm] = shift.start_time.split(':').map(Number)
@@ -150,8 +151,10 @@ export async function getAvailability(req: NextRequest) {
       }
 
       const areas = []
+      let hasAnyArea = false
       for (const sa of (shift.shift_areas || [])) {
         const areaTables = tablesByArea.get(sa.seating_area_id)
+        hasAnyArea = true
 
         if (areaTables && areaTables.length > 0) {
           // ── Modo mesas: mesa individual libre o combo completo libre.
@@ -180,7 +183,11 @@ export async function getAvailability(req: NextRequest) {
         }
       }
 
-      if (areas.length > 0) slots.push({ shift_id: shift.id, shift_name: shift.name, time: timeStr, areas })
+      if (areas.length > 0) {
+        slots.push({ shift_id: shift.id, shift_name: shift.name, time: timeStr, areas })
+      } else if (hasAnyArea) {
+        fullSlots.push({ shift_id: shift.id, shift_name: shift.name, time: timeStr })
+      }
       cur += shift.interval_minutes
     }
   }
@@ -201,5 +208,5 @@ export async function getAvailability(req: NextRequest) {
     if (match) depositRule = { id: match.id, amount_cents: match.amount_cents, refund_cutoff_hours: match.refund_cutoff_hours }
   }
 
-  return NextResponse.json({ available: slots.length > 0, date, party_size: partySize, slots, special_event: specialEvent || null, deposit_rule: depositRule })
+  return NextResponse.json({ available: slots.length > 0, date, party_size: partySize, slots, full_slots: fullSlots, special_event: specialEvent || null, deposit_rule: depositRule })
 }
