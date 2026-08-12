@@ -25,6 +25,7 @@ export default async function ReservationsPage({ params }: { params: Promise<{ s
       <ReservationsClient
         initialReservations={reservations || []}
         slug={slug}
+        tenantId={tenant.id}
         defaultDate={today}
       />
     </div>

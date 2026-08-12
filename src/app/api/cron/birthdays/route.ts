@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
         .select('id, email, name, birthday, created_at')
         .eq('tenant_id', config.tenant_id)
         .not('birthday', 'is', null)
+        .eq('email_opt_out', false)
         .lt('created_at', windowOpenedAt.toISOString())
 
       if (!guests?.length) return

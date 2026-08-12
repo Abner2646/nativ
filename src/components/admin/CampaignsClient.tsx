@@ -210,6 +210,20 @@ export function CampaignsClient({ initialCampaigns, initialBirthdayConfig, slug 
                 <p className="text-xs text-gray-600 mt-1">
                   Placeholders: {'{'+'guest_name}'}, {'{'+'restaurant_name}'}, {'{'+'reserve_url}'}
                 </p>
+                {/* Item 26 — live preview */}
+                <div className="mt-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Preview</p>
+                  <div
+                    className="rounded-xl px-5 py-4 text-sm text-gray-300 leading-relaxed"
+                    style={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.08)' }}
+                    dangerouslySetInnerHTML={{
+                      __html: birthday.email_body
+                        .replace(/\{guest_name\}/g, 'Maria García')
+                        .replace(/\{restaurant_name\}/g, slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '))
+                        .replace(/\{reserve_url\}/g, '#'),
+                    }}
+                  />
+                </div>
               </div>
             </>
           )}

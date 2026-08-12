@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import {
   getReservations, updateReservation,
   getGuests, updateGuest, addGuestTag, removeGuestTag,
+  getGuestHistory, mergeGuests,
   getShifts, createShift, updateShift, deleteShift,
   getAreas, createArea, updateArea, deleteArea,
   getTables, createTable, updateTable, deleteTable,
@@ -30,6 +31,7 @@ export async function GET(req: NextRequest) {
   switch (r) {
     case 'reservations':    return getReservations(req)
     case 'guests':          return getGuests(req)
+    case 'guest-history':   return getGuestHistory(req)
     case 'shifts':          return getShifts(req)
     case 'areas':           return getAreas(req)
     case 'tables':          return getTables(req)
@@ -71,6 +73,7 @@ export async function POST(req: NextRequest) {
     case 'events':        return createSpecialEvent(req)
     case 'employees':     return inviteEmployee(req)
     case 'guest-tag':     return addGuestTag(req)
+    case 'merge-guests':  return mergeGuests(req)
     case 'deposit-rules': return createDepositRule(req)
     case 'stripe-connect': return createStripeConnectLink(req)
     default: return Response.json({ error: 'Unknown resource' }, { status: 400 })

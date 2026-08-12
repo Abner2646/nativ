@@ -278,23 +278,25 @@ export async function sendBirthdayEmail(
     .replace(/\{restaurant_name\}/g, settings.name)
     .replace(/\{reserve_url\}/g, reserveUrl)
 
+  const unsubUrl = `${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe?tenant=${slug}&email=${encodeURIComponent(guestEmail)}`
   await resend.emails.send({
     from: getFrom(settings),
     to: guestEmail,
     subject: subject.replace(/\{restaurant_name\}/g, settings.name),
-    html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto">${html}</div>`,
+    html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto">${html}<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #eee"><p style="font-size:11px;color:#888;margin:0">Email from ${settings.name} · <a href="${unsubUrl}" style="color:#888;text-decoration:underline">Unsubscribe</a></p></div></div>`,
   })
 }
 
 export async function sendCampaignEmail(
-  guestEmail: string, settings: TenantSettings,
+  guestEmail: string, settings: TenantSettings, slug: string,
   subject: string, body: string
 ) {
+  const unsubUrl = `${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe?tenant=${slug}&email=${encodeURIComponent(guestEmail)}`
   await resend.emails.send({
     from: getFrom(settings),
     to: guestEmail,
     subject,
-    html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto">${body}</div>`,
+    html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto">${body}<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #eee"><p style="font-size:11px;color:#888;margin:0">Email from ${settings.name} · <a href="${unsubUrl}" style="color:#888;text-decoration:underline">Unsubscribe</a></p></div></div>`,
   })
 }
 

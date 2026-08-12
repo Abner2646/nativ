@@ -60,50 +60,50 @@ Recolectar el cumpleaños del guest en el momento de reservar (opcional, con exp
 
 ## Guests
 
-**15. Avatar con iniciales**
+**✅ 15. Avatar con iniciales**
 Reemplazar el placeholder genérico por un avatar generado con las iniciales del guest y un color determinístico basado en el nombre. Hace la lista de guests más legible y reconocible.
 
-**16. Historial de reservas en el perfil del guest**
+**✅ 16. Historial de reservas en el perfil del guest**
 En el split-view del guest, mostrar las últimas 5-10 reservas con fecha, party size y estado. Hoy el perfil muestra datos pero no el historial completo.
 
-**17. Nota de preferencias del guest**
+**✅ 17. Nota de preferencias del guest**
 Campo de texto libre en el perfil del guest para anotar preferencias operativas ("siempre pide la mesa del fondo", "alérgico al maní", "prefiere pagar en efectivo"). Distinto de los tags — es información narrativa.
 
-**18. Guests duplicados — merge**
+**✅ 18. Guests duplicados — merge**
 Cuando un guest reserva con el mismo teléfono pero distinto email (o viceversa), se crean perfiles duplicados. Un botón de "merge guests" en la vista de detalle evitaría el problema manual.
 
 ---
 
 ## Panel de admin — general
 
-**19. Notificación in-app de nueva reserva**
+**✅ 19. Notificación in-app de nueva reserva**
 Un toast o banner que aparece en tiempo real cuando llega una reserva nueva, sin necesidad de recargar la página. Usar Supabase Realtime.
 
-**20. Confirmación de email antes de mandar**
+**20. Confirmación de email antes de mandar** *(skipped — no UI de creación manual)*
 En el flujo de creación manual de reserva, mostrar un preview del email de confirmación antes de enviarlo. El admin puede cancelar el envío si cometió un error.
 
-**21. Dashboard con gráfico de reservas por semana**
+**✅ 21. Dashboard con gráfico de reservas por semana**
 La página principal del restaurante muestra stats numéricas. Un mini gráfico de barras de las últimas 4 semanas daría contexto visual rápido sobre tendencias.
 
-**22. Indicador de "turno activo ahora"**
+**✅ 22. Indicador de "turno activo ahora"**
 En el sidebar o header del panel, mostrar si hay un turno en curso actualmente (basado en la hora local y los shifts configurados). El admin sabe de un vistazo si el restaurante está "abierto" o no.
 
 ---
 
 ## Mobile
 
-**23. Swipe para acciones rápidas en reservas**
+**✅ 23. Swipe para acciones rápidas en reservas**
 En mobile, swipe izquierda en una reserva para cancelar, swipe derecha para marcar como completada. Patrón estándar en mobile que ahorra tiempo al personal.
 
-**24. Bottom sheet de detalle de mesa en floor plan**
+**24. Bottom sheet de detalle de mesa en floor plan** *(skipped — FloorService demasiado complejo)*
 Al tocar una mesa en mobile, el bottom sheet debería mostrar la info más importante arriba (nombre, party size, tiempo transcurrido) antes de mostrar acciones. Hoy el scroll puede ser confuso.
 
 ---
 
 ## Emails
 
-**25. Footer consistente con unsubscribe**
+**✅ 25. Footer consistente con unsubscribe**
 Los emails de campaña deberían tener un footer con "Dejar de recibir emails de [restaurante]" para cumplir con CAN-SPAM/GDPR y reducir riesgo de que Resend bloquee el dominio por spam.
 
-**26. Preview de email de cumpleaños en el panel**
+**✅ 26. Preview de email de cumpleaños en el panel**
 En la config de cumpleaños, mostrar un preview del email tal como lo va a recibir el guest (con variables reemplazadas). Hoy el admin configura el template sin verlo renderizado.

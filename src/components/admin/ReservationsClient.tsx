@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { Reservation, ReservationStatus, AvailabilitySlot } from '@/lib/types'
 import { Cake, Heart, Briefcase, Flower2, Star, CreditCard, Download, Check, type LucideIcon } from 'lucide-react'
@@ -55,6 +55,7 @@ const card = { backgroundColor: '#162232', border: '1px solid rgba(255,255,255,0
 interface Props {
   initialReservations: Reservation[]
   slug: string
+  tenantId: string
   defaultDate: string
 }
 
@@ -274,7 +275,7 @@ function DetailPanel({
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function ReservationsClient({ initialReservations, slug, defaultDate }: Props) {
+export function ReservationsClient({ initialReservations, slug, tenantId, defaultDate }: Props) {
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations)
   const [date, setDate]                 = useState(defaultDate)
   const [statusFilter, setStatusFilter] = useState('all')
@@ -284,6 +285,11 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
     initialReservations.length > 0 ? initialReservations[0].id : null
   )
   const [areaFilter, setAreaFilter]     = useState('all')
+
+  const [toast, setToast]               = useState<string | null>(null)
+  const touchStartX                     = useRef<number | null>(null)
+  const currentDate                     = useRef(date)
+  useEffect(() => { currentDate.current = date }, [date])
 
   const [showModal, setShowModal]       = useState(false)
   const [editingRes, setEditingRes]     = useState<Reservation | null>(null)
@@ -312,6 +318,38 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
       if (list.length > 0) setSelectedId(list[0].id)
     } finally { setLoading(false) }
   }, [slug])
+
+  // Item 19: Realtime new-reservation notifications
+  useEffect(() => {
+    const supabase = getBrowserSupabase()
+    const channel = supabase
+      .channel(`nativ-res-${tenantId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reservations' },
+        (payload) => {
+          const r = payload.new as { date: string; tenant_id: string }
+          if (r.tenant_id !== tenantId) return
+          if (r.date === currentDate.current) {
+            setToast('New reservation just came in!')
+            setTimeout(() => setToast(null), 4000)
+            fetchReservations(currentDate.current)
+          }
+        }
+      )
+      .subscribe()
+    return () => { void supabase.removeChannel(channel) }
+  }, [tenantId, fetchReservations])
+
+  // Item 23: swipe helpers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+  const handleTouchEnd = (r: Reservation) => (e: React.TouchEvent) => {
+    if (touchStartX.current === null || r.status !== 'confirmed' || updating) return
+    const delta = e.changedTouches[0].clientX - touchStartX.current
+    touchStartX.current = null
+    if (delta > 64) updateStatus(r.id, 'completed')
+    else if (delta < -64) updateStatus(r.id, 'cancelled')
+  }
 
   const handleDateChange = (d: string) => { setDate(d); fetchReservations(d) }
 
@@ -427,6 +465,14 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
 
   return (
     <div>
+      {/* ── Realtime toast (item 19) ── */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-midnight shadow-2xl"
+          style={{ backgroundColor: '#F2EFE9' }}>
+          <span className="w-2 h-2 rounded-full bg-sage shrink-0" />
+          {toast}
+        </div>
+      )}
       {/* ── Toolbar ── */}
       <div className="flex flex-col gap-3 mb-5 md:flex-row md:items-center">
         <div className="flex gap-2 flex-wrap">
@@ -469,10 +515,12 @@ export function ReservationsClient({ initialReservations, slug, defaultDate }: P
         </div>
       ) : (
         <>
-          {/* ── Mobile cards (< md) ── */}
+          {/* ── Mobile cards (< md) — swipe right → completed, swipe left → cancelled (item 23) ── */}
           <div className="md:hidden space-y-2">
             {filtered.map(r => (
-              <div key={r.id} className="rounded-2xl p-4" style={card}>
+              <div key={r.id} className="rounded-2xl p-4" style={card}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd(r)}>
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <span className="font-mono text-2xl font-semibold text-offwhite leading-none">
                     {fmtTime(r.time)}

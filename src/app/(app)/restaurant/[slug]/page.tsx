@@ -29,7 +29,7 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
     return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d)
   }
 
-  const [todayRes, last7, prev7, cancelledToday, pendingCampaigns, shiftsRes, areasRes] = await Promise.all([
+  const [todayRes, last7, prev7, cancelledToday, pendingCampaigns, shiftsRes, areasRes, weeklyRes] = await Promise.all([
     supabaseAdmin.from('reservations')
       .select('id, time, party_size, occasion, seated_at, guest:guests(name), table_assignments(table_id)')
       .eq('tenant_id', tenant.id).eq('date', today).eq('status', 'confirmed').order('time'),
@@ -41,9 +41,30 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
       .eq('tenant_id', tenant.id).eq('date', today).eq('status', 'cancelled'),
     supabaseAdmin.from('ai_campaigns').select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenant.id).eq('status', 'pending'),
-    supabaseAdmin.from('shifts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+    supabaseAdmin.from('shifts').select('id, name, start_time, end_time').eq('tenant_id', tenant.id),
     supabaseAdmin.from('seating_areas').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+    // Item 21: weekly chart data — last 14 days
+    supabaseAdmin.from('reservations').select('date, party_size')
+      .eq('tenant_id', tenant.id)
+      .gte('date', daysAgo(13))
+      .lte('date', today)
+      .neq('status', 'cancelled'),
   ])
+
+  // Item 22: active shift indicator
+  type ShiftRow = { id: string; name: string; start_time: string; end_time: string }
+  const allShifts = (shiftsRes.data || []) as ShiftRow[]
+  const activeShifts = allShifts.filter(s => s.start_time <= nowTime && nowTime <= s.end_time)
+
+  // Item 21: bar chart data — last 14 days
+  const chartDays: { date: string; covers: number; label: string }[] = []
+  for (let i = 13; i >= 0; i--) {
+    const d = daysAgo(i)
+    const covers = (weeklyRes.data || []).filter(r => r.date === d).reduce((s, r) => s + r.party_size, 0)
+    const dt = new Date(d + 'T12:00:00')
+    chartDays.push({ date: d, covers, label: dt.toLocaleDateString('en-US', { weekday: 'short' }) })
+  }
+  const maxCovers = Math.max(...chartDays.map(d => d.covers), 1)
 
   type TodayRow = {
     id: string; time: string; party_size: number; occasion: string | null
@@ -66,7 +87,7 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
   const cancelled  = cancelledToday.count ?? 0
 
   const onboarding = {
-    hasShift:   (shiftsRes.count ?? 0) > 0,
+    hasShift:   allShifts.length > 0,
     hasArea:    (areasRes.count ?? 0) > 0,
     hasProfile: !!(settings?.description || settings?.address),
     hasStripe:  !!settings?.stripe_account_id,
@@ -155,6 +176,21 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
         </div>
       </div>
 
+      {/* ── Item 22: turno activo ahora ── */}
+      {activeShifts.length > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl px-4 py-3 mb-4"
+          style={{ backgroundColor: 'rgba(111,143,123,0.08)', border: '1px solid rgba(111,143,123,0.20)' }}>
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: '#86BBA7' }} />
+          <p className="text-sm" style={{ color: '#86BBA7' }}>
+            <strong>{activeShifts.map(s => s.name).join(' · ')}</strong>
+            {' '}active now
+            <span className="ml-2 opacity-60 text-xs">
+              {activeShifts[0].start_time.slice(0,5)}–{activeShifts[0].end_time.slice(0,5)}
+            </span>
+          </p>
+        </div>
+      )}
+
       {/* ── Necesita atención: reservas de hoy sin mesa ── */}
       {unassigned > 0 && (
         <Link href={`/restaurant/${slug}/floor-plan`}
@@ -194,6 +230,51 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Item 21: weekly covers bar chart (last 14 days) ── */}
+      {chartDays.some(d => d.covers > 0) && (
+        <div className="rounded-2xl p-5 md:p-6 mb-6 md:mb-8" style={cardBg}>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-offwhite/40 mb-4">Last 14 days</p>
+          <div className="flex items-end gap-[3px] h-20">
+            {chartDays.map((d, i) => {
+              const isToday = d.date === today
+              const h = d.covers > 0 ? Math.max(4, Math.round((d.covers / maxCovers) * 80)) : 3
+              return (
+                <div key={d.date} className="flex-1 flex flex-col items-center gap-1 justify-end group relative">
+                  {/* tooltip */}
+                  <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-nowrap">
+                    <div className="text-xs px-2 py-1 rounded-lg text-offwhite font-mono"
+                      style={{ backgroundColor: '#1e3348', border: '1px solid rgba(255,255,255,0.10)' }}>
+                      {d.covers}
+                    </div>
+                  </div>
+                  <div style={{
+                    height: `${h}px`, width: '100%', borderRadius: '3px 3px 0 0',
+                    backgroundColor: isToday
+                      ? 'rgba(201,169,110,0.75)'
+                      : i >= 7
+                        ? 'rgba(130,150,190,0.45)'
+                        : 'rgba(130,150,190,0.25)',
+                  }} />
+                  {(i === 0 || i === 6 || i === 13 || isToday) && (
+                    <span className="text-[9px] text-offwhite/25 leading-none">{d.label}</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex items-center gap-4 mt-3">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'rgba(201,169,110,0.75)' }} />
+              <span className="text-[10px] text-offwhite/30">today</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'rgba(130,150,190,0.45)' }} />
+              <span className="text-[10px] text-offwhite/30">last 7 days</span>
+            </div>
+          </div>
         </div>
       )}
 

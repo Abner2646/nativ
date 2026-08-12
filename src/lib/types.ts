@@ -168,6 +168,7 @@ export interface Guest {
   visit_count: number
   last_visit_at: string | null
   created_at: string
+  email_opt_out: boolean
   tags?: string[]
 }
 

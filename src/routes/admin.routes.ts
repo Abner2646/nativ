@@ -118,6 +118,50 @@ export async function updateGuest(req: NextRequest) {
   return NextResponse.json({ guest: data })
 }
 
+export async function getGuestHistory(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const guestId = new URL(req.url).searchParams.get('guest_id')
+  if (!guestId) return NextResponse.json({ error: 'guest_id required' }, { status: 400 })
+  const { data } = await supabaseAdmin
+    .from('reservations')
+    .select('id, date, time, party_size, status, occasion, seating_area:seating_areas(name)')
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('guest_id', guestId)
+    .order('date', { ascending: false })
+    .order('time', { ascending: false })
+    .limit(10)
+  return NextResponse.json({ reservations: data || [] })
+}
+
+export async function mergeGuests(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx, role } = r as any
+  const adminErr = requireAdmin(role); if (adminErr) return adminErr
+  const { primary_id, duplicate_id } = await req.json()
+  if (!primary_id || !duplicate_id) return NextResponse.json({ error: 'primary_id and duplicate_id required' }, { status: 400 })
+  if (primary_id === duplicate_id) return NextResponse.json({ error: 'Cannot merge a guest with itself' }, { status: 400 })
+  const [{ data: primary }, { data: dup }] = await Promise.all([
+    supabaseAdmin.from('guests').select('id').eq('id', primary_id).eq('tenant_id', ctx.tenant.id).maybeSingle(),
+    supabaseAdmin.from('guests').select('id').eq('id', duplicate_id).eq('tenant_id', ctx.tenant.id).maybeSingle(),
+  ])
+  if (!primary || !dup) return NextResponse.json({ error: 'Guest not found' }, { status: 404 })
+  // Transfer reservations + tags, then delete duplicate
+  await supabaseAdmin.from('reservations').update({ guest_id: primary_id }).eq('guest_id', duplicate_id).eq('tenant_id', ctx.tenant.id)
+  const { data: dupTags } = await supabaseAdmin.from('guest_tags').select('tag').eq('guest_id', duplicate_id)
+  if (dupTags?.length) {
+    await Promise.allSettled(dupTags.map(t =>
+      supabaseAdmin.from('guest_tags').upsert({ tenant_id: ctx.tenant.id, guest_id: primary_id, tag: t.tag }, { onConflict: 'guest_id,tag' })
+    ))
+  }
+  await supabaseAdmin.from('guests').delete().eq('id', duplicate_id).eq('tenant_id', ctx.tenant.id)
+  // Recalculate visit_count for primary
+  const { count } = await supabaseAdmin.from('reservations').select('id', { count: 'exact', head: true })
+    .eq('guest_id', primary_id).eq('tenant_id', ctx.tenant.id).in('status', ['confirmed', 'completed'])
+  if (count !== null) await supabaseAdmin.from('guests').update({ visit_count: count }).eq('id', primary_id)
+  return NextResponse.json({ success: true })
+}
+
 export async function addGuestTag(req: NextRequest) {
   const r = await getCtxAndUser(req); if (r.error) return r.error
   const { ctx } = r as any
@@ -909,9 +953,10 @@ export async function updateCampaign(req: NextRequest) {
 
   if (action === 'approve') {
     await supabaseAdmin.from('ai_campaigns').update({ status: 'approved', subject, body, sms_body, channel, approved_at: new Date().toISOString() }).eq('id', id).eq('tenant_id', ctx.tenant.id)
-    const { data: guests } = await supabaseAdmin.from('guests').select('email').eq('tenant_id', ctx.tenant.id).gt('visit_count', 0)
+    const { data: guests } = await supabaseAdmin.from('guests').select('email')
+      .eq('tenant_id', ctx.tenant.id).gt('visit_count', 0).eq('email_opt_out', false)
     if (guests?.length) {
-      await Promise.allSettled(guests.map(g => sendCampaignEmail(g.email, ctx.settings, subject || '', body)))
+      await Promise.allSettled(guests.map(g => sendCampaignEmail(g.email, ctx.settings, ctx.tenant.slug, subject || '', body)))
     }
     await supabaseAdmin.from('ai_campaigns').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', id)
     return NextResponse.json({ success: true })
