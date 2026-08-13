@@ -1,7 +1,8 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { Guest } from '@/lib/types'
+import { Download } from 'lucide-react'
 
 async function getToken() {
   const { data: { session } } = await getBrowserSupabase().auth.getSession()
@@ -286,6 +287,9 @@ export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props
   const [guestHistory, setGuestHistory] = useState<HistoryItem[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
+  const [birthdayFilter, setBirthdayFilter] = useState(false)
+  const currentMonth = useMemo(() => new Date().getMonth() + 1, [])
+
   // Merge modal state
   const [showMerge, setShowMerge]         = useState(false)
   const [mergeSearch, setMergeSearch]     = useState('')
@@ -293,6 +297,23 @@ export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props
   const [mergeTarget, setMergeTarget]     = useState<GuestWithTags | null>(null)
   const [mergeSaving, setMergeSaving]     = useState(false)
   const [mergeError, setMergeError]       = useState('')
+
+  function exportGuestsToCSV(list: GuestWithTags[]) {
+    const headers = ['Name', 'Email', 'Phone', 'Visits', 'Last Visit', 'Birthday', 'Tags', 'Notes']
+    const csv = [
+      headers.join(','),
+      ...list.map(g => [
+        g.name, g.email, g.phone ?? '', g.visit_count,
+        g.last_visit_at ?? '', g.birthday ?? '',
+        (g.guest_tags || []).map(t => t.tag).join(';'),
+        g.notes ?? '',
+      ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url; a.download = 'guests.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   async function adminFetch(path: string, options?: RequestInit) {
     const token = await getToken()
@@ -408,31 +429,56 @@ export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props
   }
 
   const selectedGuest = guests.find(g => g.id === selectedId) ?? null
+  const displayedGuests = birthdayFilter
+    ? guests.filter(g => g.birthday && parseInt(g.birthday.slice(5, 7)) === currentMonth)
+    : guests
+  const birthdayCount = guests.filter(g => g.birthday && parseInt(g.birthday.slice(5, 7)) === currentMonth).length
 
   return (
     <div>
-      {/* ── Search bar ── */}
-      <div className="flex items-center gap-3 mb-5">
+      {/* ── Search bar + filters ── */}
+      <div className="flex flex-wrap items-center gap-2 mb-5">
         <input
           value={search} onChange={e => handleSearch(e.target.value)}
           placeholder="Search by name, email or phone…"
-          className={`flex-1 ${inputCls}`}
+          className={`flex-1 min-w-[180px] ${inputCls}`}
         />
+        {birthdayCount > 0 && (
+          <button
+            onClick={() => setBirthdayFilter(f => !f)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors shrink-0"
+            style={birthdayFilter
+              ? { backgroundColor: 'rgba(201,169,110,0.15)', border: '1px solid rgba(201,169,110,0.35)', color: '#C9A96E' }
+              : { border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(242,239,233,0.40)' }}>
+            🎂 Birthdays this month {birthdayFilter && `(${birthdayCount})`}
+          </button>
+        )}
+        {guests.length > 0 && (
+          <button
+            onClick={() => exportGuestsToCSV(displayedGuests)}
+            title="Export to CSV"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-offwhite/40 hover:text-offwhite transition-colors shrink-0"
+            style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+            <Download size={13} /> CSV
+          </button>
+        )}
         {loading
           ? <span className="text-xs text-offwhite/30 shrink-0">Loading…</span>
           : <span className="text-xs text-offwhite/25 shrink-0">{total} guests</span>
         }
       </div>
 
-      {guests.length === 0 ? (
+      {displayedGuests.length === 0 ? (
         <div className="p-12 text-center rounded-2xl" style={card}>
-          <p className="text-sm text-offwhite/35">{search ? 'No guests match your search' : 'No guests yet'}</p>
+          <p className="text-sm text-offwhite/35">
+            {birthdayFilter ? 'No guests with birthday this month' : search ? 'No guests match your search' : 'No guests yet'}
+          </p>
         </div>
       ) : (
         <>
           {/* ── Mobile cards (< md) ── */}
           <div className="md:hidden space-y-2">
-            {guests.map(guest => {
+            {displayedGuests.map(guest => {
               const isOpen = expandedId === guest.id
               const tags = guest.guest_tags || []
               return (
@@ -532,7 +578,7 @@ export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props
           <div className="hidden md:flex gap-4 lg:gap-5 items-start">
             {/* Left: compact list */}
             <div className="w-[270px] lg:w-[290px] shrink-0 rounded-2xl overflow-hidden" style={card}>
-              {guests.map(g => (
+              {displayedGuests.map(g => (
                 <CompactRow
                   key={g.id}
                   guest={g}

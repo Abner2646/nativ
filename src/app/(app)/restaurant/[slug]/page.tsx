@@ -29,7 +29,7 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
     return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d)
   }
 
-  const [todayRes, last7, prev7, cancelledToday, pendingCampaigns, shiftsRes, areasRes, weeklyRes] = await Promise.all([
+  const [todayRes, last7, prev7, cancelledToday, pendingCampaigns, shiftsRes, areasRes, weeklyRes, returningRes, totalGuestsRes] = await Promise.all([
     supabaseAdmin.from('reservations')
       .select('id, time, party_size, occasion, seated_at, guest:guests(name), table_assignments(table_id)')
       .eq('tenant_id', tenant.id).eq('date', today).eq('status', 'confirmed').order('time'),
@@ -49,6 +49,11 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
       .gte('date', daysAgo(13))
       .lte('date', today)
       .neq('status', 'cancelled'),
+    // Return rate: guests who came back at least once
+    supabaseAdmin.from('guests').select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenant.id).gt('visit_count', 1).not('email', 'like', '%@nativ.local'),
+    supabaseAdmin.from('guests').select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenant.id).not('email', 'like', '%@nativ.local'),
   ])
 
   // Item 22: active shift indicator
@@ -73,6 +78,10 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
     table_assignments: { table_id: string }[]
   }
   const todayList = (todayRes.data || []) as unknown as TodayRow[]
+
+  const totalGuests    = totalGuestsRes.count ?? 0
+  const returningGuests = returningRes.count ?? 0
+  const returnRate     = totalGuests > 0 ? Math.round((returningGuests / totalGuests) * 100) : null
 
   const sum = (d: { party_size: number }[] | null) => (d || []).reduce((s, r) => s + r.party_size, 0)
   const todayCovers  = sum(todayList)
@@ -164,6 +173,11 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
               </span>
             )}
           </p>
+          {returnRate !== null && (
+            <p className="text-[11px] text-offwhite/30 mt-1.5">
+              {returnRate}% guest return rate
+            </p>
+          )}
         </div>
 
         {/* Cancellations today */}

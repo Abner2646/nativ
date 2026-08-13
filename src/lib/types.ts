@@ -2,7 +2,7 @@
 
 export type UserRole = 'admin' | 'employee'
 export type TenantStatus = 'trial' | 'active' | 'inactive'
-export type ReservationStatus = 'confirmed' | 'cancelled' | 'completed'
+export type ReservationStatus = 'confirmed' | 'cancelled' | 'completed' | 'no-show'
 export type CampaignStatus = 'pending' | 'approved' | 'rejected' | 'sent'
 
 export interface Profile {

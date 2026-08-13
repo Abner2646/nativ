@@ -2,7 +2,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { Reservation, ReservationStatus, AvailabilitySlot } from '@/lib/types'
-import { Cake, Heart, Briefcase, Flower2, Star, CreditCard, Download, Check, type LucideIcon } from 'lucide-react'
+import { Cake, Heart, Briefcase, Flower2, Star, CreditCard, Download, Check, Printer, type LucideIcon } from 'lucide-react'
 
 async function getToken() {
   const { data: { session } } = await getBrowserSupabase().auth.getSession()
@@ -13,6 +13,7 @@ const STATUS_BADGE: Record<string, string> = {
   confirmed: 'bg-sage/15 text-sage border border-sage/30',
   cancelled:  'bg-red-400/10 text-red-400 border border-red-400/20',
   completed:  'bg-white/[0.06] text-offwhite/40 border border-white/[0.08]',
+  'no-show':  'bg-amber-400/10 text-amber-400 border border-amber-400/20',
 }
 
 const inputCls = 'bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/25 placeholder:text-offwhite/20'
@@ -251,7 +252,7 @@ function DetailPanel({
       <div>
         <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-2.5">Change status</p>
         <div className="flex gap-2">
-          {(['confirmed', 'completed', 'cancelled'] as const).map(s => (
+          {(['confirmed', 'completed', 'cancelled', 'no-show'] as const).map(s => (
             <button
               key={s}
               disabled={updating === r.id}
@@ -465,6 +466,57 @@ export function ReservationsClient({ initialReservations, slug, tenantId, defaul
 
   return (
     <div>
+      {/* ── Print stylesheet + print-only zone ── */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #nativ-print-zone, #nativ-print-zone * { visibility: visible; }
+          #nativ-print-zone {
+            position: absolute; left: 0; top: 0; width: 100%;
+            font-family: system-ui, sans-serif; font-size: 12px; padding: 24px; color: #000;
+          }
+          #nativ-print-zone table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+          #nativ-print-zone th, #nativ-print-zone td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; }
+          #nativ-print-zone th { background: #f0f0f0; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+          #nativ-print-zone tr:nth-child(even) td { background: #fafafa; }
+          #nativ-print-zone .print-noshow { color: #d97706; }
+          #nativ-print-zone .print-cancelled { color: #dc2626; text-decoration: line-through; opacity: 0.6; }
+        }
+      `}</style>
+      <div id="nativ-print-zone" style={{ display: 'none' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Reservations — {date}</h2>
+          <span style={{ fontSize: 11, color: '#666' }}>
+            {filtered.filter(r => r.status === 'confirmed').length} confirmed · {filtered.reduce((s, r) => s + r.party_size, 0)} covers
+          </span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th><th>Name</th><th>Party</th><th>Occasion</th>
+              <th>Area</th><th>Table</th><th>Notes</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(r => (
+              <tr key={r.id} className={r.status === 'no-show' ? 'print-noshow' : r.status === 'cancelled' ? 'print-cancelled' : ''}>
+                <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{fmtTime(r.time)}</td>
+                <td>
+                  {r.guest?.name}
+                  {r.guest && r.guest.visit_count > 1 ? ` (${r.guest.visit_count}×)` : ''}
+                </td>
+                <td style={{ textAlign: 'center' }}>{r.party_size}</td>
+                <td>{r.occasion || ''}</td>
+                <td>{r.seating_area?.name || ''}</td>
+                <td style={{ fontFamily: 'monospace' }}>{tableLabel(r) || ''}</td>
+                <td>{r.notes || ''}</td>
+                <td>{r.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       {/* ── Realtime toast (item 19) ── */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-midnight shadow-2xl"
@@ -497,12 +549,20 @@ export function ReservationsClient({ initialReservations, slug, tenantId, defaul
         <div className="hidden md:flex flex-1" />
         <div className="flex gap-2">
           {filtered.length > 0 && (
-            <button onClick={() => exportToCSV(filtered, date)}
-              title="Export to CSV"
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm text-offwhite/45 hover:text-offwhite transition-colors"
-              style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
-              <Download size={14} /> CSV
-            </button>
+            <>
+              <button onClick={() => exportToCSV(filtered, date)}
+                title="Export to CSV"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm text-offwhite/45 hover:text-offwhite transition-colors"
+                style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+                <Download size={14} /> CSV
+              </button>
+              <button onClick={() => window.print()}
+                title="Print reservations sheet"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm text-offwhite/45 hover:text-offwhite transition-colors"
+                style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+                <Printer size={14} />
+              </button>
+            </>
           )}
           <button onClick={openModal} className={`w-full md:w-auto ${primaryBtn}`}>+ New reservation</button>
         </div>
@@ -582,6 +642,7 @@ export function ReservationsClient({ initialReservations, slug, tenantId, defaul
                     <option value="confirmed">confirmed</option>
                     <option value="completed">completed</option>
                     <option value="cancelled">cancelled</option>
+                    <option value="no-show">no-show</option>
                   </select>
                   {r.status === 'confirmed' && (
                     <>

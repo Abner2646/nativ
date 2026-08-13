@@ -1,6 +1,6 @@
 # CONTEXT.md — Nativ
-*Última actualización: 2026-07-22 — actualizar esta fecha cada vez que se modifique este archivo*
-*Superadmin panel completo. Birthday cron implementado. Pendiente: AI campaigns auto-gen.*
+*Última actualización: 2026-08-13*
+*Items 1–26 de DETAILS.md implementados. Campaña de cumpleaños + unsubscribe + Realtime activos. Siguiente: calidad y retención.*
 
 ---
 
@@ -286,8 +286,20 @@ GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario 
 
 ### ⏳ Pendiente
 
-- **Envío real de campañas** — `ai_campaigns` tiene aprobación/rechazo pero no hay mecanismo que dispare el envío al aprobar. Falta el endpoint y el cron.
-- **AI campaigns auto-generación** — Las campañas existen en DB y se muestran en el panel, pero no hay generación automática via IA. Prerequisito: resolver envío primero.
+- **AI campaigns auto-generación** — Las campañas existen en DB y se muestran en el panel, pero no hay generación automática via IA. El envío ya funciona (al aprobar, `updateCampaign` envía via Resend).
+- **'no-show' en enum DB** — Migration 017 crea el valor. Requiere aplicación manual en Supabase SQL Editor.
+
+### ✅ Completado recientemente (items 1–26 DETAILS.md + batch post-26)
+
+- Avatar con iniciales determinístico, historial de reservas en perfil de guest, merge de guests duplicados
+- Realtime toast de nueva reserva, gráfico de barras 14 días en dashboard, turno activo indicator
+- Swipe derecha/izquierda en mobile para completar/cancelar reservas
+- Footer de unsubscribe en emails (CAN-SPAM), endpoint `/api/unsubscribe`, página `/unsubscribe`
+- Preview live de email de cumpleaños en panel de campañas
+- Status 'no-show' en reservas (migración 017)
+- Vista de impresión de reservas del día (`window.print()` + `@media print`)
+- CSV export de guests + filtro de cumpleaños este mes en página de guests
+- Tasa de retorno de guests (%) en dashboard
 
 ---
 
@@ -299,7 +311,7 @@ GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario 
 
 ## Schema de base de datos
 
-**Migraciones aplicadas:** 13 (`001` → `013`)
+**Migraciones aplicadas:** 17 (`001` → `017`)
 
 **Tablas principales:**
 

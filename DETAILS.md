@@ -107,3 +107,22 @@ Los emails de campaña deberían tener un footer con "Dejar de recibir emails de
 
 **✅ 26. Preview de email de cumpleaños en el panel**
 En la config de cumpleaños, mostrar un preview del email tal como lo va a recibir el guest (con variables reemplazadas). Hoy el admin configura el template sin verlo renderizado.
+
+---
+
+## Operaciones y retención
+
+**✅ 27. Status "no-show" en reservas**
+Agregar "no-show" como estado posible. Se aplica cuando el restaurante marca que el guest no apareció. No incrementa visit_count. Requiere migración 017.
+
+**✅ 28. Vista de impresión de reservas del día**
+Botón "Print" genera una hoja limpia con la lista de reservas del día: hora, nombre, party size, área, mesa, notas. Diseñada para imprimirse en A4 y usarse en el host stand.
+
+**✅ 29. Export CSV de guests**
+Botón de export en la página de guests que descarga la lista filtrada (nombre, email, teléfono, visitas, cumpleaños, tags, notas). Útil para el restaurante para reportes externos.
+
+**✅ 30. Filtro de cumpleaños este mes en guests**
+Toggle en la barra de búsqueda de guests que muestra solo los guests con cumpleaños en el mes actual. Permite enviar outreach de cumpleaños manualmente sin depender de la campaña automática.
+
+**✅ 31. Tasa de retorno de guests en dashboard**
+Porcentaje de guests que visitaron más de una vez. Métrica de fidelización visible en el card "Last 7 days" del dashboard. Calculado en el servidor en cada carga.

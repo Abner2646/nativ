@@ -65,14 +65,16 @@ export async function updateReservation(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { status } = await req.json()
-  const valid: ReservationStatus[] = ['confirmed', 'cancelled', 'completed']
+  const valid: ReservationStatus[] = ['confirmed', 'cancelled', 'completed', 'no-show']
   if (!valid.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
   const { data: res } = await supabaseAdmin.from('reservations').select('*, guest:guests(*)').eq('id', id).eq('tenant_id', ctx.tenant.id).maybeSingle()
   if (!res) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const now = new Date().toISOString()
   const update: any = { status }
-  if (status === 'cancelled') update.cancelled_at = new Date().toISOString()
-  if (status === 'completed') update.finished_at = new Date().toISOString()
-  if (status === 'confirmed') update.finished_at = null
+  if (status === 'cancelled') update.cancelled_at = now
+  if (status === 'completed') update.finished_at = now
+  if (status === 'no-show')   update.finished_at = now
+  if (status === 'confirmed') { update.cancelled_at = null; update.finished_at = null }
   const { data, error } = await supabaseAdmin.from('reservations').update(update).eq('id', id).select().single()
   if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
   if (status === 'cancelled') {
