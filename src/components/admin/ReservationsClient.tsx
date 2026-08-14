@@ -2,7 +2,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
 import { Reservation, ReservationStatus, AvailabilitySlot } from '@/lib/types'
-import { Cake, Heart, Briefcase, Flower2, Star, CreditCard, Download, Check, Printer, type LucideIcon } from 'lucide-react'
+import { Cake, Heart, Briefcase, Flower2, Star, CreditCard, Download, Check, Printer, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react'
 
 async function getToken() {
   const { data: { session } } = await getBrowserSupabase().auth.getSession()
@@ -22,6 +22,11 @@ const primaryBtn = 'bg-offwhite text-midnight font-semibold px-5 py-2.5 rounded-
 const secondaryBtn = 'px-4 py-2.5 border border-white/[0.12] text-offwhite/50 rounded-xl text-sm hover:border-white/25 hover:text-offwhite transition-colors'
 
 function fmtTime(t: string) { return t.slice(0, 5) }
+function shiftDate(d: string, delta: number): string {
+  const dt = new Date(d + 'T12:00:00')
+  dt.setDate(dt.getDate() + delta)
+  return dt.toISOString().split('T')[0]
+}
 
 // "T1" o "T1+T2" si la reserva tiene mesa(s) asignada(s)
 function tableLabel(r: Reservation): string | null {
@@ -536,10 +541,26 @@ export function ReservationsClient({ initialReservations, slug, tenantId, defaul
       {/* ── Toolbar ── */}
       <div className="flex flex-col gap-3 mb-5 md:flex-row md:items-center">
         <div className="flex gap-2 flex-wrap">
-          <input
-            type="date" value={date} onChange={e => handleDateChange(e.target.value)}
-            className={`flex-1 md:flex-none ${inputCls}`}
-          />
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleDateChange(shiftDate(date, -1))}
+              title="Previous day"
+              className="h-[42px] w-9 flex items-center justify-center rounded-xl text-offwhite/40 hover:text-offwhite transition-colors"
+              style={{ backgroundColor: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <ChevronLeft size={15} />
+            </button>
+            <input
+              type="date" value={date} onChange={e => handleDateChange(e.target.value)}
+              className={`flex-1 md:flex-none ${inputCls}`}
+            />
+            <button
+              onClick={() => handleDateChange(shiftDate(date, 1))}
+              title="Next day"
+              className="h-[42px] w-9 flex items-center justify-center rounded-xl text-offwhite/40 hover:text-offwhite transition-colors"
+              style={{ backgroundColor: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <ChevronRight size={15} />
+            </button>
+          </div>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={inputCls}>
             <option value="all">All</option>
             <option value="confirmed">Confirmed</option>

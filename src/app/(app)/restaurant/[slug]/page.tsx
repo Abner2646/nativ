@@ -29,7 +29,7 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
     return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d)
   }
 
-  const [todayRes, last7, prev7, cancelledToday, pendingCampaigns, shiftsRes, areasRes, weeklyRes, returningRes, totalGuestsRes] = await Promise.all([
+  const [todayRes, last7, prev7, cancelledToday, pendingCampaigns, shiftsRes, areasRes, weeklyRes, returningRes, totalGuestsRes, topGuestsRes] = await Promise.all([
     supabaseAdmin.from('reservations')
       .select('id, time, party_size, occasion, seated_at, guest:guests(name), table_assignments(table_id)')
       .eq('tenant_id', tenant.id).eq('date', today).eq('status', 'confirmed').order('time'),
@@ -54,6 +54,10 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
       .eq('tenant_id', tenant.id).gt('visit_count', 1).not('email', 'like', '%@nativ.local'),
     supabaseAdmin.from('guests').select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenant.id).not('email', 'like', '%@nativ.local'),
+    // Item 39: top regulars — top 5 guests by visit count
+    supabaseAdmin.from('guests').select('id, name, visit_count, last_visit_at')
+      .eq('tenant_id', tenant.id).not('email', 'like', '%@nativ.local')
+      .gt('visit_count', 1).order('visit_count', { ascending: false }).limit(5),
   ])
 
   // Item 22: active shift indicator
@@ -82,6 +86,9 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
   const totalGuests    = totalGuestsRes.count ?? 0
   const returningGuests = returningRes.count ?? 0
   const returnRate     = totalGuests > 0 ? Math.round((returningGuests / totalGuests) * 100) : null
+
+  type TopGuest = { id: string; name: string; visit_count: number; last_visit_at: string | null }
+  const topGuests = (topGuestsRes.data || []) as TopGuest[]
 
   const sum = (d: { party_size: number }[] | null) => (d || []).reduce((s, r) => s + r.party_size, 0)
   const todayCovers  = sum(todayList)
@@ -295,6 +302,29 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
               <span className="text-[10px] text-offwhite/30">last 7 days</span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Item 39: Top regulars ── */}
+      {topGuests.length > 0 && (
+        <div className="rounded-2xl overflow-hidden mb-6 md:mb-8" style={cardBg}>
+          <div className="flex items-center justify-between px-4 md:px-6 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-offwhite/40">Top regulars</p>
+            <Link href={`/restaurant/${slug}/guests`} className="text-[10px] text-offwhite/25 hover:text-offwhite/50 transition-colors">
+              View all →
+            </Link>
+          </div>
+          {topGuests.map((g, i) => (
+            <div key={g.id} className="flex items-center gap-3 px-4 md:px-6 py-3"
+              style={i > 0 ? { borderTop: '1px solid rgba(255,255,255,0.04)' } : undefined}>
+              <span className="text-[11px] font-bold text-offwhite/20 w-4 shrink-0">{i + 1}</span>
+              <p className="text-sm text-offwhite flex-1 min-w-0 truncate">{g.name}</p>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                style={{ backgroundColor: 'rgba(201,169,110,0.12)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.20)' }}>
+                {g.visit_count}×
+              </span>
+            </div>
+          ))}
         </div>
       )}
 

@@ -22,6 +22,7 @@ interface Props {
   initialGuests: GuestWithTags[]
   slug: string
   total: number
+  initialGuestId?: string
 }
 
 const inputCls = 'bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-white/25 placeholder:text-offwhite/20'
@@ -274,7 +275,7 @@ function DetailPanel({ guest, editingNotes, history, loadingHistory, onEditNotes
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props) {
+export function GuestsClient({ initialGuests, slug, total: initialTotal, initialGuestId }: Props) {
   const [guests, setGuests]         = useState<GuestWithTags[]>(initialGuests)
   const [total, setTotal]           = useState(initialTotal)
   const [search, setSearch]         = useState('')
@@ -282,7 +283,7 @@ export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props
   const [loading, setLoading]       = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialGuests.length > 0 ? initialGuests[0].id : null
+    initialGuestId ?? (initialGuests.length > 0 ? initialGuests[0].id : null)
   )
   const [editingNotes, setEditingNotes] = useState<{ id: string; notes: string } | null>(null)
   const [guestHistory, setGuestHistory] = useState<HistoryItem[]>([])

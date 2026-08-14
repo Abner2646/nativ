@@ -3,8 +3,15 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { GuestsClient } from '@/components/admin/GuestsClient'
 
-export default async function GuestsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GuestsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ guest?: string }>
+}) {
   const { slug } = await params
+  const { guest: initialGuestId } = await searchParams
   const user = await requireUser()
   const access = await getTenantBySlug(slug, user.id)
   if (!access) return notFound()
@@ -26,6 +33,7 @@ export default async function GuestsPage({ params }: { params: Promise<{ slug: s
         initialGuests={guests || []}
         slug={slug}
         total={count || 0}
+        initialGuestId={initialGuestId}
       />
     </div>
   )

@@ -2,7 +2,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getBrowserSupabase } from '@/lib/supabase-browser'
-import { Search, X, User } from 'lucide-react'
+import { Search, X, CalendarDays, Users } from 'lucide-react'
+
+const AVATAR_PALETTE = [
+  { bg: 'rgba(201,169,110,0.18)', color: '#C9A96E' },
+  { bg: 'rgba(111,143,123,0.18)', color: '#86BBA7' },
+  { bg: 'rgba(130,150,200,0.18)', color: '#8296C8' },
+  { bg: 'rgba(200,130,130,0.18)', color: '#C88282' },
+  { bg: 'rgba(160,130,200,0.18)', color: '#A082C8' },
+]
+function getInitials(name: string) {
+  const p = name.trim().split(/\s+/)
+  return p.length === 1 ? p[0].slice(0, 2).toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
+}
+function getAvatarColor(name: string) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
+  return AVATAR_PALETTE[h % AVATAR_PALETTE.length]
+}
 
 async function getToken() {
   const { data: { session } } = await getBrowserSupabase().auth.getSession()
@@ -55,7 +72,7 @@ export function GlobalSearch({ slug }: Props) {
           id: g.id,
           primary: g.name,
           secondary: `${g.email}${g.visit_count ? ` · ${g.visit_count} visit${g.visit_count !== 1 ? 's' : ''}` : ''}`,
-          href: `/restaurant/${slug}/guests`,
+          href: `/restaurant/${slug}/guests?guest=${g.id}`,
         }))
       )
       setActiveIdx(0)
@@ -115,9 +132,9 @@ export function GlobalSearch({ slug }: Props) {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
                   style={{ backgroundColor: i === activeIdx ? 'rgba(255,255,255,0.05)' : 'transparent' }}
                 >
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.07)' }}>
-                    <User size={13} className="text-offwhite/40" />
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
+                    style={{ backgroundColor: getAvatarColor(r.primary).bg, color: getAvatarColor(r.primary).color }}>
+                    {getInitials(r.primary)}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-offwhite truncate">{r.primary}</p>
@@ -134,7 +151,19 @@ export function GlobalSearch({ slug }: Props) {
         )}
 
         {!query && (
-          <p className="text-xs text-offwhite/20 text-center px-4 py-4">Type to search guests</p>
+          <div className="px-3 py-3">
+            <p className="text-[10px] text-offwhite/20 uppercase tracking-widest px-1 mb-1.5">Jump to</p>
+            {[
+              { icon: CalendarDays, label: "Today's reservations", href: `/restaurant/${slug}/reservations` },
+              { icon: Users, label: 'All guests', href: `/restaurant/${slug}/guests` },
+            ].map(({ icon: Icon, label, href }) => (
+              <button key={href} onClick={() => go(href)}
+                className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left transition-colors hover:bg-white/[0.04]">
+                <Icon size={13} className="text-offwhite/30 shrink-0" />
+                <span className="text-sm text-offwhite/45">{label}</span>
+              </button>
+            ))}
+          </div>
         )}
 
         {/* Footer hints */}
