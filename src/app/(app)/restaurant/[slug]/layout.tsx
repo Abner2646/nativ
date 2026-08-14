@@ -20,10 +20,12 @@ export default async function RestaurantLayout({
   const { tenant } = access
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ data: settings }, { count: todayCount }] = await Promise.all([
+  const [{ data: settings }, { count: todayCount }, { count: pendingCampaigns }] = await Promise.all([
     supabaseAdmin.from('tenant_settings').select('name').eq('tenant_id', tenant.id).single(),
     supabaseAdmin.from('reservations').select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenant.id).eq('date', today).eq('status', 'confirmed'),
+    supabaseAdmin.from('ai_campaigns').select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenant.id).eq('status', 'pending'),
   ])
 
   return (
@@ -34,6 +36,7 @@ export default async function RestaurantLayout({
         userEmail={user.email ?? ''}
         role={access.role}
         todayCount={todayCount ?? 0}
+        pendingCampaignsCount={pendingCampaigns ?? 0}
         trialEndsAt={tenant.status === 'trial' ? (tenant.trial_ends_at ?? null) : null}
       />
       {/* min-w-0: sin esto, el min-content de contenido ancho (timeline, tablas)

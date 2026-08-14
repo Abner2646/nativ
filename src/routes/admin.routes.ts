@@ -93,7 +93,7 @@ export async function getGuests(req: NextRequest) {
   const search = searchParams.get('search')
   const page = parseInt(searchParams.get('page') || '1')
   const limit = 50
-  let q = supabaseAdmin.from('guests').select('*, guest_tags(tag)', { count: 'exact' })
+  let q = supabaseAdmin.from('guests').select('*, guest_tags(id, tag)', { count: 'exact' })
     .eq('tenant_id', ctx.tenant.id)
     // Excluir guests placeholder de walk-ins y waitlist
     .not('email', 'like', '%@nativ.local')

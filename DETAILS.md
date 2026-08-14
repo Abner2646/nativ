@@ -126,3 +126,15 @@ Toggle en la barra de búsqueda de guests que muestra solo los guests con cumple
 
 **✅ 31. Tasa de retorno de guests en dashboard**
 Porcentaje de guests que visitaron más de una vez. Métrica de fidelización visible en el card "Last 7 days" del dashboard. Calculado en el servidor en cada carga.
+
+**✅ 32. AI Campaigns deja de ser "Coming Soon"**
+Se quitó el label "Soon" del link de AI Campaigns en el sidebar. Las campañas están completamente funcionales (approval, rejection, sending). Badge de pendientes visible cuando hay campañas esperando aprobación.
+
+**✅ 33. Preferencias del guest visibles en detalle de reserva**
+En el panel de detalle de reserva (desktop y tablet), se muestran las notas del perfil del guest ("Guest preferences") separadas de las notas de la reserva. El staff ve toda la info relevante sin ir al perfil del guest.
+
+**✅ 34. "Load more" en la lista de guests**
+Botón que carga la siguiente página de guests (50 por página). El contador muestra cuántos restan. Fix incluido: la selección de guest_tags ahora incluye el id necesario para el delete de tags.
+
+**✅ 35. Dashboard "Next up" muestra los próximos 3**
+El card "Next up" pasó de mostrar solo la próxima reserva a mostrar las próximas 3, con opacidad decreciente para enfatizar la más inmediata.

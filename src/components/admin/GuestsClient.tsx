@@ -278,6 +278,7 @@ export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props
   const [guests, setGuests]         = useState<GuestWithTags[]>(initialGuests)
   const [total, setTotal]           = useState(initialTotal)
   const [search, setSearch]         = useState('')
+  const [page, setPage]             = useState(1)
   const [loading, setLoading]       = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -340,6 +341,7 @@ export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props
     setLoading(true)
     setSelectedId(null)
     setExpandedId(null)
+    setPage(1)
     try {
       const token = await getToken()
       const url = q
@@ -353,6 +355,21 @@ export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props
       if (list.length > 0) setSelectedId(list[0].id)
     } finally { setLoading(false) }
   }, [slug])
+
+  const loadMore = async () => {
+    const nextPage = page + 1
+    setLoading(true)
+    try {
+      const token = await getToken()
+      const url = search
+        ? `/api/admin?resource=guests&search=${encodeURIComponent(search)}&page=${nextPage}&tenant=${slug}`
+        : `/api/admin?resource=guests&page=${nextPage}&tenant=${slug}`
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      setGuests(prev => [...prev, ...(data.guests || [])])
+      setPage(nextPage)
+    } finally { setLoading(false) }
+  }
 
   const handleSearch = (q: string) => {
     setSearch(q)
@@ -611,6 +628,19 @@ export function GuestsClient({ initialGuests, slug, total: initialTotal }: Props
             </div>
           </div>
         </>
+      )}
+
+      {/* ── Load more ── */}
+      {!birthdayFilter && guests.length < total && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={loadMore}
+            disabled={loading}
+            className="px-5 py-2.5 rounded-xl text-sm text-offwhite/50 hover:text-offwhite disabled:opacity-40 transition-colors"
+            style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+            {loading ? 'Loading…' : `Load more (${total - guests.length} remaining)`}
+          </button>
+        </div>
       )}
 
       {/* ── Merge modal ── */}

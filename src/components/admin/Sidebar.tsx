@@ -25,7 +25,7 @@ const NAV = (slug: string): NavItem[] => [
   // Seating areas se administra desde Floor plan (link en Edit layout)
   { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor plan',     icon: Table2 },
   { href: `/restaurant/${slug}/guests`,       label: 'Guests',         icon: Users },
-  { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',   icon: Sparkles,      comingSoon: true, adminOnly: true },
+  { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',   icon: Sparkles,      adminOnly: true },
   '---',
   { href: `/restaurant/${slug}/shifts`,       label: 'Shifts',         icon: Clock,         adminOnly: true },
   { href: `/restaurant/${slug}/events`,       label: 'Special events', icon: CalendarRange, adminOnly: true },
@@ -44,13 +44,14 @@ function daysUntil(isoDate: string): number {
 }
 
 export function Sidebar({
-  slug, name, userEmail, role, todayCount = 0, trialEndsAt = null,
+  slug, name, userEmail, role, todayCount = 0, pendingCampaignsCount = 0, trialEndsAt = null,
 }: {
   slug: string
   name: string
   userEmail: string
   role: 'admin' | 'employee'
   todayCount?: number
+  pendingCampaignsCount?: number
   trialEndsAt?: string | null
 }) {
   const pathname = usePathname()
@@ -262,6 +263,7 @@ export function Sidebar({
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
           const Icon   = item.icon
           const isReservations = item.href.endsWith('/reservations')
+          const isCampaigns    = item.href.endsWith('/campaigns')
           const isBilling      = item.href.endsWith('/billing')
 
           return (
@@ -278,6 +280,12 @@ export function Sidebar({
                 <span className={`${expanded ? 'hidden lg:flex' : 'hidden'} text-[10px] font-bold px-1.5 py-0.5 rounded-full`}
                   style={{ backgroundColor: 'rgba(201,169,110,0.15)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.25)' }}>
                   {todayCount}
+                </span>
+              )}
+              {isCampaigns && pendingCampaignsCount > 0 && (
+                <span className={`${expanded ? 'hidden lg:flex' : 'hidden'} text-[10px] font-bold px-1.5 py-0.5 rounded-full`}
+                  style={{ backgroundColor: 'rgba(234,179,8,0.12)', color: '#ca8a04', border: '1px solid rgba(234,179,8,0.25)' }}>
+                  {pendingCampaignsCount}
                 </span>
               )}
               {isBilling && trialWarning && (

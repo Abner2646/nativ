@@ -240,7 +240,15 @@ function DetailPanel({
         </div>
       )}
 
-      {/* Notes */}
+      {/* Guest preferences */}
+      {r.guest?.notes && (
+        <div className="pb-5 mb-5" style={divider}>
+          <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1.5">Guest preferences</p>
+          <p className="text-sm text-offwhite/45 italic">"{r.guest.notes}"</p>
+        </div>
+      )}
+
+      {/* Reservation notes */}
       {r.notes && (
         <div className="pb-5 mb-5" style={divider}>
           <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1.5">Notes</p>

@@ -146,18 +146,24 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
         {/* Next up */}
         <div className={card} style={cardBg}>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-offwhite/40 mb-3">Next up</p>
-          {next ? (
-            <>
-              <p className="font-satoshi font-bold text-[28px] leading-none text-offwhite">{fmtTime(next.time)}</p>
-              <p className="text-[13px] text-offwhite/40 mt-1.5 truncate">
-                {next.guest?.name} · {next.party_size} {next.party_size === 1 ? 'person' : 'people'}
-              </p>
-              {upcoming.length > 1 && (
-                <p className="text-[11px] text-offwhite/25 mt-1">+{upcoming.length - 1} more tonight</p>
-              )}
-            </>
-          ) : (
+          {upcoming.length === 0 ? (
             <p className="text-[14px] text-offwhite/25 mt-1">No more today</p>
+          ) : (
+            <div className="space-y-2 mt-1">
+              {upcoming.slice(0, 3).map((r, i) => (
+                <div key={r.id} className="flex items-baseline gap-2 min-w-0" style={{ opacity: i === 0 ? 1 : 0.4 }}>
+                  <span className={`font-satoshi font-bold leading-none text-offwhite shrink-0 ${i === 0 ? 'text-[22px]' : 'text-[15px]'}`}>
+                    {fmtTime(r.time)}
+                  </span>
+                  <span className="text-offwhite/50 text-[12px] truncate">
+                    {r.guest?.name} · {r.party_size}p
+                  </span>
+                </div>
+              ))}
+              {upcoming.length > 3 && (
+                <p className="text-[11px] text-offwhite/25">+{upcoming.length - 3} more tonight</p>
+              )}
+            </div>
           )}
         </div>
 
