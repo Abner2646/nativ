@@ -290,6 +290,7 @@ function DetailPanel({
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function ReservationsClient({ initialReservations, slug, tenantId, defaultDate }: Props) {
+  const today = useMemo(() => new Date().toISOString().split('T')[0], [])
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations)
   const [date, setDate]                 = useState(defaultDate)
   const [statusFilter, setStatusFilter] = useState('all')
@@ -560,6 +561,14 @@ export function ReservationsClient({ initialReservations, slug, tenantId, defaul
               style={{ backgroundColor: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <ChevronRight size={15} />
             </button>
+            {date !== today && (
+              <button
+                onClick={() => handleDateChange(today)}
+                className="h-[42px] px-3 text-xs font-semibold rounded-xl transition-colors"
+                style={{ backgroundColor: 'rgba(201,169,110,0.12)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.25)' }}>
+                Today
+              </button>
+            )}
           </div>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={inputCls}>
             <option value="all">All</option>
@@ -600,7 +609,16 @@ export function ReservationsClient({ initialReservations, slug, tenantId, defaul
       {/* ── Empty state ── */}
       {filtered.length === 0 ? (
         <div className="p-12 text-center rounded-2xl" style={card}>
-          <p className="text-sm text-offwhite/35">No reservations for this date</p>
+          <p className="text-sm font-medium text-offwhite/35 mb-1">
+            {statusFilter !== 'all' ? `No ${statusFilter} reservations` : 'No reservations for this date'}
+          </p>
+          {statusFilter === 'all' && (
+            <button onClick={openModal}
+              className="mt-4 text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+              style={{ backgroundColor: 'rgba(201,169,110,0.12)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.22)' }}>
+              + New reservation
+            </button>
+          )}
         </div>
       ) : (
         <>

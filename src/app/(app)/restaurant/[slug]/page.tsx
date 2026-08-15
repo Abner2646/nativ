@@ -144,11 +144,13 @@ export default async function RestaurantDashboard({ params }: { params: Promise<
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-5 mb-6 md:mb-8">
 
         {/* Tonight */}
-        <div className={card} style={{ ...cardBg, borderLeft: '2px solid #C9A96E' }}>
+        <Link href={`/restaurant/${slug}/reservations`}
+          className={`${card} block transition-colors hover:bg-white/[0.02]`}
+          style={{ ...cardBg, borderLeft: '2px solid #C9A96E' }}>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-offwhite/40 mb-3">Today</p>
           <p className="font-satoshi font-bold text-[36px] md:text-[40px] leading-none text-offwhite">{todayList.length}</p>
           <p className="text-[13px] text-offwhite/40 mt-1.5">{todayCovers} covers</p>
-        </div>
+        </Link>
 
         {/* Next up */}
         <div className={card} style={cardBg}>

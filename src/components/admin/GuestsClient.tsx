@@ -62,6 +62,16 @@ function Avatar({ name, size = 36 }: { name: string; size?: number }) {
 function fmtDate(d: string | null) {
   return d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
+function relativeDate(d: string | null): string {
+  if (!d) return '—'
+  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000)
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 14) return `${days}d ago`
+  if (days < 60) return `${Math.floor(days / 7)}w ago`
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`
+  return fmtDate(d)
+}
 function fmtHistDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -186,7 +196,7 @@ function DetailPanel({ guest, editingNotes, history, loadingHistory, onEditNotes
         </div>
         <div>
           <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1">Last visit</p>
-          <p className="text-sm text-offwhite/70">{fmtDate(guest.last_visit_at)}</p>
+          <p className="text-sm text-offwhite/70" title={fmtDate(guest.last_visit_at)}>{relativeDate(guest.last_visit_at)}</p>
         </div>
         <div>
           <p className="text-[10px] text-offwhite/25 uppercase tracking-widest mb-1">Birthday</p>
