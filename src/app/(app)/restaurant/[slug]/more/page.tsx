@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Clock, Armchair, CalendarRange, CreditCard,
   Settings, Image, Code2, Sparkles,
-  UserCog, Receipt, Gift, ExternalLink, Table2,
+  UserCog, Receipt, Gift, ExternalLink, Table2, Timer,
 } from 'lucide-react'
 
 const SECTIONS = (slug: string) => [
@@ -15,6 +15,7 @@ const SECTIONS = (slug: string) => [
       { href: `/restaurant/${slug}/shifts`,   icon: Clock,          label: 'Shifts',         desc: 'Service hours and slot capacity',    comingSoon: false },
       { href: `/restaurant/${slug}/areas`,    icon: Armchair,       label: 'Seating areas',  desc: 'Configure your areas and zones',     comingSoon: false },
       { href: `/restaurant/${slug}/floor-plan`, icon: Table2,       label: 'Floor plan',     desc: 'Draw your dining room and tables',   comingSoon: false },
+      { href: `/restaurant/${slug}/waitlist`, icon: Timer,          label: 'Waitlist',       desc: 'Walk-ins waiting for a table',       comingSoon: false },
       { href: `/restaurant/${slug}/events`,   icon: CalendarRange,  label: 'Special events', desc: 'Events and blocked dates',           comingSoon: false },
       { href: `/restaurant/${slug}/deposits`, icon: CreditCard,     label: 'Deposits',       desc: 'Deposit rules and Stripe Connect',   comingSoon: false },
     ],
@@ -25,7 +26,7 @@ const SECTIONS = (slug: string) => [
       { href: `/restaurant/${slug}/settings`,  icon: Settings,  label: 'Settings',      desc: 'Name, timezone, booking rules',       comingSoon: false },
       { href: `/restaurant/${slug}/photos`,    icon: Image,     label: 'Photos',        desc: 'Logo and photo gallery',              comingSoon: false },
       { href: `/restaurant/${slug}/embed`,     icon: Code2,     label: 'Embed & share', desc: 'Widget, links and branding',          comingSoon: false },
-      { href: `/restaurant/${slug}/campaigns`, icon: Sparkles,  label: 'AI Campaigns',  desc: 'Automated marketing campaigns',       comingSoon: true  },
+      { href: `/restaurant/${slug}/campaigns`, icon: Sparkles,  label: 'AI Campaigns',  desc: 'Automated marketing campaigns',       comingSoon: false },
     ],
   },
   {

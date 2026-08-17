@@ -213,7 +213,7 @@ export function SettingsClient({ settings: initial, slug }: Props) {
             {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
           </select>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { key: 'min_party_size',    label: 'Min party' },
             { key: 'max_party_size',    label: 'Max party' },

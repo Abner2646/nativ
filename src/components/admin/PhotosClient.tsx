@@ -80,7 +80,7 @@ export function PhotosClient({ slug, initialLogo, initialPhotos }: Props) {
 
       {sectionTitle('Photo gallery')}
       <p className="text-sm text-offwhite/50 mb-4">Photos shown on your public page. Max 5 MB per photo.</p>
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
         {photos.map(photo => (
           <div key={photo.id} className="relative group aspect-square rounded-2xl overflow-hidden"
             style={{ backgroundColor: '#162232' }}>

@@ -151,7 +151,7 @@ export function DepositRulesClient({ initialRules, stripeAccountId, stripeConnec
   }
 
   return (
-    <div style={{ maxWidth: '36rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="max-w-xl w-full flex flex-col gap-5">
       <ConfirmModal
         open={!!pendingDeleteRule}
         title="Remove deposit rule?"
