@@ -14,10 +14,10 @@ describe('BottomNav por rol', () => {
     expect(labels).toEqual(['Home', 'Reservations', 'Floor', 'Guests', 'More'])
   })
 
-  it('employee ve 3 tabs con Floor como home (sin Dashboard ni More)', () => {
+  it('employee ve 4 tabs con Floor como home (sin Dashboard ni More)', () => {
     render(<BottomNav slug="oth" role="employee" />)
     const labels = screen.getAllByRole('link').map(l => l.textContent)
-    expect(labels).toEqual(['Floor', 'Reservations', 'Guests'])
+    expect(labels).toEqual(['Floor', 'Reservations', 'Waitlist', 'Guests'])
   })
 
   it('el badge de reservas de hoy aparece en Reservations', () => {
