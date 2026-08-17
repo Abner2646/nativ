@@ -6,7 +6,7 @@ import { getTenantDomain, getTenantBaseUrl } from '@/lib/domain'
 import {
   LayoutDashboard, CalendarDays, Users, Sparkles, Clock,
   CalendarRange, CreditCard, UserCog, Image, Code2, Settings,
-  Receipt, ExternalLink, Table2, PanelLeftClose, PanelLeftOpen,
+  Receipt, ExternalLink, Table2, PanelLeftClose, PanelLeftOpen, Timer,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -24,6 +24,7 @@ const NAV = (slug: string): NavItem[] => [
   { href: `/restaurant/${slug}/reservations`, label: 'Reservations',   icon: CalendarDays },
   // Seating areas se administra desde Floor plan (link en Edit layout)
   { href: `/restaurant/${slug}/floor-plan`,   label: 'Floor plan',     icon: Table2 },
+  { href: `/restaurant/${slug}/waitlist`,     label: 'Waitlist',       icon: Timer },
   { href: `/restaurant/${slug}/guests`,       label: 'Guests',         icon: Users },
   { href: `/restaurant/${slug}/campaigns`,    label: 'AI Campaigns',   icon: Sparkles,      adminOnly: true },
   '---',

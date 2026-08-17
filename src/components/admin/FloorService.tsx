@@ -124,7 +124,7 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
   const [walkInParty, setWalkInParty]   = useState(2)
   const [busy, setBusy]                 = useState(false)
   const [now, setNow]                   = useState(() => Date.now())
-  const [wlForm, setWlForm]             = useState({ name: '', party: 2, quote: '' })
+  const [wlForm, setWlForm]             = useState({ name: '', phone: '', party: 2, quote: '' })
   const [wlOpen, setWlOpen]             = useState(false)
   const [showAvailableOnly, setShowAvailableOnly] = useState(false)
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -306,9 +306,9 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
     if (!wlForm.name.trim()) return
     const res = await adminFetch('resource=waitlist', {
       method: 'POST',
-      body: JSON.stringify({ name: wlForm.name.trim(), party_size: wlForm.party, quoted_minutes: wlForm.quote ? parseInt(wlForm.quote) : null }),
+      body: JSON.stringify({ name: wlForm.name.trim(), phone: wlForm.phone.trim() || null, party_size: wlForm.party, quoted_minutes: wlForm.quote ? parseInt(wlForm.quote) : null }),
     })
-    if (res.ok) { setWlForm({ name: '', party: 2, quote: '' }); setWlOpen(false); refetch() }
+    if (res.ok) { setWlForm({ name: '', phone: '', party: 2, quote: '' }); setWlOpen(false); refetch() }
     else toast.error('Failed to add to waitlist')
   }
 
@@ -858,6 +858,9 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                 <input value={wlForm.name} onChange={e => setWlForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Guest name" autoFocus
                   className="w-full bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-white/25 placeholder:text-offwhite/20" />
+                <input value={wlForm.phone} onChange={e => setWlForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="Phone (optional)"
+                  className="w-full bg-black/25 border border-white/[0.08] text-offwhite rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-white/25 placeholder:text-offwhite/20" />
                 <div className="flex gap-2">
                   <div className="flex items-center gap-2 flex-1">
                     <button onClick={() => setWlForm(f => ({ ...f, party: Math.max(1, f.party - 1) }))}
@@ -895,8 +898,9 @@ export function FloorService({ areas, slug, tenantId, initialService }: Props) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-offwhite truncate">{w.name}</p>
                       <p className="text-[11px]" style={{ color: overQuote ? '#e08585' : 'rgba(242,239,233,0.35)' }}>
-                        {w.party_size}p · waiting {waited}m{w.quoted_minutes != null ? ` / ${w.quoted_minutes}m quoted` : ''}
+                        {w.party_size}p · {waited}m{w.quoted_minutes != null ? ` / ${w.quoted_minutes}m` : ''}{overQuote ? ' ⚠' : ''}
                       </p>
+                      {w.phone && <p className="text-[10px] text-offwhite/25 truncate">{w.phone}</p>}
                     </div>
                     <button
                       onClick={() => { setSeatingEntry(prev => prev?.id === w.id ? null : w); setAssigningResId(null); setSelectedTableId(null); setView('floor') }}

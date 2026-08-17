@@ -564,6 +564,19 @@ export async function removeWaitlistEntry(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+export async function seatWaitlistEntry(req: NextRequest) {
+  const r = await getCtxAndUser(req); if (r.error) return r.error
+  const { ctx } = r as any
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const { error } = await supabaseAdmin
+    .from('waitlist_entries')
+    .update({ status: 'seated', seated_at: new Date().toISOString() })
+    .eq('id', id).eq('tenant_id', ctx.tenant.id)
+  if (error) return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
+
 // ── SERVICE VIEW (floor plan en vivo) ─────────────────────────
 // Sin requireAdmin: la operación del servicio es tarea del staff.
 

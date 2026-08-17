@@ -12,7 +12,7 @@ import {
   getCombos, createCombo, deleteCombo,
   getTurnTimes, saveTurnTimes,
   rescheduleReservation,
-  getWaitlist, addWaitlistEntry, removeWaitlistEntry,
+  getWaitlist, addWaitlistEntry, removeWaitlistEntry, seatWaitlistEntry,
   unseatReservation, unfinishReservation,
   getBlockedDates, createBlockedDate, deleteBlockedDate,
   getSpecialEvents, createSpecialEvent, deleteSpecialEvent,
@@ -92,6 +92,7 @@ export async function PATCH(req: NextRequest) {
     case 'campaigns':       return updateCampaign(req)
     case 'birthday-config': return updateBirthdayConfig(req)
     case 'toggle-blocked':  return toggleTableBlocked(req)
+    case 'waitlist':        return seatWaitlistEntry(req)
     default: return Response.json({ error: 'Unknown resource' }, { status: 400 })
   }
 }
