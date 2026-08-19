@@ -1,6 +1,6 @@
 # CONTEXT.md — Nativ
-*Última actualización: 2026-08-13*
-*Items 1–26 de DETAILS.md implementados. Campaña de cumpleaños + unsubscribe + Realtime activos. Siguiente: calidad y retención.*
+*Última actualización: 2026-08-19*
+*Items 1–43 de DETAILS.md implementados. Waitlist standalone + mobile responsiveness completos. Siguiente: AI campaigns auto-generación.*
 
 ---
 
@@ -227,7 +227,9 @@ GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario 
 
 **`src/app/(app)/restaurant/[slug]/settings/page.tsx`** — Branding, info del restaurante, config operativa.
 
-**`src/app/(app)/restaurant/[slug]/more/page.tsx`** — Hub de navegación en mobile para páginas secundarias.
+**`src/app/(app)/restaurant/[slug]/waitlist/page.tsx`** — Página standalone de la lista de espera. Realtime via `postgres_changes`. Add form con nombre/teléfono/party/quote, badge de tiempo transcurrido (rojo si supera el quoted), acciones Seat (PATCH) y Remove (DELETE).
+
+**`src/app/(app)/restaurant/[slug]/more/page.tsx`** — Hub de navegación en mobile para páginas secundarias. Incluye Waitlist en sección Manage. AI Campaigns activo (sin comingSoon).
 
 ### ✅ Cron — birthdays
 
@@ -286,10 +288,10 @@ GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario 
 
 ### ⏳ Pendiente
 
-- **AI campaigns auto-generación** — Las campañas existen en DB y se muestran en el panel, pero no hay generación automática via IA. El envío ya funciona (al aprobar, `updateCampaign` envía via Resend).
+- **AI campaigns auto-generación** — Las campañas existen en DB, el envío funciona (al aprobar). Falta el endpoint que llame a la API de Claude para generar el texto de la campaña y guardarlo en `ai_campaigns`.
 - **'no-show' en enum DB** — Migration 017 crea el valor. Requiere aplicación manual en Supabase SQL Editor.
 
-### ✅ Completado recientemente (items 1–26 DETAILS.md + batch post-26)
+### ✅ Completado recientemente (items 1–43 DETAILS.md)
 
 - Avatar con iniciales determinístico, historial de reservas en perfil de guest, merge de guests duplicados
 - Realtime toast de nueva reserva, gráfico de barras 14 días en dashboard, turno activo indicator
@@ -300,6 +302,14 @@ GET /api/cron/reminders      ← reminders 24h antes — corre 10:00 UTC diario 
 - Vista de impresión de reservas del día (`window.print()` + `@media print`)
 - CSV export de guests + filtro de cumpleaños este mes en página de guests
 - Tasa de retorno de guests (%) en dashboard
+- GlobalSearch con avatares de iniciales y deep-link `?guest=ID`
+- Reservas: flechas prev/next de día + pill "Today" para volver al día actual
+- Dashboard: Top Regulars card + card "Today" linkeable a reservations
+- Guests: tiempo relativo en "Last visit" + auto-selección por URL
+- Waitlist standalone page con Realtime, WaitBadge, acciones Seat/Remove
+- FloorService: campo de teléfono en el form de waitlist
+- Mobile responsiveness: Photos grid 2-col, Settings booking rules 1-col, DepositRules Tailwind layout
+- BottomNav employee: 4 items (Floor / Reservations / Waitlist / Guests)
 
 ---
 
